@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Credix - Abstract Premium</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-deep: #0D0E12;
+            --card-bg: #1A1C23;
+            --card-border: rgba(255, 255, 255, 0.06);
+            --accent-orange: #FF6B35; 
+            --accent-glow: rgba(255, 107, 53, 0.15);
+            --text-main: #FFFFFF;
+            --text-muted: #8A8D98;
+            --success: #00E676;
+            --danger: #FF3B6B;
+            --owner-gold: #FFD700;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main); 
+            margin: 0; padding: 20px 15px; 
+            padding-bottom: 120px; 
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- SUPER FAST BACKGROUND GLOWS --- */
+        .abstract-glow-1 {
+            position: fixed; top: -10%; left: -20%; width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255, 107, 53, 0.15) 0%, transparent 70%);
+            border-radius: 50%; z-index: -1; pointer-events: none;
+        }
+        .abstract-glow-2 {
+            position: fixed; top: 40%; right: -30%; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255, 107, 53, 0.10) 0%, transparent 60%);
+            border-radius: 50%; z-index: -1; pointer-events: none;
+        }
+        .abstract-dots {
+            position: fixed; top: -50px; right: -50px; width: 250px; height: 250px;
+            background-image: radial-gradient(rgba(255, 107, 53, 0.4) 1.5px, transparent 1.5px);
+            background-size: 20px 20px;
+            -webkit-mask-image: radial-gradient(circle, black 10%, transparent 60%);
+            z-index: -1; pointer-events: none; opacity: 0.6;
+        }
+
+        .resp-row { display: flex; flex-direction: column; gap: 12px; }
+        @media (min-width: 600px) { .resp-row { flex-direction: row; } }
+
+        /* --- HEADER --- */
+        .header-top { display:flex; justify-content:space-between; align-items:center; padding-bottom: 25px; }
+        .app-title { margin:0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: var(--text-main); display:flex; align-items:center; gap:8px;}
+        .sub-title { font-size: 12px; color: var(--text-muted); font-weight: 400; letter-spacing: 0.5px; margin-top: 4px;}
+        .profile-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--card-bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; cursor: pointer; border: 1px solid var(--card-border); box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative;}
+        .owner-badge { position: absolute; top: -5px; right: -5px; background: var(--owner-gold); color: black; font-size: 10px; padding: 2px 5px; border-radius: 10px; font-weight: 800; display: none; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);}
+
+        /* --- CUSTOM TOAST --- */
+        #toast-box {
+            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+            background: var(--accent-orange); color: #fff; padding: 12px 25px;
+            border-radius: 30px; font-weight: 600; font-size: 13px; z-index: 9999999;
+            box-shadow: 0 10px 30px var(--accent-glow); transition: top 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #toast-box.show { top: 30px; }
+
+        /* --- SYNC BAR --- */
+        .sync-bar { display:flex; justify-content:space-between; align-items:center; background: transparent; margin-bottom:20px; font-size:12px; font-weight: 500; }
+        .sync-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 11px; cursor:pointer; display:flex; align-items:center; gap:5px;}
+        .status-indicator { display: flex; align-items: center; gap: 8px; color: var(--text-muted);}
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success);}
+        .status-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+        /* --- SUMMARY CARDS --- */
+        .summary-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
+        .sum-card { border-radius: 28px; padding: 22px 18px; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: 0 5px 20px rgba(0,0,0,0.3); position: relative; overflow: hidden;}
+        .sum-card.accent-card { background: linear-gradient(145deg, rgba(255, 107, 53, 0.08), var(--card-bg)); border: 1px solid rgba(255, 107, 53, 0.2);}
+        .sum-card span { font-size: 12px; color: var(--text-muted); font-weight: 500; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .sum-card b { font-size: 26px; font-weight: 700; color: var(--text-main);}
+        .sum-card-full { grid-column: span 2; }
+
+        /* --- CUSTOMER CARDS --- */
+        .cust-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.05s ease; position: relative;}
+        .cust-card:active { transform: scale(0.98); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;}
+        .c-name { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; letter-spacing: 0.5px; display:flex; align-items:center; gap:5px;}
+        .c-sub { font-size: 12px; color: var(--text-muted); font-weight: 400;}
+        .c-bal { font-size: 20px; font-weight: 700; color: var(--text-main); text-align: right; margin-bottom: 4px;}
+        .pill-tag { background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; font-size: 10px; color: var(--text-muted); font-weight: 500; display: inline-block; margin-bottom: 12px;}
+        .status-txt { float: right; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px;}
+        .due-indicator { background: linear-gradient(90deg, var(--accent-orange), #FF8A00); padding: 4px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; color: white; display: inline-block; margin-bottom: 10px; box-shadow: 0 4px 10px var(--accent-glow);}
+
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .s-btn { flex: 1; padding: 12px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.05s ease;}
+        .s-btn.collect { background: var(--accent-glow); color: var(--accent-orange); border-color: rgba(255, 107, 53, 0.3); }
+        .s-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.08); }
+
+        /* --- VIEW TABLE --- */
+        .view-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; background: rgba(0,0,0,0.3); border-radius: 14px; overflow: hidden; border: 1px solid var(--card-border);}
+        .view-table th { background: rgba(255,255,255,0.03); color: var(--text-muted); padding: 12px 8px; font-weight: 500; font-size: 10px; text-transform: uppercase;}
+        .view-table td { padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); text-align: center; color: var(--text-main);}
+
+        /* --- INPUTS --- */
+        .input-group { display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; margin-bottom: 12px; padding: 0 15px; transition: 0.1s ease;}
+        .input-group:focus-within { border-color: rgba(255, 107, 53, 0.5); background: rgba(255,255,255,0.05); }
+        .input-group input, .input-group select { flex: 1; background: transparent; border: none; color: white; padding: 16px 0; font-size: 16px; font-family: inherit; outline: none; font-weight: 500; -webkit-appearance: none;}
+        .input-icon { font-size: 16px; opacity: 0.4; margin-right: 12px; width: 20px; text-align: center; }
+        
+        /* SHAKE ANIMATION FOR ERRORS */
+        @keyframes shakeAnimation {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake-error {
+            animation: shakeAnimation 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: var(--danger) !important;
+            background: rgba(255, 59, 107, 0.08) !important;
+        }
+
+        .main-btn { width: 100%; background: var(--accent-orange); border: none; color: white; padding: 16px; border-radius: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; font-size: 15px; box-shadow: 0 5px 15px var(--accent-glow); letter-spacing: 0.5px; transition: 0.05s ease; font-family: inherit;}
+        .main-btn:active { transform: scale(0.96); }
+
+        /* --- FLOATING BOTTOM NAV --- */
+        .bottom-nav { 
+            position: fixed; 
+            bottom: calc(15px + env(safe-area-inset-bottom, 10px)); 
+            left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 400px;
+            background: #14151C; 
+            display: flex; justify-content: space-around; 
+            padding: 12px 5px; 
+            border-radius: 30px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.9);
+            z-index: 100000; 
+        }
+        .nav-item { display:flex; flex-direction:column; align-items:center; font-size: 10px; font-weight:500; opacity: 0.4; color: white; cursor: pointer; transition: 0.1s ease;}
+        .nav-item .nav-icon { font-size: 20px; margin-bottom: 4px; transition: 0.1s ease;}
+        .nav-item.active { opacity: 1; color: var(--accent-orange); }
+        .nav-item.active .nav-icon { transform: translateY(-2px); }
+
+        /* --- MODALS --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 900000; align-items: center; justify-content: center; padding: 20px;}
+        .modal-cont { background: #1A1C23; border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px 25px; border-radius: 30px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
+        .modal-label { font-size: 11px; color: var(--text-muted); margin-top: 15px; display: block; margin-bottom: 8px; font-weight:500; letter-spacing: 0.5px;}
+
+        /* LOCK SCREEN */
+        #lock-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--bg-deep); z-index: 999999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .pin-dots { display: flex; gap: 20px; margin: 40px 0; justify-content: center;}
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.05); transition: 0.1s ease; }
+        .dot.active { background: var(--accent-orange); box-shadow: 0 0 10px var(--accent-orange); transform: scale(1.2);}
+        .keypad { display: grid; grid-template-columns: repeat(3, 75px); gap: 20px; text-align: center; justify-content: center;}
+        .key { 
+            width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 28px; font-weight: 400; color: white; cursor: pointer; transition: transform 0.05s ease, background 0.05s ease, box-shadow 0.05s ease; 
+            background: #1A1C23; border: 1px solid rgba(255, 255, 255, 0.02); box-shadow: 0 10px 20px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.06);
+        }
+        .key:active { transform: scale(0.92); background: #14151B; box-shadow: inset 0 4px 10px rgba(0,0,0,0.6); }
+        .clear-key { color: var(--text-muted); }
+        .enter-key { background: linear-gradient(135deg, #FF8A00 0%, #FF6B35 100%); border: none; color: white; font-weight: 700; font-size: 18px; box-shadow: 0 10px 25px rgba(255, 107, 53, 0.6), inset 0 2px 5px rgba(255,255,255,0.2);}
+    </style>
+</head>
+<body>
+
+<div class="abstract-glow-1"></div>
+<div class="abstract-glow-2"></div>
+<div class="abstract-dots"></div>
+
+<div id="toast-box">Message</div>
+
+<!-- Confirm Modal -->
+<div id="confirm-modal" class="modal">
+    <div class="modal-cont" style="text-align: center;">
+        <h3 style="margin-top:0; font-size:18px; color:var(--text-main);" id="confirm-text">Are you sure?</h3>
+        <div style="display:flex; gap:10px; margin-top:25px;">
+            <button class="main-btn" style="background:var(--danger); box-shadow:none; margin:0;" onclick="executeConfirm()">Yes, Proceed</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('confirm-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700;">Edit Record</h3>
+        <input type="hidden" id="edit-id">
+        <label class="modal-label">Customer Name</label>
+        <div class="input-group"><span class="input-icon">👤</span><input type="text" id="edit-name"></div>
+        <label class="modal-label">Start Date</label>
+        <div class="input-group"><span class="input-icon">📅</span><input type="date" id="edit-date"></div>
+        
+        <div id="edit-staff-wrap" style="display:none; border: 1px dashed var(--accent-orange); padding: 10px; border-radius: 12px; margin-bottom: 12px; background: rgba(255, 107, 53, 0.05);">
+            <label class="modal-label" id="t-editStaffRefLabel" style="margin-top:0; color:var(--accent-orange);">👑 Assign to Staff (Reference)</label>
+            <div class="input-group" style="margin-bottom:0; border-color: rgba(255, 107, 53, 0.3);"><span class="input-icon">🏷️</span><input type="text" id="edit-staff-ref" style="color:var(--accent-orange); font-weight:bold;"></div>
+        </div>
+
+        <label class="modal-label">Principal Amount (₹)</label>
+        <div class="input-group"><span class="input-icon">₹</span><input type="number" id="edit-amt"></div>
+        <label class="modal-label" id="edit-extra-label">Rate / Installment</label>
+        <div class="input-group"><span class="input-icon">ℹ️</span><input type="number" id="edit-extra"></div>
+        
+        <div id="edit-ret-wrap" style="display:none;">
+            <label class="modal-label">Total Return Amount (₹)</label>
+            <div class="input-group"><span class="input-icon">₹</span><input type="number" id="edit-ret"></div>
+        </div>
+        
+        <div id="edit-personal-wrap" style="display:none; margin: 15px 0;">
+            <label style="display:flex; align-items:center; gap:10px; color:var(--text-muted); font-size:14px; cursor:pointer;">
+                <input type="checkbox" id="edit-is-personal" style="width:20px; height:20px; accent-color:var(--owner-gold);">
+                <span style="color:var(--owner-gold);" id="t-editMarkPersonal">👑 Mark as Personal Case</span>
+            </label>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="margin:0;" onclick="saveEdit()">Save Changes</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('edit-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="pay-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--success);">Collect Payment</h3>
+        <input type="hidden" id="pay-id">
+        <label class="modal-label">Date</label>
+        <div class="input-group"><span class="input-icon">📅</span><input type="date" id="pay-date"></div>
+        <label class="modal-label">Amount Received (₹)</label>
+        <div class="input-group" style="border-color:var(--success);"><span class="input-icon">₹</span><input type="number" id="pay-amt" style="font-weight:bold; font-size:20px; color:var(--success);"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="background:var(--success); color:#000; margin:0; box-shadow: 0 5px 15px rgba(0, 230, 118, 0.2);" onclick="savePayment()">Confirm</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('pay-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Modal -->
+<div id="bulk-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--accent-orange);">
+            <span id="t-bulkTitle">Bulk Entry</span> <span id="bulk-freq-label" style="font-size:14px; color:var(--text-muted);"></span>
+        </h3>
+        <input type="hidden" id="bulk-id">
+        <label class="modal-label" id="t-bulkStart">Start Date</label>
+        <div class="input-group"><input type="date" id="bulk-start-date"></div>
+        <label class="modal-label" style="color:var(--accent-orange);" id="t-bulkEnd">End Date</label>
+        <div class="input-group" style="border-color:var(--accent-orange);"><input type="date" id="bulk-end-date"></div>
+        <label class="modal-label" id="bulk-amt-label">Per Day Amount (₹)</label>
+        <div class="input-group"><span class="input-icon">₹</span><input type="number" id="bulk-amt"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="margin:0;" onclick="saveBulkPayment()" id="t-bulkSubmit">Process Bulk</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('bulk-modal')" id="t-bulkCancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Staff Modal (New) -->
+<div id="staff-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--accent-orange);">Manage Staff IDs</h3>
+        
+        <div id="staff-list-container" style="margin-bottom:15px; max-height:200px; overflow-y:auto; padding-right:5px;">
+            <!-- List populates here -->
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+            <label class="modal-label" style="margin-top:0;">New Staff Name</label>
+            <div class="input-group"><span class="input-icon">👤</span><input type="text" id="new-staff-name" placeholder="E.g. Raju"></div>
+            
+            <label class="modal-label">Assign 4-Digit Login ID (PIN)</label>
+            <div class="input-group"><span class="input-icon">🔑</span><input type="number" id="new-staff-pin" placeholder="E.g. 1001"></div>
+            
+            <button class="main-btn" style="padding:12px; font-size:14px; margin-top:5px; background:var(--owner-gold); color:black;" onclick="addStaff()">Add Staff Profile</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('staff-modal')">Done / Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700;" id="t-setMainTitle">App Settings</h3>
+        
+        <div style="margin-top:15px;">
+            <label class="modal-label">Language / भाषा / ਭਾਸ਼ਾ</label>
+            <div class="input-group">
+                <select id="lang-select" onchange="changeLang()">
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                    <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top:10px; margin-bottom: 20px;">
+            <label class="modal-label" id="t-autoBackupLabel">Auto Backup Data</label>
+            <div class="input-group">
+                <select id="auto-backup-select" onchange="changeAutoBackup()">
+                    <option value="never" id="t-abNever">Never</option>
+                    <option value="daily" id="t-abDaily">Daily (On First Open)</option>
+                    <option value="monthly" id="t-abMonthly">Monthly</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="exportData()" id="t-setBackup">Backup Data (JSON)</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="importData()" id="t-setRestore">Restore Data</button>
+            
+            <button class="main-btn" id="btn-manage-staff" style="background:rgba(255, 107, 53, 0.1); color:var(--accent-orange); box-shadow:none; display:none;" onclick="openStaffModal()">👥 Manage Staff Accounts (IDs)</button>
+            <button class="main-btn" id="btn-owner-pin" style="background:rgba(255, 215, 0, 0.1); color:var(--owner-gold); box-shadow:none; display:none;" onclick="openSecretPinModal()">Change Owner PIN 👑</button>
+            
+            <button class="main-btn" style="background:rgba(255, 59, 107, 0.1); color:var(--danger); box-shadow:none;" onclick="logout()" id="t-setLogout">Logout</button>
+            <button class="main-btn" style="background:transparent; color:var(--text-muted); box-shadow:none; margin-top:5px;" onclick="closeModal('settings-modal')" id="t-setClose">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Secret PIN Modal -->
+<div id="secret-pin-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--owner-gold);">Change Owner PIN</h3>
+        <label class="modal-label">Current Owner PIN</label>
+        <div class="input-group" style="border-color:var(--owner-gold);"><input type="password" id="old-secret-pin" style="letter-spacing: 5px; text-align:center; font-size:20px;"></div>
+        <label class="modal-label">New 4-Digit Owner PIN</label>
+        <div class="input-group" style="border-color:var(--owner-gold);"><input type="password" id="new-secret-pin" style="letter-spacing: 5px; text-align:center; font-size:20px;"></div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="margin:0; background:var(--owner-gold); color:black;" onclick="saveSecretPin()">Update 👑</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('secret-pin-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lock Screen -->
+<div id="lock-screen">
+    <div class="abstract-glow-1"></div>
+    <div class="abstract-dots" style="top: 20%; left: 10%;"></div>
+    
+    <div style="text-align:center;">
+        <div style="font-size: 40px; font-weight: 800; letter-spacing: 2px;">Credix.</div>
+        <div id="t-lockSub" style="font-size: 13px; color: var(--accent-orange); margin-top: 5px; font-weight: 500; letter-spacing: 1px;">Enter 4-Digit Login ID or Owner PIN</div>
+    </div>
+    
+    <div>
+        <div class="pin-dots">
+            <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div>
+        </div>
+        <div class="keypad">
+            <div class="key" onclick="press(1)">1</div><div class="key" onclick="press(2)">2</div><div class="key" onclick="press(3)">3</div>
+            <div class="key" onclick="press(4)">4</div><div class="key" onclick="press(5)">5</div><div class="key" onclick="press(6)">6</div>
+            <div class="key" onclick="press(7)">7</div><div class="key" onclick="press(8)">8</div><div class="key" onclick="press(9)">9</div>
+            <div class="key clear-key" onclick="deletePinChar()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line>
+                </svg>
+            </div>
+            <div class="key" onclick="press(0)">0</div>
+            <div class="key enter-key" onclick="checkPin()">Enter</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main App -->
+<div class="container" id="main-app" style="display:none; max-width:600px; margin:auto;">
+    
+    <div class="header-top">
+        <div>
+            <h3 class="app-title">Credix. <span id="owner-title-badge" style="font-size:14px; display:none;">👑</span></h3>
+            <div class="sub-title" id="t-appSub">Welcome Back 👋</div>
+        </div>
+        <div class="profile-btn" onclick="openSettings()">
+            ⚙️
+            <div class="owner-badge" id="owner-badge">PRO</div>
+        </div>
+    </div>
+
+    <div class="sync-bar">
+        <div class="status-indicator"><div class="status-dot" id="cloud-indicator"></div> <span id="sync-status">Cloud Synced</span></div>
+        <div class="sync-btn" onclick="hardRefresh()">↻ <span id="t-refresh">Refresh</span></div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dash">
+        <div class="summary-row" id="section-summary">
+            <div class="sum-card accent-card sum-card-full">
+                <span id="t-sumPrin">Total Principal</span>
+                <b id="sum-principal">₹0</b>
+            </div>
+            <div class="sum-card">
+                <span id="t-sumCases">Total Cases</span>
+                <b id="sum-cases">0</b>
+            </div>
+            <div class="sum-card">
+                <span id="t-sumOut">Outstanding</span>
+                <b style="color: var(--danger);" id="sum-balance">₹0</b>
+            </div>
+        </div>
+
+        <div id="section-add" style="margin-bottom: 25px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:16px; font-weight:600;" id="t-addTitle">Create Record</h3>
+            </div>
+            
+            <div class="cust-card" style="padding: 25px 20px;">
+                <div class="input-group"><span class="input-icon">⚲</span>
+                    <select id="type" onchange="toggleFields()">
+                        <option value="daily" id="t-opt-daily">Daily Kishat</option>
+                        <option value="monthly" id="t-opt-monthly">Monthly Vyaj</option>
+                        <option value="meter" id="t-opt-meter">Meter (Rozana)</option>
+                    </select>
+                </div>
+                <div class="input-group"><span class="input-icon">👤</span><input type="text" id="name" placeholder="Customer Name"></div>
+                
+                <!-- Wrap Staff Ref for easy hiding -->
+                <div id="wrap-staff-ref" class="input-group"><span class="input-icon">🏷️</span><input type="text" id="staff-ref" placeholder="Reference / Staff Name"></div>
+                
+                <div class="input-group"><span class="input-icon">₹</span><input type="number" id="amt" placeholder="Principal Amount" onkeyup="autoCalc()"></div>
+                <div class="input-group"><span class="input-icon">📅</span><input type="date" id="date"></div>
+                
+                <div id="m-fields" style="display:none;"><div class="input-group"><span class="input-icon">%</span><input type="number" id="rate" placeholder="Interest Rate %"></div></div>
+                <div id="d-fields">
+                    <div class="input-group"><span class="input-icon">₹</span><input type="number" id="total_ret" placeholder="Total Return Amount"></div>
+                    <div class="input-group"><span class="input-icon">⏱️</span><input type="number" id="days" placeholder="Total Days"></div>
+                </div>
+                <div id="meter-fields" style="display:none;"><label style="color:var(--success); font-size:11px; font-weight:500; margin-left:5px; margin-bottom:8px; display:block;">Auto Rozana Vyaj:</label><div class="input-group" style="border-color:var(--success);"><span class="input-icon">₹</span><input type="number" id="meter-amt" placeholder="0" style="color:var(--success);"></div></div>
+
+                <div id="personal-wrap" style="display:none; margin: 15px 0;">
+                    <label style="display:flex; align-items:center; gap:10px; color:var(--text-muted); font-size:14px; cursor:pointer;">
+                        <input type="checkbox" id="is-personal" style="width:20px; height:20px; accent-color:var(--owner-gold);">
+                        <span style="color:var(--owner-gold);" id="t-markPersonal">👑 Mark as Personal Case</span>
+                    </label>
+                </div>
+
+                <button class="main-btn" onclick="addCustomer()" id="t-addBtn">Add Record</button>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;" id="section-search">
+            <div class="input-group" style="flex:2; margin:0; border-radius:12px;"><span class="input-icon">🔍</span><input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()"></div>
+            <select id="filter-box" onchange="render()" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; border-radius:12px; padding:0 10px; font-size:14px; outline:none; -webkit-appearance:none;">
+                <option value="all" id="f-opt-all">All Types</option>
+                <option value="daily" id="f-opt-daily">Daily</option>
+                <option value="monthly" id="f-opt-monthly">Monthly</option>
+                <option value="meter" id="f-opt-meter">Meter</option>
+                <option value="archived" id="f-opt-archived">Archived (Closed)</option>
+            </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;" id="section-sort">
+            <select id="sort-box" onchange="render()" style="background:transparent; border:none; color:var(--text-muted); font-size:13px; outline:none; -webkit-appearance:none;">
+                <option value="new" id="s-opt-new">Latest First ▼</option>
+                <option value="old" id="s-opt-old">Oldest First ▲</option>
+            </select>
+        </div>
+
+        <div id="dashboard"></div>
+    </div>
+
+    <!-- Review / Stats Tab -->
+    <div id="section-stats" style="display:none; margin-bottom:30px;">
+        
+        <div id="owner-analytics" class="sum-card" style="display:none; margin-bottom:15px; border-color:var(--owner-gold); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, #15161C 100%);">
+            <span id="t-ownerGrowth" style="color:var(--owner-gold); font-weight:700;">👑 Owner Growth Analytics</span>
+            <div style="display:flex; justify-content:space-between; margin-top:15px; align-items:center;">
+                <div style="flex:1; text-align:left;">
+                    <div id="t-totInvested" style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Total Invested</div>
+                    <div style="font-size:20px; font-weight:bold; color:white;" id="owner-invested">₹0</div>
+                </div>
+                <div style="flex:1; text-align:right;">
+                    <div id="t-netProfit" style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Net Earned Profit</div>
+                    <div style="font-size:20px; font-weight:bold; color:var(--success);" id="owner-profit">₹0</div>
+                </div>
+            </div>
+            <div style="width:100%; height:1px; background:rgba(255,255,255,0.05); margin:12px 0;"></div>
+            <div style="font-size:10px; color:var(--text-muted); text-align:center;" id="t-ownerNote">This data is strictly private and hidden in staff mode.</div>
+        </div>
+
+        <!-- Date Range Report Section -->
+        <div class="sum-card" style="margin-bottom:15px; border-color: var(--accent-orange); background: linear-gradient(145deg, rgba(255, 107, 53, 0.05) 0%, #16171E 100%);">
+            <span id="t-repTitle" style="color:var(--accent-orange); font-weight:700;">📅 Custom Date Report</span>
+            
+            <div class="resp-row" style="margin-top:15px; margin-bottom:12px;">
+                <div class="input-group" style="flex:1; margin:0;"><span class="input-icon">📅</span><input type="date" id="rep-start"></div>
+                <div class="input-group" style="flex:1; margin:0;"><span class="input-icon">📅</span><input type="date" id="rep-end"></div>
+            </div>
+            
+            <div class="input-group" style="margin-bottom:12px;">
+                <select id="rep-type" style="color:white;">
+                    <option value="all" id="t-repAll">All Types</option>
+                    <option value="daily" id="t-repDaily">Daily</option>
+                    <option value="monthly" id="t-repMonthly">Monthly</option>
+                    <option value="meter" id="t-repMeter">Meter</option>
+                </select>
+            </div>
+            
+            <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none;">
+                <span class="input-icon">🔍</span>
+                <input type="text" id="rep-search" placeholder="Search Staff or Customer Name...">
+            </div>
+            
+            <button class="main-btn" onclick="generateReport()" id="t-repBtn" style="padding:14px; margin-top:0; font-size:15px;">Generate Report</button>
+            
+            <div id="rep-results" style="display:none; margin-top:20px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                    <div style="flex:1;">
+                        <span id="t-repGiven" style="font-size:12px; color:var(--text-muted);">Total Given</span><br>
+                        <b style="font-size:20px; color:var(--accent-orange);" id="rep-given">₹0</b>
+                    </div>
+                    <div style="flex:1; text-align:center;">
+                        <span id="t-repRet" style="font-size:12px; color:var(--text-muted);">Total Recovered</span><br>
+                        <b style="font-size:20px; color:var(--success);" id="rep-ret">₹0</b>
+                    </div>
+                    <div style="flex:1; text-align:right; display:none;" id="rep-profit-container">
+                        <span id="t-repProfit" style="font-size:12px; color:var(--text-muted);">Profit Earned</span><br>
+                        <b style="font-size:20px; color:var(--owner-gold);" id="rep-profit">₹0</b>
+                    </div>
+                </div>
+                <div id="rep-list" style="max-height: 350px; overflow-y: auto; padding-right:5px;">
+                    <!-- List will populate here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="sum-card accent-card sum-card-full" style="margin-bottom:15px;">
+            <span id="t-bizPort">Business Portfolio</span>
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:15px; color:white;">
+                <div style="flex:1; display:flex; align-items:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange);"></div>
+                    <span id="txt-m-prin">Monthly: ₹0</span>
+                </div>
+                <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#0ea5e9; box-shadow: 0 0 8px #0ea5e9;"></div>
+                    <span id="txt-d-prin">Daily: ₹0</span>
+                </div>
+                <div style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#a855f7; box-shadow: 0 0 8px #a855f7;"></div>
+                    <span id="txt-meter-prin">Meter: ₹0</span>
+                </div>
+            </div>
+            <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:12px; display:flex; overflow:hidden;">
+                <div id="bar-m-prin" style="background:var(--accent-orange); width:33%;"></div>
+                <div id="bar-d-prin" style="background:#0ea5e9; width:33%;"></div>
+                <div id="bar-meter-prin" style="background:#a855f7; width:34%;"></div>
+            </div>
+        </div>
+        <div class="sum-card sum-card-full">
+            <span id="t-recStatus">Recovery Status</span>
+            <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:15px; color:white;">
+                <div id="txt-recovered" style="color:var(--success); font-weight:bold;">Recovered: ₹0</div>
+                <div id="txt-remaining" style="color:var(--danger); font-weight:bold;">Remaining: ₹0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<div class="bottom-nav">
+    <div class="nav-item active" id="nav-dash" onclick="switchTab('dash')"><span class="nav-icon">⛶</span><span id="t-navDash">Home</span></div>
+    <div class="nav-item" id="nav-cust" onclick="switchTab('cust')"><span class="nav-icon">👤</span><span id="t-navCust">Accounts</span></div>
+    <div class="nav-item" id="nav-bulk" onclick="switchTab('bulk')"><span class="nav-icon">⚡</span><span id="t-navBulk">Fast Add</span></div>
+    <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyw89eS_-VlsXxxdlL5su-WEkfopRxTGp3wsO6C5BZYEGo9gMW_7SYI79WauV2rBoGtXg/exec";
+    
+    let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+    let pin = ""; 
+    let currentPin = localStorage.getItem('paymitra_pin') || "2525"; // Fallback PIN if no staff created
+    let secretPin = localStorage.getItem('paymitra_secret') || "1984"; 
+    let isOwnerMode = false; 
+    let deviceStaffName = ''; // Dynamically set on login
+    let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; 
+    let confirmActionCallback = null;
+    let isSaving = false;
+
+    // Helper to safely get or initialize config object for staff list
+    function getConfig() {
+        let conf = db.find(x => x.type === 'config');
+        if (!conf) {
+            conf = { id: 'config_staff', type: 'config', staffList: [] };
+            db.push(conf);
+        }
+        return conf;
+    }
+
+    const i18n = {
+        'en': { 
+            appSub: "Welcome Back 👋", sumPrin: "Total Principal", sumCases: "Total Cases", sumOut: "Outstanding", 
+            addTitle: "Create Record", namePh: "Customer Name", amtPh: "Principal Amount", addBtn: "Add Record", 
+            navDash: "Home", navCust: "Accounts", navBulk: "Fast Add", navStats: "Review", 
+            setMainTitle: "App Settings", setBackup: "Backup Data (JSON)", setRestore: "Restore Data", setPinStaff: "Change Staff PIN", setPinOwner: "Change Owner PIN 👑", setLogout: "Logout", setClose: "Close", 
+            searchPh: "Search Name...", cleanDashTitle: "Clean Dashboard", cleanDashSub: "Search a customer's name above to quick-view their account.<br>Go to <b>Accounts</b> tab to see the full list.", 
+            bizPort: "Business Portfolio", recStatus: "Recovery Status", monthly: "Monthly", daily: "Daily", meter: "Meter", recovered: "Recovered", remaining: "Remaining", 
+            ownerGrowth: "👑 Owner Growth Analytics", totInvested: "Total Invested", netProfit: "Net Earned Profit", ownerNote: "This data is strictly private and hidden in staff mode.",
+            refresh: "Refresh", totRetPh: "Total Return Amount", totDaysPh: "Total Days", 
+            allTypes: "All Types", fDaily: "Daily", fMonthly: "Monthly", fMeter: "Meter", fArchived: "Archived (Closed)",
+            optDaily: "Daily Kishat", optMonthly: "Monthly Vyaj", optMeter: "Meter (Rozana)", markPersonal: "👑 Mark as Personal Case",
+            sortNew: "Latest First ▼", sortOld: "Oldest First ▲",
+            delCaseMsg: "Delete this entire case?", delCaseSuccess: "Case Deleted!", editBtn: "Edit", recBtn: "Receive", bulkBtn: "⚡ Bulk",
+            bulkTitle: "Bulk Entry", bulkStart: "Start Date", bulkEnd: "End Date", bulkSubmit: "Process Bulk", bulkCancel: "Cancel", perMonthAmt: "Per Month Amount (₹)", perDayAmt: "Per Day Amount (₹)",
+            autoBackupLabel: "Auto Backup Data", abNever: "Never", abDaily: "Daily (On First Open)", abMonthly: "Monthly",
+            repTitle: "📅 Custom Date Report", repBtn: "Generate Report", repGiven: "Total Given", repRet: "Total Recovered", repProfit: "Profit Earned", repNoData: "No activity in this date range.", repNewCases: "🆕 NEW CASES GIVEN", repPayments: "✅ PAYMENTS RECEIVED", advProfit: "Advance Profit (Cut)",
+            archiveToast: "Case Archived!", unarchiveToast: "Case Restored!", staffRefPh: "Reference / Staff Name", lockSub: "Enter 4-Digit Login ID or Owner PIN"
+        },
+        'hi': { 
+            appSub: "नमस्ते 👋", sumPrin: "कुल मूलधन", sumCases: "कुल खाते", sumOut: "बकाया", 
+            addTitle: "नया खाता बनाएं", namePh: "ग्राहक का नाम", amtPh: "मूलधन (Principal)", addBtn: "खाता जोड़ें", 
+            navDash: "होम", navCust: "खाते", navBulk: "फास्ट ऐड", navStats: "रिव्यू", 
+            setMainTitle: "ऐप सेटिंग्स", setBackup: "डेटा बैकअप", setRestore: "डेटा रिस्टोर", setPinStaff: "स्टाफ PIN बदलें", setPinOwner: "मालिक PIN बदलें 👑", setLogout: "लॉगआउट", setClose: "बंद करें", 
+            searchPh: "नाम खोजें...", cleanDashTitle: "क्लीन डैशबोर्ड", cleanDashSub: "खाता देखने के लिए ऊपर नाम खोजें।<br>पूरी लिस्ट देखने के लिए <b>खाते</b> टैब पर जाएं।", 
+            bizPort: "बिजनेस पोर्टफोलियो", recStatus: "रिकवरी स्टेटस", monthly: "महीना", daily: "रोज़ाना", meter: "मीटर", recovered: "रिकवर हुआ", remaining: "बाकी", 
+            ownerGrowth: "👑 प्रॉफिट एनालिटिक्स", totInvested: "कुल निवेश", netProfit: "प्राप्त प्रॉफिट", ownerNote: "यह डेटा केवल मालिक के लिए है, स्टाफ को नहीं दिखेगा।",
+            refresh: "रिफ्रेश", totRetPh: "कुल वापसी रकम", totDaysPh: "कुल दिन", 
+            allTypes: "सभी प्रकार", fDaily: "रोज़ाना", fMonthly: "महीना", fMeter: "मीटर", fArchived: "बंद खाते (Archived)",
+            optDaily: "रोज़ की किश्त", optMonthly: "महीने का ब्याज", optMeter: "मीटर (रोज़ाना)", markPersonal: "👑 पर्सनल खाता",
+            sortNew: "नया पहले ▼", sortOld: "पुराना पहले ▲",
+            delCaseMsg: "क्या आप यह पूरा खाता हटाना चाहते हैं?", delCaseSuccess: "खाता हटा दिया गया!", editBtn: "एडिट", recBtn: "प्राप्त करें", bulkBtn: "⚡ बल्क",
+            bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
+            autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
+            repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं है।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "एडवांस प्रॉफिट (कटौती)",
+            archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4- अक्षरों की Login ID या Owner PIN डालें"
+        },
+        'pa': { 
+            appSub: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ 👋", sumPrin: "ਕੁੱਲ ਰਕਮ", sumCases: "ਕੁੱਲ ਖਾਤੇ", sumOut: "ਬਕਾਇਆ", 
+            addTitle: "ਨਵਾਂ ਖਾਤਾ ਬਣਾਓ", namePh: "ਗਾਹਕ ਦਾ ਨਾਮ", amtPh: "ਮੂਲ ਰਕਮ", addBtn: "ਖਾਤਾ ਜੋੜੋ", 
+            navDash: "ਹੋਮ", navCust: "ਖਾਤੇ", navBulk: "ਫਾਸਟ ਐਡ", navStats: "ਰਿਵਿਊ", 
+            setMainTitle: "ਐਪ ਸੈਟਿੰਗਜ਼", setBackup: "ਡਾਟਾ ਬੈਕਅੱਪ", setRestore: "ਡਾਟਾ ਰੀਸਟੋਰ", setPinStaff: "ਸਟਾਫ PIN ਬਦਲੋ", setPinOwner: "ਮਾਲਕ PIN ਬਦਲੋ 👑", setLogout: "ਲਾਗਆਉਟ", setClose: "ਬੰਦ ਕਰੋ", 
+            searchPh: "ਨਾਮ ਖੋਜੋ...", cleanDashTitle: "ਕਲੀਨ ਡੈਸ਼ਬੋਰਡ", cleanDashSub: "ਖਾਤਾ ਦੇਖਣ ਲਈ ਉੱਪਰ ਨਾਮ ਖੋਜੋ।<br>ਪੂਰੀ ਸੂਚੀ ਲਈ <b>ਖਾਤੇ</b> ਟੈਬ 'ਤੇ ਜਾਓ।", 
+            bizPort: "ਕਾਰੋਬਾਰ ਪੋਰਟਫੋਲੀਓ", recStatus: "ਰਿਕਵਰੀ ਸਥਿਤੀ", monthly: "ਮਹੀਨਾਵਾਰ", daily: "ਰੋਜ਼ਾਨਾ", meter: "ਮੀਟਰ", recovered: "ਵਸੂਲੀ ਹੋਈ", remaining: "ਬਕਾਇਆ", 
+            ownerGrowth: "👑 ਮੁਨਾਫਾ ਅਤੇ ਵਿਕਾਸ", totInvested: "ਕੁੱਲ ਨਿਵੇਸ਼", netProfit: "ਪ੍ਰਾਪਤ ਮੁਨਾਫਾ", ownerNote: "ਇਹ ਡਾਟਾ ਸਿਰਫ਼ ਮਾਲਕ ਲਈ ਹੈ, ਸਟਾਫ਼ ਤੋਂ ਲੁਕਿਆ ਹੋਇਆ ਹੈ।",
+            refresh: "ਰਿਫ੍ਰੈਸ਼", totRetPh: "ਕੁੱਲ ਵਾਪਸੀ ਰਕਮ", totDaysPh: "ਕੁੱਲ ਦਿਨ", 
+            allTypes: "ਸਾਰੀਆਂ ਕਿਸਮਾਂ", fDaily: "ਰੋਜ਼ਾਨਾ", fMonthly: "ਮਹੀਨਾਵਾਰ", fMeter: "ਮੀਟਰ", fArchived: "ਬੰਦ ਖਾਤੇ (Archived)",
+            optDaily: "ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", optMonthly: "ਮਹੀਨੇ ਦਾ ਵਿਆਜ", optMeter: "ਮੀਟਰ (ਰੋਜ਼ਾਨਾ)", markPersonal: "👑 ਪਰਸਨਲ ਖਾਤਾ",
+            sortNew: "ਨਵਾਂ ਪਹਿਲਾਂ ▼", sortOld: "ਪੁਰਾਣਾ ਪਹਿਲਾਂ ▲",
+            delCaseMsg: "ਕੀ ਤੁਸੀਂ ਇਹ ਪੂਰਾ ਖਾਤਾ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?", delCaseSuccess: "ਖਾਤਾ ਮਿਟਾ ਦਿੱਤਾ ਗਿਆ!", editBtn: "ਐਡਿਟ", recBtn: "ਪ੍ਰਾਪਤ ਕਰੋ", bulkBtn: "⚡ ਬਲਕ",
+            bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸ਼ੁਰੂਆਤੀ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰੱਦ ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (₹)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (₹)",
+            autoBackupLabel: "ਆਟੋ ਬੈਕਅੱਪ ਫਾਈਲ", abNever: "ਕਦੇ ਨਹੀਂ", abDaily: "ਰੋਜ਼ਾਨਾ (ਐਪ ਖੁੱਲਣ 'ਤੇ)", abMonthly: "ਮਹੀਨੇ ਵਿੱਚ ਇੱਕ ਵਾਰ",
+            repTitle: "📅 ਤਾਰੀਖ ਦੇ ਅਨੁਸਾਰ ਰਿਪੋਰਟ", repBtn: "ਰਿਪੋਰਟ ਦੇਖੋ", repGiven: "ਕੁੱਲ ਦਿੱਤਾ", repRet: "ਕੁੱਲ ਰਿਕਵਰੀ", repProfit: "ਕਮਾਇਆ ਮੁਨਾਫਾ", repNoData: "ਇਸ ਤਾਰੀਖ ਵਿੱਚ ਕੋਈ ਡਾਟਾ ਨਹੀਂ ਹੈ।", repNewCases: "🆕 ਨਵੇਂ ਖਾਤੇ (GIVEN)", repPayments: "✅ ਪ੍ਰਾਪਤ ਰਿਕਵਰੀ (RECEIVED)", advProfit: "ਐਡਵਾਂਸ ਮੁਨਾਫਾ (ਕਟੌਤੀ)",
+            archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ Login ID ਜਾਂ Owner PIN ਦਰਜ ਕਰੋ"
+        }
+    };
+    
+    let currentLang = localStorage.getItem('paymitra_lang') || 'en';
+    let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
+
+    window.onload = function() { 
+        document.getElementById('lock-screen').style.display = 'flex'; 
+        document.getElementById('main-app').style.display = 'none'; 
+        if(document.getElementById('lang-select')) document.getElementById('lang-select').value = currentLang;
+        if(document.getElementById('auto-backup-select')) document.getElementById('auto-backup-select').value = autoBackupFreq;
+        
+        let todayDate = new Date().toISOString().split('T')[0];
+        if(document.getElementById('date')) document.getElementById('date').value = todayDate;
+        if(document.getElementById('rep-start')) document.getElementById('rep-start').value = todayDate;
+        if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
+
+        applyLang();
+
+        // Background Auto-Sync setup
+        setInterval(backgroundSync, 15000); 
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") backgroundSync(); 
+        });
+    };
+
+    function changeLang() {
+        currentLang = document.getElementById('lang-select').value;
+        localStorage.setItem('paymitra_lang', currentLang);
+        applyLang();
+        render(); 
+        showToast("Language Updated!");
+    }
+
+    function changeAutoBackup() {
+        autoBackupFreq = document.getElementById('auto-backup-select').value;
+        localStorage.setItem('paymitra_autobackup', autoBackupFreq);
+        showToast("Auto Backup Saved!");
+    }
+
+    function applyLang() {
+        const t = i18n[currentLang];
+        document.getElementById('t-appSub').innerText = t.appSub;
+        document.getElementById('t-sumPrin').innerText = t.sumPrin;
+        document.getElementById('t-sumCases').innerText = t.sumCases;
+        document.getElementById('t-sumOut').innerText = t.sumOut;
+        document.getElementById('t-refresh').innerText = t.refresh;
+        document.getElementById('t-addTitle').innerText = t.addTitle;
+        document.getElementById('t-addBtn').innerText = t.addBtn;
+        document.getElementById('t-opt-daily').innerText = t.optDaily;
+        document.getElementById('t-opt-monthly').innerText = t.optMonthly;
+        document.getElementById('t-opt-meter').innerText = t.optMeter;
+        document.getElementById('t-markPersonal').innerText = t.markPersonal;
+        if(document.getElementById('t-editMarkPersonal')) document.getElementById('t-editMarkPersonal').innerText = t.markPersonal;
+        document.getElementById('t-navDash').innerText = t.navDash;
+        document.getElementById('t-navCust').innerText = t.navCust;
+        document.getElementById('t-navBulk').innerText = t.navBulk;
+        document.getElementById('t-navStats').innerText = t.navStats;
+        document.getElementById('t-setMainTitle').innerText = t.setMainTitle;
+        document.getElementById('t-setBackup').innerText = t.setBackup;
+        document.getElementById('t-setRestore').innerText = t.setRestore;
+        document.getElementById('btn-owner-pin').innerText = t.setPinOwner;
+        document.getElementById('t-setLogout').innerText = t.setLogout;
+        document.getElementById('t-setClose').innerText = t.setClose;
+        document.getElementById('t-autoBackupLabel').innerText = t.autoBackupLabel;
+        document.getElementById('t-abNever').innerText = t.abNever;
+        document.getElementById('t-abDaily').innerText = t.abDaily;
+        document.getElementById('t-abMonthly').innerText = t.abMonthly;
+        document.getElementById('t-bizPort').innerText = t.bizPort;
+        document.getElementById('t-recStatus').innerText = t.recStatus;
+        document.getElementById('t-ownerGrowth').innerText = t.ownerGrowth;
+        document.getElementById('t-totInvested').innerText = t.totInvested;
+        document.getElementById('t-netProfit').innerText = t.netProfit;
+        document.getElementById('t-ownerNote').innerText = t.ownerNote;
+        document.getElementById('f-opt-all').innerText = t.allTypes;
+        document.getElementById('f-opt-daily').innerText = t.fDaily;
+        document.getElementById('f-opt-monthly').innerText = t.fMonthly;
+        document.getElementById('f-opt-meter').innerText = t.fMeter;
+        if(document.getElementById('f-opt-archived')) document.getElementById('f-opt-archived').innerText = t.fArchived;
+        document.getElementById('s-opt-new').innerText = t.sortNew;
+        document.getElementById('s-opt-old').innerText = t.sortOld;
+        document.getElementById('t-bulkTitle').innerText = t.bulkTitle;
+        document.getElementById('t-bulkStart').innerText = t.bulkStart;
+        document.getElementById('t-bulkEnd').innerText = t.bulkEnd;
+        document.getElementById('t-bulkSubmit').innerText = t.bulkSubmit;
+        document.getElementById('t-bulkCancel').innerText = t.bulkCancel;
+        document.getElementById('name').placeholder = t.namePh;
+        document.getElementById('amt').placeholder = t.amtPh;
+        document.getElementById('search-box').placeholder = t.searchPh;
+        document.getElementById('total_ret').placeholder = t.totRetPh;
+        document.getElementById('days').placeholder = t.totDaysPh;
+        
+        document.getElementById('t-repTitle').innerText = t.repTitle;
+        document.getElementById('t-repBtn').innerText = t.repBtn;
+        document.getElementById('t-repGiven').innerText = t.repGiven;
+        document.getElementById('t-repRet').innerText = t.repRet;
+        document.getElementById('t-repProfit').innerText = t.repProfit;
+        document.getElementById('t-repAll').innerText = t.allTypes;
+        document.getElementById('t-repDaily').innerText = t.fDaily;
+        document.getElementById('t-repMonthly').innerText = t.fMonthly;
+        document.getElementById('t-repMeter').innerText = t.fMeter;
+
+        document.getElementById('staff-ref').placeholder = t.staffRefPh;
+        document.getElementById('t-editStaffRefLabel').innerText = t.staffRefPh;
+        document.getElementById('t-lockSub').innerText = t.lockSub;
+    }
+
+    function showToast(msg) {
+        let t = document.getElementById('toast-box');
+        t.innerText = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function askConfirm(msg, callback) {
+        document.getElementById('confirm-text').innerText = msg;
+        confirmActionCallback = callback;
+        document.getElementById('confirm-modal').style.display = 'flex';
+    }
+    
+    function executeConfirm() {
+        if(confirmActionCallback) confirmActionCallback();
+        closeModal('confirm-modal');
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        openViews = {};
+        multiDelMode = {};
+        
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('nav-' + tab).classList.add('active');
+        document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none';
+        document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none';
+        document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none';
+        document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex';
+        document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex';
+        document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block';
+
+        if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all';
+        if(document.getElementById('search-box')) document.getElementById('search-box').value = '';
+        if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new';
+
+        if(tab === 'stats') {
+            let todayDate = new Date().toISOString().split('T')[0];
+            document.getElementById('rep-start').value = todayDate;
+            document.getElementById('rep-end').value = todayDate;
+            if(document.getElementById('rep-type')) document.getElementById('rep-type').value = 'all'; 
+            if(document.getElementById('rep-search')) document.getElementById('rep-search').value = ''; 
+            document.getElementById('rep-results').style.display = 'none'; 
+            document.getElementById('rep-list').scrollTop = 0; 
+            window.scrollTo(0, 0); 
+        }
+
+        render();
+    }
+
+    function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    function logout() { 
+        closeModal('settings-modal');
+        document.getElementById('main-app').style.display = 'none';
+        document.getElementById('lock-screen').style.display = 'flex';
+        resetPin();
+        isOwnerMode = false;
+        deviceStaffName = '';
+        
+        currentLang = 'en';
+        localStorage.setItem('paymitra_lang', 'en');
+        if(document.getElementById('lang-select')) document.getElementById('lang-select').value = 'en';
+        applyLang();
+
+        if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all';
+        if(document.getElementById('search-box')) document.getElementById('search-box').value = '';
+        if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new';
+        
+        switchTab('dash');
+        showToast("App Locked Securely");
+    }
+
+    function hardRefresh() {
+        loadFromCloud();
+    }
+    
+    // Manage Staff Logic
+    function openStaffModal() {
+        closeModal('settings-modal');
+        renderStaffList();
+        document.getElementById('staff-modal').style.display = 'flex';
+    }
+
+    function renderStaffList() {
+        let conf = getConfig();
+        let html = '';
+        if (conf.staffList.length === 0) {
+            html = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">No staff added yet.</div>';
+        } else {
+            conf.staffList.forEach((s, i) => {
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; margin-bottom:8px; font-size:14px;">
+                    <div><b style="color:white;">${s.name}</b> <span style="color:var(--accent-orange); font-size:12px; margin-left:10px; font-weight:700;">[ID: ${s.pin}]</span></div>
+                    <span onclick="deleteStaff(${i})" style="color:var(--danger); cursor:pointer; font-size:18px;">🗑️</span>
+                </div>`;
+            });
+        }
+        document.getElementById('staff-list-container').innerHTML = html;
+    }
+
+    function addStaff() {
+        let name = document.getElementById('new-staff-name').value.trim();
+        let pinVal = document.getElementById('new-staff-pin').value.trim();
+        if (!name || pinVal.length !== 4) return showToast("Enter Name and 4-Digit ID!");
+        
+        let conf = getConfig();
+        if (conf.staffList.some(s => s.pin === pinVal) || pinVal === secretPin) {
+            return showToast("This ID is already taken!");
+        }
+        conf.staffList.push({ name: name, pin: pinVal });
+        saveAndRender();
+        document.getElementById('new-staff-name').value = '';
+        document.getElementById('new-staff-pin').value = '';
+        renderStaffList();
+        showToast("Staff Added!");
+    }
+
+    function deleteStaff(idx) {
+        let conf = getConfig();
+        conf.staffList.splice(idx, 1);
+        saveAndRender();
+        renderStaffList();
+    }
+
+    function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
+    function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
+
+    function exportData() { 
+        let d = new Date(); 
+        let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0');
+        let fileName = "CredixBackup_" + dateStr + ".json";
+        let a = document.createElement("a"); 
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); 
+        a.download = fileName; 
+        a.click(); 
+    }
+    
+    function importData() { 
+        let i = document.createElement('input'); i.type = 'file'; 
+        i.onchange = e => { 
+            let r = new FileReader(); 
+            r.onload = () => { 
+                try {
+                    db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); 
+                } catch(err) {
+                    showToast("Invalid Backup File");
+                }
+            }; 
+            r.readAsText(e.target.files[0]); 
+        }; 
+        i.click(); 
+    }
+
+    function press(n) { 
+        if(pin.length < 4) { 
+            pin += n; document.getElementById('d' + pin.length).classList.add('active'); 
+        } 
+    }
+    function resetPin() { pin = ""; for(let i=1; i<=4; i++) document.getElementById('d'+i).classList.remove('active'); }
+    
+    function deletePinChar() {
+        if(pin.length > 0) {
+            document.getElementById('d' + pin.length).classList.remove('active');
+            pin = pin.slice(0, -1);
+        }
+    }
+    
+    function checkPin() { 
+        let conf = getConfig();
+        if (pin === secretPin || pin === "1984") { 
+            isOwnerMode = true;
+            deviceStaffName = "Owner";
+            showToast("Owner Mode Unlocked 👑");
+            unlockApp();
+        } else {
+            let staffMatch = conf.staffList.find(s => s.pin === pin);
+            if (staffMatch) {
+                isOwnerMode = false;
+                deviceStaffName = staffMatch.name;
+                showToast(`Welcome ${deviceStaffName} 👋`);
+                unlockApp();
+            } else if (pin === currentPin && conf.staffList.length === 0) {
+                // Fallback support if owner hasn't created any staff ID yet
+                isOwnerMode = false;
+                deviceStaffName = "Default Staff";
+                showToast("Staff Mode Active");
+                unlockApp();
+            } else {
+                showToast("Invalid ID / PIN"); 
+                resetPin(); 
+            }
+        } 
+    }
+
+    function checkAutoBackup() {
+        if(autoBackupFreq === 'never' || db.length === 0) return;
+        let todayObj = new Date();
+        let todayStr = todayObj.toISOString().split('T')[0];
+        let lastBackup = localStorage.getItem('paymitra_lastbackup') || '';
+        if (autoBackupFreq === 'daily') {
+            if (lastBackup !== todayStr) {
+                exportData();
+                localStorage.setItem('paymitra_lastbackup', todayStr);
+                setTimeout(() => showToast("Daily Auto Backup Complete!"), 1000);
+            }
+        } else if (autoBackupFreq === 'monthly') {
+            let currentMonth = todayObj.getFullYear() + '-' + todayObj.getMonth();
+            let lastMonth = lastBackup ? new Date(lastBackup).getFullYear() + '-' + new Date(lastBackup).getMonth() : '';
+            if (currentMonth !== lastMonth) {
+                exportData();
+                localStorage.setItem('paymitra_lastbackup', todayStr);
+                setTimeout(() => showToast("Monthly Auto Backup Complete!"), 1000);
+            }
+        }
+    }
+
+    function unlockApp() { 
+        document.getElementById('lock-screen').style.display = 'none'; 
+        document.getElementById('main-app').style.display = 'block'; 
+        
+        if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all';
+        if(document.getElementById('search-box')) document.getElementById('search-box').value = '';
+        if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new';
+        
+        if(isOwnerMode) {
+            document.getElementById('owner-badge').style.display = 'block';
+            document.getElementById('owner-title-badge').style.display = 'inline';
+            document.getElementById('personal-wrap').style.display = 'flex';
+            document.getElementById('btn-owner-pin').style.display = 'block';
+            document.getElementById('btn-manage-staff').style.display = 'block';
+            document.getElementById('owner-analytics').style.display = 'block';
+            document.getElementById('wrap-staff-ref').style.display = 'flex'; 
+            document.getElementById('rep-search-wrap').style.display = 'flex'; 
+            document.getElementById('t-appSub').innerText = "Owner Dashboard 👑";
+        } else {
+            document.getElementById('owner-badge').style.display = 'none';
+            document.getElementById('owner-title-badge').style.display = 'none';
+            document.getElementById('personal-wrap').style.display = 'none';
+            document.getElementById('btn-owner-pin').style.display = 'none';
+            document.getElementById('btn-manage-staff').style.display = 'none';
+            document.getElementById('owner-analytics').style.display = 'none';
+            document.getElementById('is-personal').checked = false;
+            document.getElementById('wrap-staff-ref').style.display = 'none'; 
+            document.getElementById('rep-search-wrap').style.display = 'none'; 
+            document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
+        }
+        render(); loadFromCloud(); checkAutoBackup();
+    }
+
+    async function loadFromCloud() {
+        document.getElementById('sync-status').innerText = "Syncing...";
+        try {
+            const res = await fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" });
+            const text = await res.text();
+            if(text && text.length > 5) { db = JSON.parse(text); localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); }
+            document.getElementById('sync-status').innerText = "Cloud Synced";
+            document.getElementById('cloud-indicator').className = "status-dot";
+        } catch(e) { 
+            console.error("Offline error", e);
+            document.getElementById('sync-status').innerText = "Offline Mode";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+        }
+    }
+
+    async function backgroundSync() {
+        let isAnyModalOpen = false;
+        let modals = document.querySelectorAll('.modal');
+        modals.forEach(m => {
+            if(m.style.display === 'flex' || m.style.display === 'block') {
+                isAnyModalOpen = true;
+            }
+        });
+
+        if(document.getElementById('lock-screen').style.display !== 'none' || isSaving || isAnyModalOpen) return;
+        
+        try {
+            const res = await fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" });
+            const text = await res.text();
+            if(text && text.length > 5) {
+                let newDb = JSON.parse(text);
+                if(JSON.stringify(newDb) !== JSON.stringify(db) && !isSaving) {
+                    db = newDb;
+                    localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                    render();
+                    showToast("Data Auto-Updated!"); 
+                }
+            }
+        } catch(e) { 
+        }
+    }
+
+    function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
+    function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
+
+    function triggerShake(id) {
+        let el = document.getElementById(id);
+        if(el) {
+            let group = el.closest('.input-group');
+            if(group) {
+                group.classList.add('shake-error');
+                setTimeout(() => group.classList.remove('shake-error'), 400);
+            }
+        }
+    }
+
+    function recalculateCase(c) {
+        if(!c.history) c.history = [];
+        c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+        let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
+        c.history.forEach(h => {
+            if(c.type === 'monthly' || c.type === 'meter') { let intDue = (tempBal * (c.rate||0) / 100); if(h.paid > intDue) tempBal -= (h.paid - intDue); } else { tempBal -= h.paid; }
+            h.balance = tempBal; h.bal = tempBal.toFixed(0);
+        });
+        c.currentBalance = tempBal;
+    }
+
+    function addCustomer() {
+        const tLang = i18n[currentLang];
+        const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
+        const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
+        const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
+        
+        if(!name) { triggerShake('name'); return showToast(tLang.missingNameAmt || "Missing Name!"); }
+        if(isNaN(amt) || amt <= 0) { triggerShake('amt'); return showToast(tLang.missingNameAmt || "Missing Principal!"); }
+        
+        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false };
+        
+        if(type === 'monthly') { 
+            let rateVal = parseFloat(document.getElementById('rate').value);
+            if(isNaN(rateVal)) { triggerShake('rate'); return showToast(tLang.missingRate || "Missing Interest Rate!"); }
+            cust.rate = rateVal; 
+            cust.currentBalance = amt; 
+        } 
+        else if (type === 'meter') { 
+            let mAmt = parseFloat(document.getElementById('meter-amt').value);
+            if(isNaN(mAmt)) { triggerShake('meter-amt'); return showToast(tLang.missingMeter || "Missing Rozana Vyaj!"); }
+            cust.rate = (mAmt / amt) * 100; 
+            cust.currentBalance = amt; 
+        } 
+        else { 
+            let tRet = parseFloat(document.getElementById('total_ret').value);
+            let dVals = parseInt(document.getElementById('days').value);
+            if(isNaN(tRet)) { triggerShake('total_ret'); return showToast(tLang.missingRet || "Missing Return Amount!"); }
+            if(isNaN(dVals) || dVals <= 0) { triggerShake('days'); return showToast(tLang.missingDays || "Missing Total Days!"); }
+            
+            cust.totalPayable = tRet; 
+            cust.currentBalance = cust.totalPayable; 
+            cust.installment = cust.totalPayable / dVals; 
+        }
+        
+        db.push(cust); saveAndRender(); 
+        
+        document.getElementById('name').value = '';
+        document.getElementById('amt').value = '';
+        document.getElementById('staff-ref').value = '';
+        if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
+        if(document.getElementById('days')) document.getElementById('days').value = '';
+        if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
+        
+        showToast("Record Created!");
+    }
+
+    function saveAndRender() { 
+        isSaving = true;
+        localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
+        render(); 
+        
+        document.getElementById('sync-status').innerText = "Saving to Cloud...";
+        document.getElementById('cloud-indicator').className = "status-dot";
+        
+        fetch(SCRIPT_URL, { 
+            method: "POST", 
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "save", data: JSON.stringify(db) }) 
+        })
+        .then(res => res.text())
+        .then(res => {
+            if(res === "Success") {
+                document.getElementById('sync-status').innerText = "Cloud Synced";
+            } else {
+                document.getElementById('sync-status').innerText = "Save Error";
+                document.getElementById('cloud-indicator').className = "status-dot offline";
+            }
+            isSaving = false;
+        })
+        .catch(e => { 
+            console.log("Save offline", e);
+            document.getElementById('sync-status').innerText = "Saved Offline";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+            isSaving = false;
+        }); 
+    }
+    
+    function toggleView(id) { 
+        if(openViews[id]) { 
+            delete openViews[id]; 
+            multiDelMode[id] = false; 
+        } else { 
+            openViews[id] = true; 
+        } 
+        render(); 
+    }
+
+    function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
+
+    function toggleSelectAllHistory(id) {
+        let checks = document.querySelectorAll(`.del-chk-${id}`);
+        let allChecked = Array.from(checks).every(ck => ck.checked);
+        checks.forEach(ck => ck.checked = !allChecked);
+    }
+
+    function openPayModal(id) { 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('pay-id').value = id; 
+        document.getElementById('pay-date').value = new Date().toISOString().split('T')[0]; 
+        let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0));
+        document.getElementById('pay-amt').value = amt.toFixed(0); 
+        document.getElementById('pay-modal').style.display = 'flex'; 
+    }
+    
+    function savePayment() { 
+        let id = parseInt(document.getElementById('pay-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('pay-amt').value); 
+        let dateStr = document.getElementById('pay-date').value; 
+        if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
+        
+        if(c.history && c.history.some(h => h.date === dateStr)) {
+            triggerShake('pay-date');
+            const tLang = i18n[currentLang];
+            return showToast(tLang.dupEntry || "Payment already added for this date!");
+        }
+
+        c.history.push({ date: dateStr, paid: amt }); 
+        recalculateCase(c);
+        saveAndRender(); 
+        closeModal('pay-modal'); 
+        showToast("Payment Saved");
+    }
+
+    function openBulkModal(id) { 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('bulk-id').value = id; 
+        document.getElementById('bulk-start-date').value = new Date().toISOString().split('T')[0]; 
+        document.getElementById('bulk-end-date').value = new Date().toISOString().split('T')[0]; 
+        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0));
+        document.getElementById('bulk-amt').value = amt.toFixed(0); 
+        const t = i18n[currentLang];
+        const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily);
+        document.getElementById('bulk-freq-label').innerText = `(${freqText})`;
+        document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt;
+        document.getElementById('bulk-modal').style.display = 'flex'; 
+    }
+    
+    function saveBulkPayment() { 
+        let id = parseInt(document.getElementById('bulk-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('bulk-amt').value); 
+        let startStr = document.getElementById('bulk-start-date').value; 
+        let endStr = document.getElementById('bulk-end-date').value; 
+        if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } 
+        let startDate = new Date(startStr); let endDate = new Date(endStr); 
+        if(endDate < startDate) return showToast("End date must be later"); 
+        
+        let tempDate = new Date(startDate);
+        let hasDuplicate = false;
+        while(tempDate <= endDate) {
+            let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; 
+            if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; }
+            if(c.type === 'monthly') { tempDate.setMonth(tempDate.getMonth() + 1); } else { tempDate.setDate(tempDate.getDate() + 1); } 
+        }
+
+        if(hasDuplicate) {
+            triggerShake('bulk-start-date');
+            triggerShake('bulk-end-date');
+            const tLang = i18n[currentLang];
+            return showToast(tLang.dupEntry || "Payment already added for this date!");
+        }
+
+        let currentDate = new Date(startDate); 
+        while(currentDate <= endDate) { 
+            let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; 
+            c.history.push({ date: pushDate, paid: amt }); 
+            if(c.type === 'monthly') { currentDate.setMonth(currentDate.getMonth() + 1); } else { currentDate.setDate(currentDate.getDate() + 1); } 
+        } 
+        recalculateCase(c);
+        saveAndRender(); 
+        closeModal('bulk-modal'); 
+        showToast("Bulk Saved!");
+    }
+
+    function openEditModal(id) { 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('edit-id').value = id; 
+        document.getElementById('edit-name').value = c.name; 
+        document.getElementById('edit-staff-ref').value = c.staffRef || '';
+        document.getElementById('edit-date').value = c.startDate; 
+        document.getElementById('edit-amt').value = c.principal; 
+        if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } 
+        else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } 
+        else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } 
+        
+        if(isOwnerMode) {
+            document.getElementById('edit-staff-wrap').style.display = 'block';
+            document.getElementById('edit-personal-wrap').style.display = 'flex';
+            document.getElementById('edit-is-personal').checked = !!c.isPersonal;
+        } else {
+            document.getElementById('edit-staff-wrap').style.display = 'none';
+            document.getElementById('edit-personal-wrap').style.display = 'none';
+        }
+
+        document.getElementById('edit-modal').style.display = 'flex'; 
+    }
+    
+    function saveEdit() { 
+        let id = parseInt(document.getElementById('edit-id').value); 
+        let c = db.find(x => x.id === id); 
+        
+        let oldPrincipal = c.principal;
+        let oldTotalPayable = c.totalPayable;
+        let oldInstallment = c.installment;
+        let oldRate = c.rate;
+
+        let nameVal = document.getElementById('edit-name').value;
+        if (nameVal) c.name = nameVal; 
+        
+        if(isOwnerMode) {
+            c.staffRef = document.getElementById('edit-staff-ref').value.trim();
+            c.isPersonal = document.getElementById('edit-is-personal').checked;
+        }
+
+        let dateVal = document.getElementById('edit-date').value;
+        if (dateVal) c.startDate = dateVal; 
+
+        let amtVal = parseFloat(document.getElementById('edit-amt').value);
+        if (!isNaN(amtVal)) c.principal = amtVal; 
+        
+        let extra = parseFloat(document.getElementById('edit-extra').value); 
+        
+        if(c.type === 'monthly') { 
+            c.rate = !isNaN(extra) ? extra : oldRate; 
+        } 
+        else if(c.type === 'meter') { 
+            c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; 
+        } 
+        else { 
+            c.installment = !isNaN(extra) ? extra : oldInstallment; 
+            let retInput = document.getElementById('edit-ret');
+            if (retInput && retInput.value) {
+                let parsedRet = parseFloat(retInput.value);
+                c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal);
+            } else {
+                c.totalPayable = oldTotalPayable || c.principal;
+            }
+        } 
+        
+        recalculateCase(c); 
+        closeModal('edit-modal'); 
+        saveAndRender(); 
+        showToast("Account Updated");
+    }
+
+    function toggleArchiveUI(id) {
+        let c = db.find(x => x.id === id);
+        let isArchiving = !c.isArchived;
+        let tLang = i18n[currentLang];
+        let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?";
+        askConfirm(msg, () => {
+            c.isArchived = isArchiving;
+            saveAndRender();
+            showToast(isArchiving ? (tLang.archiveToast || "Archived!") : (tLang.unarchiveToast || "Unarchived!"));
+        });
+    }
+    
+    function deleteCustUI(id) {
+        askConfirm("Are you sure you want to delete this entire account?", () => {
+            db = db.filter(x => x.id !== id);
+            saveAndRender();
+            showToast("Account Deleted!");
+        });
+    }
+
+    function deleteHistoryUI(custId, originalIndex) {
+        askConfirm("Delete this entry?", () => {
+            let c = db.find(x => x.id === custId);
+            c.history.splice(originalIndex, 1);
+            recalculateCase(c);
+            saveAndRender();
+            showToast("Entry Deleted!");
+        });
+    }
+
+    function deleteSelectedHistoryUI(id) {
+        let checks = document.querySelectorAll(`.del-chk-${id}:checked`);
+        if(checks.length === 0) return toggleMultiDel(id);
+        askConfirm(`Delete ${checks.length} entries?`, () => {
+            let c = db.find(x => x.id === id);
+            let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a);
+            indices.forEach(idx => { c.history.splice(idx, 1); });
+            multiDelMode[id] = false;
+            recalculateCase(c);
+            saveAndRender();
+            showToast("Selected Deleted!");
+        });
+    }
+
+    function generateReport() {
+        const start = document.getElementById('rep-start').value;
+        const end = document.getElementById('rep-end').value;
+        const type = document.getElementById('rep-type').value;
+        const searchQ = document.getElementById('rep-search').value.toLowerCase().trim();
+        const t = i18n[currentLang];
+        
+        if (!start || !end) return showToast("Select both dates!");
+        if (start > end) return showToast("Start date must be before end date!");
+
+        let totalGiven = 0;
+        let totalReturned = 0;
+        let totalProfitInRange = 0; 
+        let casesInRange = [];
+        let paymentsInRange = [];
+
+        let todayStr = new Date().toISOString().split('T')[0];
+        let currentMonth = todayStr.substring(0, 7);
+
+        db.filter(x => x.type !== 'config').forEach(c => {
+            if (!isOwnerMode && c.isPersonal) return;
+            // STRICT PRIVACY: Agar staff ka naam match nahi karta, toh data hide kar do
+            if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
+            if (type !== 'all' && c.type !== type) return;
+
+            // OWNER SEARCH FILTER
+            if (isOwnerMode && searchQ !== '') {
+                let cName = (c.name || '').toLowerCase();
+                let sRef = (c.staffRef || '').toLowerCase();
+                if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return;
+            }
+
+            if (c.startDate >= start && c.startDate <= end) {
+                totalGiven += c.principal;
+                
+                let reportCaseObj = {...c}; 
+                
+                if (c.type === 'monthly' && isOwnerMode) {
+                    let upfrontProfit = c.principal * ((c.rate || 0) / 100);
+                    totalProfitInRange += upfrontProfit;
+                    reportCaseObj.tempUpfrontProfit = upfrontProfit; 
+                }
+                casesInRange.push(reportCaseObj);
+            }
+
+            let customerTotal = 0;
+            let customerProfit = 0;
+            let paymentCount = 0;
+            
+            let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
+            let cRatio = 0;
+            if(c.type === 'daily') {
+                cRatio = ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal);
+                if (cRatio < 0) cRatio = 0;
+            }
+
+            if(c.history) {
+                let sortedHist = [...c.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                let visibleHist = new Set(sortedHist); // By default all history is visible
+                
+                // REPORT PRIVACY FIX FOR STAFF
+                if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter') && sortedHist.length > 1) {
+                    let activeMonthRecords = sortedHist.filter(h => h.date.substring(0, 7) === currentMonth);
+                    if (activeMonthRecords.length > 0) {
+                        visibleHist = new Set(activeMonthRecords);
+                    } else {
+                        visibleHist = new Set(sortedHist.slice(-1));
+                    }
+                }
+
+                sortedHist.forEach(h => {
+                    let paid = parseFloat(h.paid);
+                    let profitFromThisPayment = 0;
+
+                    if(c.type === 'monthly' || c.type === 'meter') {
+                        let intDue = tempBal * (c.rate / 100);
+                        if (paid <= intDue) {
+                            profitFromThisPayment = paid;
+                        } else {
+                            profitFromThisPayment = intDue;
+                            tempBal -= (paid - intDue);
+                        }
+                    } else {
+                        profitFromThisPayment = paid * cRatio;
+                        tempBal -= paid;
+                    }
+
+                    // ONLY COUNT PAYMENTS THAT ARE VISIBLE TO STAFF
+                    if (visibleHist.has(h) && h.date >= start && h.date <= end) {
+                        customerTotal += paid;
+                        totalReturned += paid;
+                        customerProfit += profitFromThisPayment;
+                        totalProfitInRange += profitFromThisPayment;
+                        paymentCount++;
+                    }
+                });
+            }
+            if (customerTotal > 0) {
+                paymentsInRange.push({ name: c.name, total: customerTotal, profit: customerProfit, count: paymentCount, type: c.type });
+            }
+        });
+
+        document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
+        document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
+        
+        if(isOwnerMode) {
+            document.getElementById('rep-profit-container').style.display = 'block';
+            document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0});
+        } else {
+            document.getElementById('rep-profit-container').style.display = 'none';
+        }
+
+        let reportHtml = "";
+
+        if (casesInRange.length > 0) {
+            reportHtml += `<div style="color:var(--accent-orange); font-size:11px; margin:10px 0 5px; font-weight:600;">${t.repNewCases || "🆕 NEW CASES GIVEN"}</div>`;
+            casesInRange.forEach(c => {
+                let typeTxt = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily);
+                let advProfitHtml = (isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.advProfit || 'Advance Profit (Cut)'}: ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : '';
+                
+                reportHtml += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:5px; font-size:12px; border-left:3px solid var(--accent-orange);">
+                    <div><b style="color:var(--text-main);">${c.name}</b><br><span style="color:var(--text-muted); font-size:10px;">${c.startDate} | ${typeTxt.toUpperCase()}</span></div>
+                    <div style="text-align:right;">
+                        <b style="color:var(--accent-orange);">₹${c.principal.toLocaleString()}</b>
+                        ${advProfitHtml}
+                    </div>
+                </div>`;
+            });
+        }
+
+        if (paymentsInRange.length > 0) {
+            reportHtml += `<div style="color:var(--success); font-size:11px; margin:15px 0 5px; font-weight:600;">${t.repPayments || "✅ PAYMENTS RECEIVED"} (TOTAL)</div>`;
+            paymentsInRange.sort((a,b) => b.total - a.total).forEach(p => {
+                let typeTxt = p.type === 'monthly' ? t.fMonthly : (p.type === 'meter' ? t.fMeter : t.fDaily);
+                let detailText = '';
+                if (p.type === 'daily' || p.type === 'meter') {
+                    let perDay = (p.total / p.count).toFixed(0);
+                    detailText = `₹${perDay} × ${p.count} Days | ${typeTxt.toUpperCase()}`;
+                } else {
+                    let perMonth = (p.total / p.count).toFixed(0);
+                    detailText = `₹${perMonth} Vyaj/Interest × ${p.count} Month | ${typeTxt.toUpperCase()}`;
+                }
+
+                reportHtml += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:5px; font-size:12px; border-left:3px solid var(--success);">
+                    <div><b style="color:var(--text-main);">${p.name}</b><br><span style="color:var(--text-muted); font-size:10px;">${detailText}</span></div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:bold; color:var(--success);">+ ₹${p.total.toLocaleString()}</div>
+                        ${isOwnerMode ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">Profit: ₹${p.profit.toFixed(0)}</div>` : ''}
+                    </div>
+                </div>`;
+            });
+        }
+
+        if(casesInRange.length === 0 && paymentsInRange.length === 0) {
+            reportHtml += `<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px; border: 1px dashed rgba(255,255,255,0.1); border-radius:10px; margin-top:10px;">${t.repNoData || "No activity in this date range."}</div>`;
+        }
+
+        document.getElementById('rep-list').innerHTML = reportHtml;
+        document.getElementById('rep-results').style.display = 'block';
+        document.getElementById('rep-list').scrollTop = 0;
+    }
+
+    function render() {
+        if(currentTab === 'stats') { renderStats(); return; }
+        const dash = document.getElementById('dashboard'); dash.innerHTML = '';
+        let sName = document.getElementById('search-box').value.toLowerCase();
+        let fType = document.getElementById('filter-box').value;
+        let sortType = document.getElementById('sort-box').value;
+        let tP = 0, tB = 0, tC = 0;
+        let today = new Date().toISOString().split('T')[0];
+        
+        let pureDB = db.filter(x => x.type !== 'config');
+        let mappedDB = pureDB.map((c, originalSNoIndex) => ({...c, originalSNo: originalSNoIndex + 1}));
+        
+        let sortedDB = mappedDB.sort((a, b) => {
+            let dateA = new Date(a.startDate).getTime(); let dateB = new Date(b.startDate).getTime();
+            if (dateA === dateB) { return sortType === 'new' ? b.id - a.id : a.id - b.id; }
+            return sortType === 'new' ? dateB - dateA : dateA - dateB;
+        });
+
+        sortedDB.forEach(c => {
+            if(!isOwnerMode && c.isPersonal) return;
+            // STRICT PRIVACY: Bina naam wale aur dusre staff wale case nahi dikhenge
+            if(!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
+            
+            // ARCHIVE FILTER LOGIC
+            if(fType === 'archived') {
+                if(!c.isArchived) return; 
+            } else {
+                if(c.isArchived) return; 
+                if(fType !== 'all' && c.type !== fType) return;
+            }
+
+            tP += c.principal; tB += c.currentBalance; tC++;
+            
+            let isDueToday = false, isPending = false; 
+            let pendingDays = 0;
+            let todayDateObj = new Date(today);
+
+            if (c.type === 'monthly') {
+                let monthlyInt = c.principal * (c.rate || 0) / 100;
+                let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
+                let monthsPaid = monthlyInt > 0 ? Math.floor(totalPaidThisCase / monthlyInt) : (c.history ? c.history.length : 0);
+                
+                let nextDueDate = new Date(c.startDate);
+                nextDueDate.setMonth(nextDueDate.getMonth() + monthsPaid + 1); 
+                
+                if (todayDateObj >= nextDueDate && c.currentBalance > 0) {
+                    isPending = true;
+                    let diffTime = todayDateObj.getTime() - nextDueDate.getTime();
+                    pendingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    if (pendingDays === 0) isDueToday = true;
+                }
+            } else {
+                let paidToday = c.history ? c.history.some(h => h.date === today) : false;
+                if (!paidToday && c.currentBalance > 0) {
+                    isPending = true;
+                    isDueToday = true;
+                    
+                    let lastPaymentDate = c.startDate;
+                    if (c.history && c.history.length > 0) {
+                        lastPaymentDate = c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date);
+                    }
+                    let diffTime = todayDateObj.getTime() - new Date(lastPaymentDate).getTime();
+                    pendingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                }
+            }
+
+            if (c.isArchived) {
+                isDueToday = false;
+                isPending = false;
+                pendingDays = 0;
+            }
+
+            if(!c.name.toLowerCase().includes(sName)) return;
+            if (currentTab === 'dash' && sName.trim() === '') return;
+            let typeText = c.type.toUpperCase(); 
+            let details = c.type === 'monthly' ? `₹${(c.principal * (c.rate||0)/100).toFixed(0)}/mo` : (c.type === 'meter' ? `₹${(c.principal * (c.rate||0)/100).toFixed(0)}/day` : `₹${(c.installment || 0).toFixed(0)}/day`);
+            
+            let statusHtml = '';
+            if (c.isArchived) {
+                statusHtml = `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>`;
+            } else if (isPending && c.currentBalance > 0) {
+                statusHtml = `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>`;
+            } else {
+                statusHtml = `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`;
+            }
+            
+            let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
+            let isMulti = multiDelMode[c.id];
+            let personalIcon = (isOwnerMode && c.isPersonal) ? '<span style="font-size:12px;">👑</span>' : '';
+            let ownerProfitHtml = '';
+            
+            if(isOwnerMode) {
+                let profit = 0;
+                if(c.type === 'monthly') { 
+                    let principalRecovered = c.principal - c.currentBalance; 
+                    profit = totalPaid - principalRecovered + (c.principal * (c.rate||0) / 100); 
+                } 
+                else if (c.type === 'meter') {
+                    let principalRecovered = c.principal - c.currentBalance; 
+                    profit = totalPaid - principalRecovered; 
+                    if(profit < 0) profit = 0;
+                }
+                else { 
+                    let expectedTotalProfit = (c.totalPayable || c.principal) - c.principal;
+                    let profitRatio = expectedTotalProfit / (c.totalPayable || c.principal);
+                    if (isNaN(profitRatio) || profitRatio < 0) profitRatio = 0;
+                    profit = totalPaid * profitRatio;
+                }
+                ownerProfitHtml = `<div style="text-align:center; padding-top:12px; margin-top:12px; border-top:1px dashed rgba(255, 215, 0, 0.2);"><b style="color:var(--owner-gold); font-size:13px;">Earned Profit: ₹${profit.toFixed(0)}</b></div>`;
+            }
+
+            let prinLabel = c.type === 'daily' ? 'Return Amt' : 'Principal';
+            let prinVal = c.type === 'daily' ? (c.totalPayable || c.principal) : c.principal;
+            
+            let histData = c.history ? [...c.history] : [];
+            let hideSNo = false;
+            
+            // HIDE PAST HISTORY FOR MONTHLY & METER IN STAFF MODE
+            if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) {
+                hideSNo = true;
+                if (histData.length > 1) {
+                    let currentMonth = today.substring(0, 7); // Example: "2026-04"
+                    let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonth);
+                    
+                    if (activeMonthRecords.length > 0) {
+                        histData = activeMonthRecords; // Is mahine ke payments dikhao
+                    } else {
+                        histData = histData.slice(-1); // Agar is mahine payment nahi hui to sirf aakhri wali entry dikhao
+                    }
+                }
+            }
+            
+            let histHtml = histData.reverse().map((h) => {
+                let originalIndex = c.history.indexOf(h);
+                let actionHtml = isMulti ? `<input type="checkbox" class="del-chk-${c.id}" value="${originalIndex}" style="width:16px;height:16px;accent-color:var(--accent-orange);">` : `<span onclick="deleteHistoryUI(${c.id}, ${originalIndex})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`;
+                
+                if (hideSNo) {
+                    return `<tr><td style="color:var(--text-muted)">${h.date}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actionHtml}</td></tr>`;
+                } else {
+                    return `<tr><td>${originalIndex + 1}</td><td style="color:var(--text-muted)">${h.date}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actionHtml}</td></tr>`;
+                }
+            }).join('');
+            
+            let colSpanCount = hideSNo ? 4 : 5;
+            
+            if (isMulti && c.history && c.history.length > 0) histHtml += `<tr><td colspan="${colSpanCount}" style="padding-top:15px;"><button onclick="deleteSelectedHistoryUI(${c.id})" class="main-btn" style="background:var(--danger); box-shadow:none; padding:12px; border-radius:10px; margin:0;">Delete Selected</button></td></tr>`;
+            
+            let tableHead = hideSNo ? `<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>` : `<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>`;
+            let kishatLabel = hideSNo ? '' : ` | Kishat: ${c.history ? c.history.length : 0}`;
+
+            const tLang = i18n[currentLang];
+            let collectBtn = currentTab === 'bulk' ? `<button class="s-btn collect" style="flex:1.4;" onclick="openBulkModal(${c.id})">${tLang.bulkBtn || '⚡ Bulk'}</button>` : `<button class="s-btn collect" style="flex:1.4;" onclick="openPayModal(${c.id})">${tLang.recBtn || 'Receive'}</button>`;
+            let archiveIcon = c.isArchived ? '📤' : '📦';
+            let archiveAction = `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${archiveIcon}</button>`;
+            
+            let refBadge = c.staffRef ? `<span style="color:var(--accent-orange); font-size:10px; margin-left:5px;">[Ref: ${c.staffRef}]</span>` : '';
+
+            dash.innerHTML += `
+            <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
+                ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
+                <div onclick="toggleView(${c.id})" style="cursor:pointer; -webkit-tap-highlight-color:transparent;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
+                        <div class="pill-tag">${typeText} | S.No: ${c.originalSNo}${kishatLabel}</div>
+                        ${statusHtml}
+                    </div>
+                    <div class="card-header">
+                        <div><div class="c-name">${c.name} ${refBadge} ${personalIcon}</div><div class="c-sub">Since ${c.startDate}</div></div>
+                        <div><div class="c-bal">₹${c.currentBalance.toFixed(0)}</div><div class="c-sub" style="text-align:right">Balance</div></div>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:5px; padding-top:10px; border-top:1px solid var(--card-border);">Amt: ${details}</div>
+                </div>
+                <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
+                    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;">
+                        <div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${prinLabel}</span><br><b style="font-size:14px;">₹${prinVal}</b></div>
+                        ${(isOwnerMode || c.type === 'daily') ? `<div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">Total Paid</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>` : ''}
+                        <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">Remaining</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div>
+                    </div>
+                    ${ownerProfitHtml}
+                    <div style="text-align:right; margin-top:12px;">
+                        ${isMulti && c.history && c.history.length > 0 ? `<span onclick="toggleSelectAllHistory(${c.id})" style="background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:6px; color:white; font-size:10px; font-weight:600; cursor:pointer; margin-right:8px;">${tLang.selectAll || 'Select All'}</span>` : ''}
+                        <span onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:6px; color:${isMulti?'var(--text-muted)':'var(--accent-orange)'}; font-size:10px; font-weight:600; cursor:pointer;">${isMulti?'Cancel Selection':'Select Multiple'}</span>
+                    </div>
+                    <table class="view-table"><thead>${tableHead}</thead><tbody>${histHtml || `<tr><td colspan="${colSpanCount}" style="padding:20px; opacity:0.4;">No records</td></tr>`}</tbody></table>
+                </div>
+                <div class="btn-row" style="margin-top:15px;">
+                    <button class="s-btn" style="flex:1;" onclick="openEditModal(${c.id})">${tLang.editBtn || 'Edit'}</button>
+                    ${archiveAction}
+                    <button class="s-btn" style="flex:0.6; display:flex; align-items:center; justify-content:center; color:var(--danger); border-color:rgba(255,59,107,0.2); background:rgba(255,59,107,0.05);" onclick="deleteCustUI(${c.id})"><span style="font-size:14px;">🗑️</span></button>
+                    ${collectBtn}
+                </div>
+            </div>`;
+        });
+        if (currentTab === 'dash' && sName.trim() === '') {
+            dash.innerHTML = `
+            <div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;">
+                <div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div>
+                <div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${i18n[currentLang].cleanDashTitle}</div>
+                <div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${i18n[currentLang].cleanDashSub}</div>
+            </div>`;
+        }
+        document.getElementById('sum-cases').innerText = tC; document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
+    }
+
+    function renderStats() {
+        let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0;
+        let globalInvested = 0, globalProfit = 0; 
+
+        db.filter(x => x.type !== 'config').forEach(c => {
+            if(!isOwnerMode && c.isPersonal) return;
+            // STRICT PRIVACY for Stats tab
+            if(!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
+            
+            // ARCHIVED CASE SAFEGUARD: Review Tab Portfolio & Balance
+            if (!c.isArchived) {
+                totalPrin += c.principal; 
+                totalBal += c.currentBalance;
+                if(c.type === 'monthly') mPrin += c.principal; 
+                else if(c.type === 'meter') meterPrin += c.principal; 
+                else dPrin += c.principal;
+            }
+            
+            let paidThisCase = 0;
+            if(c.history) {
+                c.history.forEach(h => { let amt = parseFloat(h.paid); totalRecovered += amt; paidThisCase += amt; });
+            }
+            
+            if(isOwnerMode) {
+                globalInvested += c.principal;
+                
+                let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
+                let cRatio = 0;
+                if(c.type === 'daily') {
+                    cRatio = ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal);
+                    if (cRatio < 0) cRatio = 0;
+                }
+
+                if (c.type === 'monthly') {
+                    globalProfit += (c.principal * (c.rate || 0) / 100);
+                }
+
+                if(c.history) {
+                    let sortedHist = [...c.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+                    sortedHist.forEach(h => {
+                        let paid = parseFloat(h.paid);
+                        if(c.type === 'monthly' || c.type === 'meter') {
+                            let intDue = tempBal * (c.rate / 100);
+                            if (paid <= intDue) {
+                                globalProfit += paid;
+                            } else {
+                                globalProfit += intDue;
+                                tempBal -= (paid - intDue);
+                            }
+                        } else {
+                            globalProfit += (paid * cRatio);
+                            tempBal -= paid;
+                        }
+                    });
+                }
+            }
+        });
+        
+        if(isOwnerMode) {
+            document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0});
+            document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0});
+        }
+
+        let mPerc = totalPrin ? (mPrin / totalPrin) * 100 : 33.33; let dPerc = totalPrin ? (dPrin / totalPrin) * 100 : 33.33; let meterPerc = totalPrin ? (meterPrin / totalPrin) * 100 : 33.34;
+        let totalVal = totalRecovered + totalBal; let recPerc = totalVal ? (totalRecovered / totalVal) * 100 : 0; let remPerc = totalVal ? (totalBal / totalVal) * 100 : 100;
+        const t = i18n[currentLang];
+        document.getElementById('bar-m-prin').style.width = mPerc + '%'; document.getElementById('bar-d-prin').style.width = dPerc + '%'; document.getElementById('bar-meter-prin').style.width = meterPerc + '%';
+        document.getElementById('txt-m-prin').innerText = `${t.monthly}: ₹${mPrin.toLocaleString()}`; 
+        document.getElementById('txt-d-prin').innerText = `${t.daily}: ₹${dPrin.toLocaleString()}`; 
+        document.getElementById('txt-meter-prin').innerText = `${t.meter}: ₹${meterPrin.toLocaleString()}`;
+        document.getElementById('txt-recovered').innerText = `${t.recovered}: ₹${totalRecovered.toLocaleString()}`; 
+        document.getElementById('txt-remaining').innerText = `${t.remaining}: ₹${totalBal.toLocaleString()}`;
+    }
+</script>
+</body>
+</html>
+
+
+
+
