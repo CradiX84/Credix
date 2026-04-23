@@ -266,7 +266,7 @@
     </div>
 </div>
 
-<!-- Manage Staff Modal (New) -->
+<!-- Manage Staff Modal -->
 <div id="staff-modal" class="modal">
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--accent-orange);">Manage Staff IDs</h3>
@@ -287,6 +287,22 @@
 
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('staff-modal')">Done / Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Staff PIN Modal -->
+<div id="edit-staff-pin-modal" class="modal">
+    <div class="modal-cont">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--owner-gold);">Update Staff PIN</h3>
+        <input type="hidden" id="edit-staff-idx">
+        <label class="modal-label" id="edit-staff-name-label" style="font-size:14px; color:white;"></label>
+        <label class="modal-label">New 4-Digit Login ID (PIN)</label>
+        <div class="input-group" style="border-color:var(--owner-gold);"><span class="input-icon">🔑</span><input type="number" id="edit-staff-new-pin" placeholder="E.g. 2002" style="font-weight:bold; letter-spacing:2px;"></div>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="background:var(--owner-gold); color:black; margin:0;" onclick="saveStaffPin()">Save New PIN</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('edit-staff-pin-modal')">Cancel</button>
         </div>
     </div>
 </div>
@@ -580,10 +596,11 @@
     
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
     let pin = ""; 
-    let currentPin = localStorage.getItem('paymitra_pin') || "2525"; // Fallback PIN if no staff created
+    let activeLoginPin = ""; // Stores PIN during active session for validation
+    let currentPin = localStorage.getItem('paymitra_pin') || "2525"; // Fallback
     let secretPin = localStorage.getItem('paymitra_secret') || "1984"; 
     let isOwnerMode = false; 
-    let deviceStaffName = ''; // Dynamically set on login
+    let deviceStaffName = ''; 
     let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; 
     let confirmActionCallback = null;
     let isSaving = false;
@@ -671,7 +688,6 @@
 
         applyLang();
 
-        // Background me naye phone ke liye turant data fetch karna
         document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
         fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" })
         .then(res => res.text())
@@ -827,12 +843,13 @@
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
     function logout() { 
-        closeModal('settings-modal');
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('main-app').style.display = 'none';
         document.getElementById('lock-screen').style.display = 'flex';
         resetPin();
         isOwnerMode = false;
         deviceStaffName = '';
+        activeLoginPin = "";
         
         currentLang = 'en';
         localStorage.setItem('paymitra_lang', 'en');
@@ -844,7 +861,21 @@
         if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new';
         
         switchTab('dash');
-        showToast("App Locked Securely");
+    }
+
+    // Security Check: Validates if the staff PIN was changed from another device
+    function validateSession(newDb) {
+        if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true;
+        let conf = newDb.find(x => x.type === 'config');
+        if (!conf || !conf.staffList) return true;
+        
+        let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin);
+        if (!isValid) {
+            logout();
+            setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500);
+            return false;
+        }
+        return true;
     }
 
     function hardRefresh() {
@@ -867,7 +898,10 @@
             conf.staffList.forEach((s, i) => {
                 html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; margin-bottom:8px; font-size:14px;">
                     <div><b style="color:white;">${s.name}</b> <span style="color:var(--accent-orange); font-size:12px; margin-left:10px; font-weight:700;">[ID: ${s.pin}]</span></div>
-                    <span onclick="deleteStaff(${i})" style="color:var(--danger); cursor:pointer; font-size:18px;">🗑️</span>
+                    <div>
+                        <span onclick="openEditStaffPin(${i})" style="color:var(--owner-gold); cursor:pointer; font-size:16px; margin-right:12px;">✏️</span>
+                        <span onclick="deleteStaff(${i})" style="color:var(--danger); cursor:pointer; font-size:16px;">🗑️</span>
+                    </div>
                 </div>`;
             });
         }
@@ -891,11 +925,39 @@
         showToast("Staff Added!");
     }
 
-    function deleteStaff(idx) {
+    function openEditStaffPin(idx) {
         let conf = getConfig();
-        conf.staffList.splice(idx, 1);
+        document.getElementById('edit-staff-idx').value = idx;
+        document.getElementById('edit-staff-name-label').innerText = `Change PIN for: ${conf.staffList[idx].name}`;
+        document.getElementById('edit-staff-new-pin').value = conf.staffList[idx].pin;
+        document.getElementById('edit-staff-pin-modal').style.display = 'flex';
+    }
+
+    function saveStaffPin() {
+        let idx = document.getElementById('edit-staff-idx').value;
+        let newPin = document.getElementById('edit-staff-new-pin').value.trim();
+        if(newPin.length !== 4) return showToast("Enter 4-Digit ID!");
+        
+        let conf = getConfig();
+        // Check if new pin belongs to someone else
+        if(conf.staffList.some((s, i) => s.pin === newPin && i != idx) || newPin === secretPin) {
+            return showToast("This ID is already taken!");
+        }
+        
+        conf.staffList[idx].pin = newPin;
         saveAndRender();
         renderStaffList();
+        closeModal('edit-staff-pin-modal');
+        showToast("Staff PIN Updated!");
+    }
+
+    function deleteStaff(idx) {
+        askConfirm("Delete this staff account? They will be logged out instantly.", () => {
+            let conf = getConfig();
+            conf.staffList.splice(idx, 1);
+            saveAndRender();
+            renderStaffList();
+        });
     }
 
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
@@ -946,6 +1008,7 @@
         if (pin === secretPin || pin === "1984") { 
             isOwnerMode = true;
             deviceStaffName = "Owner";
+            activeLoginPin = pin; // Store active pin for security check
             showToast("Owner Mode Unlocked 👑");
             unlockApp();
         } else {
@@ -953,12 +1016,13 @@
             if (staffMatch) {
                 isOwnerMode = false;
                 deviceStaffName = staffMatch.name;
+                activeLoginPin = pin; // Store active pin for security check
                 showToast(`Welcome ${deviceStaffName} 👋`);
                 unlockApp();
             } else if (pin === currentPin && conf.staffList.length === 0) {
-                // Fallback support if owner hasn't created any staff ID yet
                 isOwnerMode = false;
                 deviceStaffName = "Default Staff";
+                activeLoginPin = pin;
                 showToast("Staff Mode Active");
                 unlockApp();
             } else {
@@ -1028,7 +1092,16 @@
         try {
             const res = await fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" });
             const text = await res.text();
-            if(text && text.length > 5) { db = JSON.parse(text); localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); }
+            if(text && text.length > 5) { 
+                let newDb = JSON.parse(text); 
+                
+                // Real-time security check
+                if(!validateSession(newDb)) return; 
+
+                db = newDb; 
+                localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
+                render(); 
+            }
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
         } catch(e) { 
@@ -1054,6 +1127,10 @@
             const text = await res.text();
             if(text && text.length > 5) {
                 let newDb = JSON.parse(text);
+                
+                // Real-time security check
+                if(!validateSession(newDb)) return; 
+
                 if(JSON.stringify(newDb) !== JSON.stringify(db) && !isSaving) {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
