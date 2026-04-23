@@ -506,7 +506,7 @@
                     <option value="meter" id="t-repMeter">Meter</option>
                 </select>
             </div>
-            
+
             <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none;">
                 <span class="input-icon">🔍</span>
                 <input type="text" id="rep-search" placeholder="Search Staff or Customer Name...">
@@ -633,7 +633,7 @@
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
             autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
             repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं है।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "एडवांस प्रॉफिट (कटौती)",
-            archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4- अक्षरों की Login ID या Owner PIN डालें"
+            archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की Login ID या Owner PIN डालें"
         },
         'pa': { 
             appSub: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ 👋", sumPrin: "ਕੁੱਲ ਰਕਮ", sumCases: "ਕੁੱਲ ਖਾਤੇ", sumOut: "ਬਕਾਇਆ", 
@@ -670,6 +670,21 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
 
         applyLang();
+
+        // Background me naye phone ke liye turant data fetch karna
+        document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
+        fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" })
+        .then(res => res.text())
+        .then(text => {
+            if(text && text.length > 5) {
+                db = JSON.parse(text);
+                localStorage.setItem('paymitra_v11', JSON.stringify(db));
+            }
+            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub; 
+        })
+        .catch(e => {
+            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+        });
 
         // Background Auto-Sync setup
         setInterval(backgroundSync, 15000); 
@@ -1807,7 +1822,5 @@
 </script>
 </body>
 </html>
-
-
 
 
