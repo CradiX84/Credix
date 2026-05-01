@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Credix - Abstract Premium</title>
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
@@ -119,7 +122,7 @@
         .due-indicator { background: linear-gradient(90deg, var(--accent-orange), #FF8A00); padding: 4px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; color: white; display: inline-block; margin-bottom: 10px; box-shadow: 0 4px 10px var(--accent-glow);}
 
         .btn-row { display: flex; gap: 8px; margin-top: 15px; }
-        .s-btn { flex: 1; padding: 12px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.05s ease;}
+        .s-btn { flex: 1; padding: 12px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.05s ease; display: flex; align-items: center; justify-content: center;}
         .s-btn.collect { background: var(--accent-glow); color: var(--accent-orange); border-color: rgba(255, 107, 53, 0.3); }
         .s-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.08); }
 
@@ -478,9 +481,9 @@
             </div>
         </div>
 
-        <div id="section-search" style="display: flex; gap: 8px; margin-bottom: 20px;">
-            <div class="input-group" style="flex: 2; margin-bottom: 0;"><span class="input-icon">🔍</span><input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()"></div>
-            <select id="filter-box" onchange="render()" style="flex: 1; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; border-radius:12px; padding:0 10px; font-size:14px; outline:none;">
+        <div id="section-search">
+            <div class="input-group"><span class="input-icon">🔍</span><input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()"></div>
+            <select id="filter-box" onchange="render()">
                 <option value="all" id="f-opt-all">All Types</option>
                 <option value="daily" id="f-opt-daily">Daily</option>
                 <option value="monthly" id="f-opt-monthly">Monthly</option>
@@ -499,9 +502,9 @@
 
     <!-- Review / Stats Tab -->
     <div id="section-stats" style="display:none; margin-bottom:30px;">
-        <div id="owner-analytics" class="sum-card" style="display:none; margin-bottom:15px; border-color:var(--owner-gold); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, #15161C 100%);">
+        <div id="owner-analytics" class="sum-card" style="display:none; margin-bottom:15px; border-color:var(--owner-gold); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, #15161C 100%); padding: 22px 20px;">
             <span id="t-ownerGrowth" style="color:var(--owner-gold); font-weight:700;">👑 Owner Growth Analytics</span>
-            <div style="display:flex; justify-content:space-between; margin-top:15px; align-items:center;">
+            <div style="display:flex; justify-content:space-between; margin-top:15px; align-items:center; padding: 0 5px;">
                 <div style="flex:1; text-align:left;">
                     <div id="t-totInvested" style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Total Invested</div>
                     <div style="font-size:20px; font-weight:bold; color:white;" id="owner-invested">₹0</div>
@@ -511,7 +514,7 @@
                     <div style="font-size:20px; font-weight:bold; color:var(--success);" id="owner-profit">₹0</div>
                 </div>
             </div>
-            <div style="width:100%; height:1px; background:rgba(255,255,255,0.05); margin:12px 0;"></div>
+            <div style="width:100%; height:1px; background:rgba(255,255,255,0.05); margin:15px 0;"></div>
             <div style="font-size:10px; color:var(--text-muted); text-align:center;" id="t-ownerNote">This data is strictly private and hidden in staff mode.</div>
         </div>
 
@@ -646,7 +649,7 @@
             ownerGrowth: "👑 प्रॉफिट एनालिटिक्स", totInvested: "कुल निवेश", netProfit: "प्राप्त प्रॉफिट", ownerNote: "यह डेटा केवल मालिक के लिए है, स्टाफ को नहीं दिखेगा।",
             refresh: "रिफ्रेश", totRetPh: "कुल वापसी रकम", totDaysPh: "कुल दिन", 
             allTypes: "सभी प्रकार", fDaily: "रोज़ाना", fMonthly: "महीना", fMeter: "मीटर", fArchived: "बंद खाते (Archived)",
-            optDaily: "रोज़ की किश्त", optMonthly: "महीने का ब्याज", optMeter: "मीटर (रोज़ाना)", markPersonal: "👑 पर्सनल खाता",
+            optDaily: "रोज़ की किश्त", optMonthly: "मਹੀਨੇ का ब्याज", optMeter: "मीटर (रोज़ाना)", markPersonal: "👑 पर्सनल खाता",
             sortNew: "नया पहले ▼", sortOld: "पुराना पहले ▲",
             delCaseMsg: "क्या आप यह पूरा खाता हटाना चाहते हैं?", delCaseSuccess: "खाता हटा दिया गया!", editBtn: "एडिट", recBtn: "प्राप्त करें", bulkBtn: "⚡ बल्क",
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
@@ -1325,6 +1328,78 @@
         });
     }
 
+    // Generate PDF Report for Customer
+    function generateCustomerPDF(id) {
+        const { jsPDF } = window.jspdf;
+        const c = db.find(x => x.id === id);
+        if(!c) return;
+
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(255, 107, 53); // Accent Orange
+        doc.text("Credix.", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text("Statement of Account", 14, 28);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 140, 28);
+        
+        // Horizontal Line
+        doc.setDrawColor(200);
+        doc.line(14, 32, 196, 32);
+        
+        // Customer Details
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Customer Name: ${c.name}`, 14, 42);
+        doc.text(`Account Type: ${c.type.toUpperCase()}`, 14, 48);
+        doc.text(`Start Date: ${c.startDate}`, 14, 54);
+        
+        let principalLabel = c.type === 'daily' ? 'Total Return Value' : 'Principal Amount';
+        let principalValue = c.type === 'daily' ? (c.totalPayable || c.principal) : c.principal;
+        doc.text(`${principalLabel}: RS. ${principalValue.toLocaleString()}`, 120, 42);
+        doc.text(`Current Balance: RS. ${c.currentBalance.toFixed(0).toLocaleString()}`, 120, 48);
+        if(c.staffRef) doc.text(`Ref: ${c.staffRef}`, 120, 54);
+
+        // Table
+        const tableData = [];
+        let totalPaid = 0;
+        if(c.history) {
+            c.history.forEach((h, index) => {
+                tableData.push([
+                    index + 1,
+                    h.date,
+                    `RS. ${h.paid.toLocaleString()}`,
+                    `RS. ${Number(h.balance||0).toFixed(0).toLocaleString()}`
+                ]);
+                totalPaid += parseFloat(h.paid);
+            });
+        }
+
+        doc.autoTable({
+            startY: 65,
+            head: [['S.No', 'Date', 'Paid Amount', 'Remaining Balance']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: { fillColor: [26, 28, 35], textColor: [255, 255, 255] },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+        });
+
+        // Summary Footer
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Total Amount Paid: RS. ${totalPaid.toLocaleString()}`, 14, finalY);
+        doc.setTextColor(255, 59, 107); // Danger Red for remaining
+        doc.text(`Net Outstanding: RS. ${c.currentBalance.toFixed(0).toLocaleString()}`, 14, finalY + 7);
+
+        // Save
+        doc.save(`${c.name}_Report.pdf`);
+        showToast("PDF Downloaded!");
+    }
+
     function generateReport() {
         const start = document.getElementById('rep-start').value;
         const end = document.getElementById('rep-end').value;
@@ -1457,8 +1532,9 @@
 
             tP += c.principal; tB += c.currentBalance; tC++;
 
-            // UPDATED SEARCH LOGIC
+            // SEARCH LOGIC
             let nameMatch = c.name.toLowerCase().includes(sName);
+            // Reference search only on HOME tab in Owner Mode
             let refMatch = (currentTab === 'dash' && isOwnerMode && sName !== '') && (c.staffRef || '').toLowerCase().includes(sName);
             
             if(!nameMatch && !refMatch) return;
@@ -1542,6 +1618,7 @@
                 </div>
                 <div class="btn-row" style="margin-top:15px;">
                     <button class="s-btn" onclick="openEditModal(${c.id})">${tL.editBtn||'Edit'}</button>
+                    ${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
                     <button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
                     <button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button>
                     <button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':tL.recBtn||'Receive'}</button>
