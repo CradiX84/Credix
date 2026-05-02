@@ -100,15 +100,15 @@
 
         /* --- SEARCH SUMMARY CARD --- */
         .search-stat-card {
-            background: linear-gradient(145deg, rgba(255, 107, 53, 0.1), #1A1C23);
-            border: 1px solid rgba(255, 107, 53, 0.3);
-            border-radius: 24px; padding: 20px; margin-bottom: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            background: linear-gradient(145deg, rgba(255, 107, 53, 0.15), #1A1C23);
+            border: 1px solid rgba(255, 107, 53, 0.4);
+            border-radius: 24px; padding: 22px 20px; margin-bottom: 25px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
         }
-        .search-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;}
+        .search-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 20px;}
         .stat-item { text-align: left; }
-        .stat-item label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;}
-        .stat-item value { font-size: 16px; font-weight: 700; color: white; display: block;}
+        .stat-item label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; display: block; margin-bottom: 5px; font-weight: 700;}
+        .stat-item value { font-size: 15px; font-weight: 700; color: white; display: block;}
 
         /* --- CUSTOMER CARDS --- */
         .cust-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.05s ease; position: relative;}
@@ -514,7 +514,7 @@
                     <div style="font-size:20px; font-weight:bold; color:var(--success);" id="owner-profit">₹0</div>
                 </div>
             </div>
-            <div style="width:100%; height:1px; background:rgba(255,255,255,0.05); margin:15px 0;"></div>
+            <div style="width:100%; height:1px; background:rgba(255,255,255,0.05); margin:12px 0;"></div>
             <div style="font-size:10px; color:var(--text-muted); text-align:center;" id="t-ownerNote">This data is strictly private and hidden in staff mode.</div>
         </div>
 
@@ -637,7 +637,8 @@
             autoBackupLabel: "Auto Backup Data", abNever: "Never", abDaily: "Daily (On First Open)", abMonthly: "Monthly",
             repTitle: "📅 Custom Date Report", repBtn: "Generate Report", repGiven: "Total Given", repRet: "Total Recovered", repProfit: "Profit Earned", repNoData: "No activity in this date range.", repNewCases: "🆕 NEW CASES GIVEN", repPayments: "✅ PAYMENTS RECEIVED", advProfit: "Advance Profit (Cut)",
             archiveToast: "Case Archived!", unarchiveToast: "Case Restored!", staffRefPh: "Reference / Staff Name", lockSub: "Enter 4-Digit Login ID or Owner PIN",
-            refStatTitle: "👑 Reference Summary", refStatCases: "Total Accounts", refStatValue: "Total Value", refStatRec: "Recovered", refStatOut: "Outstanding"
+            refStatTitle: "👑 Reference Summary", refStatCases: "Total Accounts", refStatValue: "Total Value", refStatRec: "Recovered", refStatOut: "Outstanding",
+            refStatCollection: "Daily Collection", refStatInterest: "Monthly Interest", refStatProfit: "Estimated Profit"
         },
         'hi': { 
             appSub: "नमस्ते 👋", sumPrin: "कुल मूलधन", sumCases: "कुल खाते", sumOut: "बकाया", 
@@ -649,20 +650,21 @@
             ownerGrowth: "👑 प्रॉफिट एनालिटिक्स", totInvested: "कुल निवेश", netProfit: "प्राप्त प्रॉफिट", ownerNote: "यह डेटा केवल मालिक के लिए है, स्टाफ को नहीं दिखेगा।",
             refresh: "रिफ्रेश", totRetPh: "कुल वापसी रकम", totDaysPh: "कुल दिन", 
             allTypes: "सभी प्रकार", fDaily: "रोज़ाना", fMonthly: "महीना", fMeter: "मीटर", fArchived: "बंद खाते (Archived)",
-            optDaily: "रोज़ की किश्त", optMonthly: "मਹੀਨੇ का ब्याज", optMeter: "मीटर (रोज़ाना)", markPersonal: "👑 पर्सनल खाता",
+            optDaily: "रोज़ की किश्त", optMonthly: "महीने का ब्याज", optMeter: "मीटर (रोज़ाना)", markPersonal: "👑 पर्सनल खाता",
             sortNew: "नया पहले ▼", sortOld: "पुराना पहले ▲",
             delCaseMsg: "क्या आप यह पूरा खाता हटाना चाहते हैं?", delCaseSuccess: "खाता हटा दिया गया!", editBtn: "एडिट", recBtn: "प्राप्त करें", bulkBtn: "⚡ बल्क",
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
             autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
             repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं है।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "एडवांस प्रॉफिट (कटौती)",
             archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की Login ID या Owner PIN डालें",
-            refStatTitle: "👑 रेफरेंस सारांश", refStatCases: "कुल खाते", refStatValue: "कुल वैल्यू", refStatRec: "प्राप्त", refStatOut: "बकाया"
+            refStatTitle: "👑 रेफरेंस सारांश", refStatCases: "कुल खाते", refStatValue: "कुल वैल्यू", refStatRec: "प्राप्त", refStatOut: "बकाया",
+            refStatCollection: "कुल रोज़ाना किश्त", refStatInterest: "कुल महीने का ब्याज", refStatProfit: "अनुमानित प्रॉफिट"
         },
         'pa': { 
             appSub: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ 👋", sumPrin: "ਕੁੱਲ ਰਕਮ", sumCases: "ਕੁੱਲ ਖਾਤੇ", sumOut: "ਬਕਾਇਆ", 
             addTitle: "ਨਵਾਂ ਖਾਤਾ ਬਣਾਓ", namePh: "ਗਾਹਕ ਦਾ ਨਾਮ", amtPh: "ਮੂਲ ਰਕਮ", addBtn: "ਖਾਤਾ ਜੋੜੋ", 
             navDash: "ਹੋਮ", navCust: "ਖਾਤੇ", navBulk: "ਫਾਸਟ ਐਡ", navStats: "ਰਿਵਿਊ", 
-            setMainTitle: "ਐਪ ਸੈਟਿੰਗਜ਼", setBackup: "ਡਾਟਾ ਬੈਕਅੱਪ", setRestore: "ਡਾਟਾ ਰੀਸਟੋਰ", setPinStaff: "ਸਟਾਫ PIN ਬਦਲੋ", setPinOwner: "ਮਾਲਕ PIN ਬਦਲੋ 👑", setLogout: "ਲਾਗਆਉਟ", setClose: "ਬੰਦ ਕਰੋ", 
+            setMainTitle: "ਐਪ ਸੈਟਿੰਗਜ਼", setBackup: "ਡਾਟਾ ਬੈਕਅੱਪ", setRestore: "ਡਾਟਾ ਰੀੀਸਟੋਰ", setPinStaff: "ਸਟਾਫ PIN ਬਦਲੋ", setPinOwner: "ਮਾਲਕ PIN ਬਦਲੋ 👑", setLogout: "ਲਾਗਆਉਟ", setClose: "ਬੰਦ ਕਰੋ", 
             searchPh: "ਨਾਮ ਖੋਜੋ...", cleanDashTitle: "ਕਲੀਨ ਡੈਸ਼ਬੋਰਡ", cleanDashSub: "ਖਾਤਾ ਦੇਖਣ ਲਈ ਉੱਪਰ ਨਾਮ ਖੋਜੋ।<br>ਪੂਰੀ ਸੂਚੀ ਲਈ <b>ਖਾਤੇ</b> टैਬ 'ਤੇ ਜਾਓ।", 
             bizPort: "ਕਾਰੋਬਾਰ ਪੋਰਟਫੋਲੀਓ", recStatus: "ਰਿਕਵਰੀ ਸਥਿਤੀ", monthly: "ਮਹੀਨਾਵਾਰ", daily: "ਰੋਜ਼ਾਨਾ", meter: "ਮੀਟਰ", recovered: "ਵਸੂਲੀ ਹੋਈ", remaining: "ਬਕਾਇਆ", 
             ownerGrowth: "👑 ਮੁਨਾਫਾ ਅਤੇ ਵਿਕਾਸ", totInvested: "ਕੁੱਲ ਨਿਵੇਸ਼", netProfit: "ਪ੍ਰਾਪਤ ਮੁਨਾਫਾ", ownerNote: "ਇਹ ਡਾਟਾ ਸਿਰਫ਼ ਮਾਲਕ ਲਈ ਹੈ, ਸਟਾਫ਼ ਤੋਂ ਲੁਕਿਆ ਹੋਇਆ ਹੈ।",
@@ -675,7 +677,8 @@
             autoBackupLabel: "ਆਟੋ ਬੈਕਅੱਪ ਫਾਈਲ", abNever: "ਕਦੇ ਨਹੀਂ", abDaily: "ਰੋਜ਼ਾਨਾ (ਐਪ ਖੁੱਲਣ 'ਤੇ)", abMonthly: "ਮਹੀਨੇ ਵਿੱਚ ਇੱਕ ਵਾਰ",
             repTitle: "📅 ਤਾਰੀਖ ਦੇ ਅਨੁਸਾਰ ਰਿਪੋਰਟ", repBtn: "ਰਿਪੋਰਟ ਦੇਖੋ", repGiven: "ਕੁੱਲ ਦਿੱਤਾ", repRet: "ਕੁੱਲ ਰਿਕਵਰੀ", repProfit: "ਕਮਾਇਆ ਮੁਨਾਫਾ", repNoData: "ਇਸ ਤਾਰੀਖ ਵਿੱਚ ਕੋਈ ਡਾਟਾ ਨਹੀਂ ਹੈ।", repNewCases: "🆕 ਨਵੇਂ ਖਾਤੇ (GIVEN)", repPayments: "✅ ਪ੍ਰਾਪਤ ਰਿਕਵਰੀ (RECEIVED)", advProfit: "ਐਡਵਾਂਸ ਮੁਨਾਫਾ (ਕਟੌਤੀ)",
             archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ Login ID ਜਾਂ Owner PIN ਦਰਜ ਕਰੋ",
-            refStatTitle: "👑 ਰੈਫਰੈਂਸ ਸਾਰਾਂਸ਼", refStatCases: "ਕੁੱਲ ਖਾਤੇ", refStatValue: "ਕੁੱਲ ਮੁੱਲ", refStatRec: "ਪ੍ਰਾਪਤ", refStatOut: "ਬਕਾਇਆ"
+            refStatTitle: "👑 ਰੈਫਰੈਂਸ ਸਾਰਾਂਸ਼", refStatCases: "ਕੁੱਲ ਖਾਤੇ", refStatValue: "ਕੁੱਲ ਮੁੱਲ", refStatRec: "ਪ੍ਰਾਪਤ", refStatOut: "ਬਕਾਇਆ",
+            refStatCollection: "ਕੁੱਲ ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", refStatInterest: "ਕੁੱਲ ਮਹੀਨਾਵਾਰ ਵਿਆਜ", refStatProfit: "ਅਨੁਮਾਨਿਤ ਮੁਨਾਫਾ"
         }
     };
     
@@ -1510,6 +1513,7 @@
         let tP = 0, tB = 0, tC = 0;
         
         let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
+        let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
 
         let today = new Date().toISOString().split('T')[0];
@@ -1547,6 +1551,19 @@
                 searchTotalBal += c.currentBalance;
                 let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
                 searchTotalRec += paid;
+
+                // Capacity/Profit Logic
+                if (c.type === 'daily') {
+                    searchTotalKishat += (c.installment || 0);
+                    // Kishat Profit = Kishat * (TotalProfit / TotalValue)
+                    let totalP = (c.totalPayable || c.principal) - c.principal;
+                    let ratio = totalP / (c.totalPayable || c.principal);
+                    searchTotalProfit += (c.installment * ratio);
+                } else if (c.type === 'monthly' || c.type === 'meter') {
+                    let interest = (c.principal * (c.rate || 0) / 100);
+                    searchTotalKishat += interest;
+                    searchTotalProfit += interest;
+                }
             }
 
             let isDueToday = false, isPending = false, pendingDays = 0, todayDateObj = new Date(today);
@@ -1632,19 +1649,34 @@
         if (currentTab === 'dash' && sName === '') {
             finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`;
         } else {
-            // IF reference search found, show the Stat Card first in the result area
+            // UPDATED Stat Card with Collection/Interest and Profit
             if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') {
+                let collectionLabel = t.refStatCollection;
+                if (fType === 'monthly') collectionLabel = t.refStatInterest;
+                else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily');
+
                 finalHtml += `
                 <div class="search-stat-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:13px; font-weight:700; color:var(--accent-orange);">${t.refStatTitle}</span>
-                        <span style="font-size:11px; color:var(--text-muted);">"${sName.toUpperCase()}"</span>
+                        <span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span>
+                        <span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span>
                     </div>
                     <div class="search-stat-grid">
                         <div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div>
                         <div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div>
                         <div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div>
                         <div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>
+                        
+                        ${fType !== 'all' ? `
+                            <div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;">
+                                <label>${collectionLabel}</label>
+                                <value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value>
+                            </div>
+                            <div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;">
+                                <label>${t.refStatProfit}</label>
+                                <value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>`;
             }
