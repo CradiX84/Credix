@@ -23,6 +23,7 @@
             --owner-gold: #FFD700;
         }
 
+        /* Essential Reset to prevent horizontal displacement and unwanted scrolling */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
 
         body {
@@ -32,7 +33,7 @@
             margin: 0; padding: 20px 12px;
             padding-bottom: 120px; 
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Critical: Prevents side movement */
             position: relative;
         }
 
@@ -111,12 +112,28 @@
         .stat-item value { font-size: 15px; font-weight: 700; color: white; display: block;}
 
         /* --- CUSTOMER CARDS --- */
-        .cust-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.05s ease; position: relative;}
+        .cust-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.05s ease; position: relative; overflow: hidden; width: 100%; }
         .cust-card:active { transform: scale(0.98); }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;}
-        .c-name { font-size: 17px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; letter-spacing: 0.5px; display:flex; align-items:center; gap:5px;}
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 10px; width: 100%;}
+        
+        .c-name { 
+            font-size: 17px; 
+            font-weight: 700; 
+            color: var(--text-main); 
+            margin-bottom: 4px; 
+            letter-spacing: 0.5px; 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            word-break: break-word; 
+            overflow-wrap: break-word;
+            flex: 1;
+            min-width: 0;
+            white-space: normal;
+        }
+        
         .c-sub { font-size: 11px; color: var(--text-muted); font-weight: 400;}
-        .c-bal { font-size: 19px; font-weight: 700; color: var(--text-main); text-align: right; margin-bottom: 4px;}
+        .c-bal { font-size: 19px; font-weight: 700; color: var(--text-main); text-align: right; margin-bottom: 4px; flex-shrink: 0;}
         .pill-tag { background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; font-size: 10px; color: var(--text-muted); font-weight: 500; display: inline-block; margin-bottom: 12px;}
         .status-txt { float: right; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px;}
         .due-indicator { background: linear-gradient(90deg, var(--accent-orange), #FF8A00); padding: 4px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; color: white; display: inline-block; margin-bottom: 10px; box-shadow: 0 4px 10px var(--accent-glow);}
@@ -190,7 +207,7 @@
         .modal-cont { background: #1A1C23; border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px 25px; border-radius: 30px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
         .modal-label { font-size: 11px; color: var(--text-muted); margin-top: 15px; display: block; margin-bottom: 8px; font-weight:500; letter-spacing: 0.5px;}
 
-        /* LOCK SCREEN */
+        /* LOCK SCREEN KEYPAD */
         #lock-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: var(--bg-deep); z-index: 999999; 
@@ -979,7 +996,7 @@
                     let monthlyInt = c.principal * (c.rate || 0) / 100; amountPerUnit = monthlyInt;
                     let totalPaidAllTime = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
                     let monthsCleared = monthlyInt > 0 ? Math.floor(totalPaidAllTime / monthlyInt) : 0;
-                    let iterDate = new Date(c.startDate); iterDate.setMonth(iterDate.getMonth() + monthsCleared + 1);
+                    let iterDate = new Date(c.startDate); iterDate.setMonth(iterDate.setMonth() + monthsCleared + 1);
                     while(iterDate <= reportEndDateObj) { accumulatedTotal += amountPerUnit; missedDates.push(String(annivDay).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); iterDate.setMonth(iterDate.getMonth() + 1); }
                 }
                 if (missedDates.length > 0) { pendingsInRange.push({ ...c, displayPendingDate: missedDates[missedDates.length-1]+"/"+reportEndYear, pendingAmount: amountPerUnit, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
@@ -996,7 +1013,7 @@
         const renderCases = (list, title, color) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:15px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
-            list.forEach(c => { html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color};"><div><b style="color:var(--text-main);">${c.name}</b><br><span style="color:var(--text-muted); font-size:10px;">Given on ${c.startDate}</span></div><div style="text-align:right;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">Profit Cut: ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; });
+            list.forEach(c => { html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">Given on ${c.startDate}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">Profit Cut: ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; });
             return html;
         };
         reportHtml += renderCases(newCasesDaily, "🆕 New Daily Cases", "var(--accent-orange)");
@@ -1006,7 +1023,12 @@
         const renderPayments = (list, title, color, isMonthly) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
-            list.sort((a,b) => b.total - a.total).forEach(p => { let dates = p.hits.map(h => h.date).sort(); let dateSummary = dates.length > 1 ? `${dates[0]} to ${dates[dates.length-1]}` : dates[0]; let detailStr = isMonthly ? `Interest Received (${p.hits.length} Months)` : `₹${(p.installment||0).toFixed(0)} × ${p.count} Kishats`; html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color};"><div style="display:flex; justify-content:space-between; align-items:center;"><div><b style="color:var(--text-main);">${p.name}</b><br><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between;"><span>${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold);">Earned Profit: ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; });
+            list.sort((a,b) => b.total - a.total).forEach(p => { 
+                let dates = p.hits.map(h => h.date).sort(); 
+                let dateSummary = dates.length > 1 ? `${dates[0]} to ${dates[dates.length-1]}` : dates[0]; 
+                let detailStr = isMonthly ? `Interest Received (${p.hits.length} Months)` : `₹${(p.installment||0).toFixed(0)} × ${p.count} Kishats`; 
+                html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-break:break-word;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">Profit: ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
+            });
             return html;
         };
         reportHtml += renderPayments(paymentsDaily, "✅ Daily Recoveries", "var(--success)", false);
@@ -1016,7 +1038,7 @@
         if (pendingsInRange.length > 0) { 
             reportHtml += `<div style="color:var(--danger); font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">⚠️ Pending Collections</div>`; 
             pendingsInRange.forEach(p => { 
-                reportHtml += `<div style="display:flex; flex-direction:column; background:rgba(255, 59, 107, 0.05); padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid var(--danger);"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div><b style="color:var(--text-main);">${p.name}</b><br><span style="color:var(--danger); font-size:9px; font-weight:800; letter-spacing:0.5px;">${p.type.toUpperCase()} BASIS</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px;">Missed: ${p.missedDatesStr}</span></div><div style="text-align:right;"><b style="color:var(--danger); font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`; 
+                reportHtml += `<div style="display:flex; flex-direction:column; background:rgba(255, 59, 107, 0.05); padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid var(--danger); overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--danger); font-size:9px; font-weight:800; letter-spacing:0.5px;">${p.type.toUpperCase()} BASIS</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-break:break-all; overflow-wrap:anywhere;">Missed: ${p.missedDatesStr}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:var(--danger); font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`; 
             }); 
         }
         if(reportHtml === "") { reportHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12px; border:1px dashed rgba(255,255,255,0.1); border-radius:12px; margin-top:15px;">No activity found in selected date range.</div>`; }
@@ -1025,114 +1047,122 @@
 
     function downloadReportPDF() {
         if(!lastGeneratedReportData) return showToast("Generate report first!");
-        const { jsPDF } = window.jspdf; 
-        const doc = new jsPDF(); 
-        const data = lastGeneratedReportData;
-        const marginX = 14;
-        let currentY = 20;
+        try {
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF(); 
+            const data = lastGeneratedReportData;
+            const marginX = 14;
+            let currentY = 20;
 
-        doc.setFontSize(24); doc.setTextColor(255, 107, 53); doc.text("Credix.", marginX, currentY);
-        doc.setFontSize(10); doc.setTextColor(100); doc.text(`Business Activity Statement`, marginX, currentY + 8);
-        doc.text(`Period: ${data.start} to ${data.end}`, 140, currentY + 8);
-        currentY += 14;
-        doc.setDrawColor(220); doc.line(marginX, currentY, 196, currentY);
-        currentY += 10;
+            doc.setFontSize(24); doc.setTextColor(255, 107, 53); doc.text("Credix.", marginX, currentY);
+            doc.setFontSize(10); doc.setTextColor(100); doc.text(`Business Activity Statement`, marginX, currentY + 8);
+            doc.text(`Period: ${data.start} to ${data.end}`, 140, currentY + 8);
+            currentY += 14;
+            doc.setDrawColor(220); doc.line(marginX, currentY, 196, currentY);
+            currentY += 10;
 
-        doc.setFontSize(12); doc.setTextColor(0); doc.setFont(undefined, 'bold');
-        doc.text("Financial Summary", marginX, currentY);
-        currentY += 6;
-        doc.autoTable({
-            startY: currentY,
-            head: [['Description', 'Total Amount (INR)']],
-            body: [['Total Capital Given (New Cases)', `RS. ${data.totalGiven.toLocaleString()}`], ['Total Cash Recovered (Recoveries)', `RS. ${data.totalReturned.toLocaleString()}`]],
-            theme: 'grid', styles: { fontSize: 10 }, headStyles: { fillColor: [50, 50, 50] }
-        });
-        currentY = doc.lastAutoTable.finalY + 15;
-
-        let combinedNewCases = [...data.newCasesDaily.map(c=>({...c, type:'DAILY'})), ...data.newCasesMonthly.map(c=>({...c, type:'MONTHLY'})), ...data.newCasesMeter.map(c=>({...c, type:'METER'}))];
-        if (combinedNewCases.length > 0) {
-            doc.setFontSize(11); doc.setTextColor(255, 107, 53); doc.text("NEW PORTFOLIO ADDITIONS (GIVEN)", marginX, currentY);
-            let totalNewValue = 0;
-            let casesTableBody = combinedNewCases.map((c, i) => {
-                totalNewValue += c.principal;
-                return [i + 1, c.name, c.startDate, c.type, `RS. ${c.principal.toLocaleString()}`];
-            });
+            doc.setFontSize(12); doc.setTextColor(0); doc.setFont(undefined, 'bold');
+            doc.text("Financial Summary", marginX, currentY);
+            currentY += 6;
             doc.autoTable({
-                startY: currentY + 4,
-                head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']],
-                body: casesTableBody,
-                foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalNewValue.toLocaleString()}`]],
-                theme: 'striped', 
-                headStyles: { fillColor: [255, 107, 53] },
-                footStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255] }
+                startY: currentY,
+                head: [['Description', 'Total Amount (INR)']],
+                body: [['Total Capital Given (New Cases)', `RS. ${Number(data.totalGiven).toLocaleString()}`], ['Total Cash Recovered (Recoveries)', `RS. ${Number(data.totalReturned).toLocaleString()}`]],
+                theme: 'grid', styles: { fontSize: 10 }, headStyles: { fillColor: [50, 50, 50] }
             });
-            currentY = doc.lastAutoTable.finalY + 12;
-        }
+            currentY = doc.lastAutoTable.finalY + 15;
 
-        if (data.paymentsDaily.length > 0 || data.paymentsMeter.length > 0) {
-            if (currentY > 250) { doc.addPage(); currentY = 20; }
-            doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY & METER RECOVERY LOG (KISHATS)", marginX, currentY);
-            let totalDaily = 0;
-            let combinedDaily = [...data.paymentsDaily, ...data.paymentsMeter];
-            let dailyTableBody = combinedDaily.map((p, i) => {
-                let dates = p.hits.map(h => h.date).sort();
-                let summary = dates.length > 1 ? `${dates[0]} to ${dates[dates.length-1]}` : dates[0];
-                let calculation = `RS. ${(p.installment||0).toFixed(0)} X ${p.count} Units`;
-                totalDaily += p.total;
-                return [i + 1, p.name, summary, p.type.toUpperCase(), `RS. ${p.total.toLocaleString()}`];
-            });
-            doc.autoTable({
-                startY: currentY + 4,
-                head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']],
-                body: dailyTableBody,
-                foot: [['', '', '', 'TOTAL DAILY/METER RECOVERY', `RS. ${totalDaily.toLocaleString()}`]],
-                theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] }
-            });
-            currentY = doc.lastAutoTable.finalY + 12;
-        }
+            let combinedNewCases = [...data.newCasesDaily.map(c=>({...c, type:'DAILY'})), ...data.newCasesMonthly.map(c=>({...c, type:'MONTHLY'})), ...data.newCasesMeter.map(c=>({...c, type:'METER'}))];
+            if (combinedNewCases.length > 0) {
+                doc.setFontSize(11); doc.setTextColor(255, 107, 53); doc.text("NEW PORTFOLIO ADDITIONS (GIVEN)", marginX, currentY);
+                let totalNewValue = 0;
+                let casesTableBody = combinedNewCases.map((c, i) => {
+                    totalNewValue += Number(c.principal || 0);
+                    return [i + 1, c.name, c.startDate, c.type, `RS. ${Number(c.principal).toLocaleString()}`];
+                });
+                doc.autoTable({
+                    startY: currentY + 4,
+                    head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']],
+                    body: casesTableBody,
+                    foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalNewValue.toLocaleString()}`]],
+                    theme: 'striped', headStyles: { fillColor: [255, 107, 53] }, footStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255] }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            }
 
-        if (data.paymentsMonthly.length > 0) {
-            if (currentY > 250) { doc.addPage(); currentY = 20; }
-            doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY);
-            let totalMonthly = 0;
-            let monthlyTableBody = data.paymentsMonthly.map((p, i) => {
-                let dates = p.hits.map(h => h.date).sort().join(", ");
-                totalMonthly += p.total;
-                return [i + 1, p.name, dates, `RS. ${p.total.toLocaleString()}`];
-            });
-            doc.autoTable({
-                startY: currentY + 4,
-                head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']],
-                body: monthlyTableBody,
-                foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]],
-                theme: 'striped', headStyles: { fillColor: [184, 134, 11] }, footStyles: { fillColor: [184, 134, 11], textColor: [255, 255, 255] }
-            });
-            currentY = doc.lastAutoTable.finalY + 12;
-        }
+            if (data.paymentsDaily.length > 0 || data.paymentsMeter.length > 0) {
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY & METER RECOVERY LOG (KISHATS)", marginX, currentY);
+                let totalDaily = 0;
+                let combinedDaily = [...data.paymentsDaily, ...data.paymentsMeter];
+                let dailyTableBody = combinedDaily.map((p, i) => {
+                    let dates = p.hits.map(h => h.date).sort();
+                    let summary = dates.length > 1 ? `${dates[0]} to ${dates[dates.length-1]}` : dates[0];
+                    totalDaily += Number(p.total || 0);
+                    return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`];
+                });
+                doc.autoTable({
+                    startY: currentY + 4,
+                    head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']],
+                    body: dailyTableBody,
+                    foot: [['', '', '', 'TOTAL DAILY/METER RECOVERY', `RS. ${totalDaily.toLocaleString()}`]],
+                    theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            }
 
-        if (data.pendingsInRange && data.pendingsInRange.length > 0) {
-            if (currentY > 250) { doc.addPage(); currentY = 20; }
-            doc.setFontSize(11); doc.setTextColor(255, 59, 107); doc.text("PENDING COLLECTIONS SUMMARY", marginX, currentY);
-            let totalPending = 0;
-            let pendingTableBody = data.pendingsInRange.map((p, i) => {
-                totalPending += p.accumulatedTotal;
-                return [i + 1, p.name, p.type.toUpperCase(), p.missedDatesStr, `RS. ${p.accumulatedTotal.toFixed(0).toLocaleString()}`];
-            });
-            doc.autoTable({
-                startY: currentY + 4,
-                head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']],
-                body: pendingTableBody,
-                foot: [['', '', '', 'TOTAL PENDING AMOUNT', `RS. ${totalPending.toFixed(0).toLocaleString()}`]],
-                theme: 'striped', headStyles: { fillColor: [255, 59, 107] }, footStyles: { fillColor: [255, 59, 107], textColor: [255, 255, 255] }
-            });
-            currentY = doc.lastAutoTable.finalY + 12;
-        }
+            if (data.paymentsMonthly.length > 0) {
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY);
+                let totalMonthly = 0;
+                // FIX: Sort monthly payments by the earliest payment date in their hits
+                let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => {
+                    let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99';
+                    let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99';
+                    return new Date(dateA) - new Date(dateB);
+                });
+                let monthlyTableBody = sortedMonthlyPayments.map((p, i) => {
+                    let dates = p.hits.map(h => h.date).sort().join(", ");
+                    totalMonthly += Number(p.total || 0);
+                    return [i + 1, p.name, dates, `RS. ${Number(p.total).toLocaleString()}`];
+                });
+                doc.autoTable({
+                    startY: currentY + 4,
+                    head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']],
+                    body: monthlyTableBody,
+                    foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]],
+                    theme: 'striped', headStyles: { fillColor: [184, 134, 11] }, footStyles: { fillColor: [184, 134, 11], textColor: [255, 255, 255] }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            }
 
-        if (currentY > 270) { doc.addPage(); currentY = 20; }
-        doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic');
-        doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10);
-        doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`);
-        showToast("Professional PDF Downloaded!");
+            if (data.pendingsInRange && data.pendingsInRange.length > 0) {
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(255, 59, 107); doc.text("PENDING COLLECTIONS SUMMARY", marginX, currentY);
+                let totalPending = 0;
+                let pendingTableBody = data.pendingsInRange.map((p, i) => {
+                    totalPending += Number(p.accumulatedTotal || 0);
+                    return [i + 1, p.name, (p.type || 'DAILY').toUpperCase(), p.missedDatesStr, `RS. ${Number(p.accumulatedTotal).toFixed(0).toLocaleString()}`];
+                });
+                doc.autoTable({
+                    startY: currentY + 4,
+                    head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']],
+                    body: pendingTableBody,
+                    foot: [['', '', '', 'TOTAL PENDING AMOUNT', `RS. ${totalPending.toFixed(0).toLocaleString()}`]],
+                    theme: 'striped', headStyles: { fillColor: [255, 59, 107] }, footStyles: { fillColor: [255, 59, 107], textColor: [255, 255, 255] }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            }
+
+            if (currentY > 270) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic');
+            doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10);
+            doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`);
+            showToast("Professional PDF Downloaded!");
+        } catch (err) {
+            console.error(err);
+            showToast("Error generating PDF. Try again.");
+        }
     }
 
     function render() {
@@ -1174,7 +1204,7 @@
                 ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
                 <div onclick="toggleView(${c.id})" style="cursor:pointer;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
-                    <div class="card-header"><div><div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'👑':''}</div><div class="c-sub">Since ${c.startDate}</div></div><div><div class="c-bal">₹${c.currentBalance.toFixed(0)}</div><div class="c-sub" style="text-align:right">Balance</div></div></div>
+                    <div class="card-header"><div style="min-width:0; flex:1;"><div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div><div class="c-sub">Since ${c.startDate}</div></div><div style="flex-shrink:0;"><div class="c-bal">₹${c.currentBalance.toFixed(0)}</div><div class="c-sub" style="text-align:right">Balance</div></div></div>
                 </div>
                 <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
                     <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;"><div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${c.type==='daily'?'Return Amt':'Principal'}</span><br><b style="font-size:14px;">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b></div><div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">Total Paid</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div><div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">Remaining</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div></div>
