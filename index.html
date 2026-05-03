@@ -7,6 +7,10 @@
     <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Cropper.js Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
@@ -23,7 +27,7 @@
             --owner-gold: #FFD700;
         }
 
-        /* Essential Reset to prevent horizontal displacement and unwanted scrolling */
+        /* Essential Reset */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
 
         body {
@@ -33,7 +37,7 @@
             margin: 0; padding: 20px 12px;
             padding-bottom: 120px; 
             min-height: 100vh;
-            overflow-x: hidden; /* Critical: Prevents side movement */
+            overflow-x: hidden;
             position: relative;
         }
 
@@ -124,12 +128,21 @@
             letter-spacing: 0.5px; 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
+            gap: 10px; 
             word-break: break-word; 
             overflow-wrap: break-word;
             flex: 1;
             min-width: 0;
             white-space: normal;
+        }
+
+        .cust-avatar {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid var(--accent-orange);
+            background: rgba(255,255,255,0.05);
+            flex-shrink: 0;
         }
         
         .c-sub { font-size: 11px; color: var(--text-muted); font-weight: 400;}
@@ -207,6 +220,39 @@
         .modal-cont { background: #1A1C23; border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px 25px; border-radius: 30px; width: 100%; max-width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
         .modal-label { font-size: 11px; color: var(--text-muted); margin-top: 15px; display: block; margin-bottom: 8px; font-weight:500; letter-spacing: 0.5px;}
 
+        /* Photo Preview Styling */
+        .photo-preview-wrap {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 15px;
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+        .photo-preview-img {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid var(--accent-orange);
+        }
+
+        /* --- CROP MODAL CUSTOM STYLES --- */
+        .crop-area-wrap {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            margin-top: 15px;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        .crop-area-wrap img {
+            max-width: 100%;
+            display: block;
+        }
+
         /* LOCK SCREEN KEYPAD */
         #lock-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -235,6 +281,20 @@
 
 <div id="toast-box">Message</div>
 
+<!-- Image Crop Modal -->
+<div id="crop-modal" class="modal">
+    <div class="modal-cont" style="max-width: 450px;">
+        <h3 style="margin-top:0; font-size:18px; color:var(--text-main);">Crop Photo</h3>
+        <div class="crop-area-wrap">
+            <img id="crop-image-el" src="">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="margin:0; background:var(--success); color:#000;" onclick="confirmCrop()">Crop & Save</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeCropModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <!-- Confirm Modal -->
 <div id="confirm-modal" class="modal">
     <div class="modal-cont" style="text-align: center;">
@@ -250,6 +310,14 @@
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700;">Edit Record</h3>
         <input type="hidden" id="edit-id">
+        
+        <label class="modal-label">Customer Photo</label>
+        <div id="edit-photo-preview-wrap" class="photo-preview-wrap" style="display:none;">
+            <img id="edit-photo-preview" src="" class="photo-preview-img">
+            <button type="button" onclick="removeEditPhoto()" style="background:transparent; border:1px solid var(--danger); color:var(--danger); font-size:10px; padding:4px 8px; border-radius:8px; cursor:pointer;">Remove Photo</button>
+        </div>
+        <div class="input-group"><span class="input-icon">📷</span><input type="file" id="edit-photo-input" accept="image/*" onchange="handleImageSelect(this, 'edit')"></div>
+
         <label class="modal-label">Customer Name</label>
         <div class="input-group"><span class="input-icon">👤</span><input type="text" id="edit-name"></div>
         <label class="modal-label">Start Date</label>
@@ -462,6 +530,12 @@
                 <h3 style="margin:0; font-size:16px; font-weight:600;" id="t-addTitle">Create Record</h3>
             </div>
             <div class="cust-card" style="padding: 25px 20px;">
+                
+                <div class="input-group">
+                    <span class="input-icon">📷</span>
+                    <input type="file" id="cust-photo" accept="image/*" onchange="handleImageSelect(this, 'add')">
+                </div>
+
                 <div class="input-group"><span class="input-icon">⚲</span>
                     <select id="type" onchange="toggleFields()">
                         <option value="daily" id="t-opt-daily">Daily Kishat</option>
@@ -618,6 +692,11 @@
     let confirmActionCallback = null;
     let isSaving = false;
     let lastGeneratedReportData = null;
+
+    // Cropper specific globals
+    let activeCropper = null;
+    let currentCropTarget = ''; // 'add' or 'edit'
+    let lastCroppedBase64 = '';
 
     function getConfig() {
         let conf = db.find(x => x.type === 'config');
@@ -800,6 +879,64 @@
     function switchTab(tab) { currentTab = tab; openViews = {}; multiDelMode = {}; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + tab).classList.add('active'); document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none'; document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none'; document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none'; document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block'; if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; if(tab === 'stats') { let todayDate = new Date().toISOString().split('T')[0]; document.getElementById('rep-start').value = todayDate; document.getElementById('rep-end').value = todayDate; if(document.getElementById('rep-type')) document.getElementById('rep-type').value = 'all'; if(document.getElementById('rep-search')) document.getElementById('rep-search').value = ''; document.getElementById('rep-results').style.display = 'none'; document.getElementById('rep-list').scrollTop = 0; window.scrollTo(0, 0); } render(); }
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    // --- Image Selection & Cropping Logic ---
+    function handleImageSelect(input, target) {
+        if (!input.files || !input.files[0]) return;
+        
+        currentCropTarget = target;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const cropImg = document.getElementById('crop-image-el');
+            cropImg.src = e.target.result;
+            document.getElementById('crop-modal').style.display = 'flex';
+            
+            if (activeCropper) activeCropper.destroy();
+            
+            // Initialize Cropper.js
+            activeCropper = new Cropper(cropImg, {
+                aspectRatio: 1, // Circular or Square look
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 1,
+                restore: false,
+                guides: false,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+            });
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+
+    function confirmCrop() {
+        if (!activeCropper) return;
+        
+        const canvas = activeCropper.getCroppedCanvas({
+            width: 400,
+            height: 400,
+            imageSmoothingQuality: 'high'
+        });
+        
+        lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        if (currentCropTarget === 'edit') {
+            document.getElementById('edit-photo-preview').src = lastCroppedBase64;
+            document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
+        }
+        
+        closeCropModal();
+        showToast("Photo Cropped!");
+    }
+
+    function closeCropModal() {
+        if (activeCropper) activeCropper.destroy();
+        activeCropper = null;
+        document.getElementById('crop-modal').style.display = 'none';
+    }
+
     function logout() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); document.getElementById('main-app').style.display = 'none'; document.getElementById('lock-screen').style.display = 'flex'; resetPin(); isOwnerMode = false; deviceStaffName = ''; activeLoginPin = ""; currentLang = 'en'; localStorage.setItem('paymitra_lang', 'en'); if(document.getElementById('lang-select')) document.getElementById('lang-select').value = 'en'; applyLang(); if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; switchTab('dash'); }
     function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
     function hardRefresh() { loadFromCloud(); }
@@ -857,14 +994,28 @@
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
     function recalculateCase(c) { if(!c.history) c.history = []; c.history.sort((a, b) => (a.date > b.date ? 1 : -1)); let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); c.history.forEach(h => { if(c.type === 'monthly' || c.type === 'meter') { let intDue = (tempBal * (c.rate||0) / 100); if(h.paid > intDue) tempBal -= (h.paid - intDue); } else { tempBal -= h.paid; } h.balance = tempBal; h.bal = tempBal.toFixed(0); }); c.currentBalance = tempBal; }
 
-    function addCustomer() {
+    async function addCustomer() {
         const tLang = i18n[currentLang];
         const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
         const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
         const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
+        
         if(!name) { triggerShake('name'); return showToast(tLang.missingNameAmt || "Missing Name!"); }
         if(isNaN(amt) || amt <= 0) { triggerShake('amt'); return showToast(tLang.missingNameAmt || "Missing Principal!"); }
-        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false };
+        
+        let photoBase64 = "";
+        // Use last cropped image if target was 'add'
+        if (currentCropTarget === 'add' && lastCroppedBase64) {
+            photoBase64 = lastCroppedBase64;
+        } else {
+            // Fallback to original resize logic if no crop was done
+            const fileInput = document.getElementById('cust-photo');
+            if (fileInput.files && fileInput.files[0]) {
+                photoBase64 = await toBase64(fileInput.files[0]);
+            }
+        }
+
+        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64 };
         if(type === 'monthly') { 
             let rateVal = parseFloat(document.getElementById('rate').value);
             if(isNaN(rateVal)) { triggerShake('rate'); return showToast(tLang.missingRate || "Missing Interest Rate!"); }
@@ -882,10 +1033,36 @@
         }
         db.push(cust); saveAndRender(); 
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
+        document.getElementById('cust-photo').value = '';
+        lastCroppedBase64 = ''; // Reset
         if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
         if(document.getElementById('days')) document.getElementById('days').value = '';
         if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
         showToast("Record Created!");
+    }
+
+    function toBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 400; // Optimize for identification speed
+                    if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+                    else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+            reader.onerror = error => reject(error);
+        });
     }
 
     function saveAndRender() { isSaving = true; localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); document.getElementById('sync-status').innerText = "Saving to Cloud..."; document.getElementById('cloud-indicator').className = "status-dot"; fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "save", data: JSON.stringify(db) }) }).then(res => res.text()).then(res => { if(res === "Success") { document.getElementById('sync-status').innerText = "Cloud Synced"; } else { document.getElementById('sync-status').innerText = "Save Error"; document.getElementById('cloud-indicator').className = "status-dot offline"; } isSaving = false; }).catch(e => { document.getElementById('sync-status').innerText = "Saved Offline"; document.getElementById('cloud-indicator').className = "status-dot offline"; isSaving = false; }); }
@@ -896,8 +1073,60 @@
     function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
     function openBulkModal(id) { let c = db.find(x => x.id === id); document.getElementById('bulk-id').value = id; document.getElementById('bulk-start-date').value = new Date().toISOString().split('T')[0]; document.getElementById('bulk-end-date').value = new Date().toISOString().split('T')[0]; let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); document.getElementById('bulk-amt').value = amt.toFixed(0); const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); document.getElementById('bulk-freq-label').innerText = `(${freqText})`; document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt; document.getElementById('bulk-modal').style.display = 'flex'; }
     function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
-    function openEditModal(id) { let c = db.find(x => x.id === id); document.getElementById('edit-id').value = id; document.getElementById('edit-name').value = c.name; document.getElementById('edit-staff-ref').value = c.staffRef || ''; document.getElementById('edit-date').value = c.startDate; document.getElementById('edit-amt').value = c.principal; if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } document.getElementById('edit-modal').style.display = 'flex'; }
-    function saveEdit() { let id = parseInt(document.getElementById('edit-id').value); let c = db.find(x => x.id === id); let oldRate = c.rate; let oldInstallment = c.installment; let oldTotalPayable = c.totalPayable; let nameVal = document.getElementById('edit-name').value; if (nameVal) c.name = nameVal; if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } recalculateCase(c); closeModal('edit-modal'); saveAndRender(); showToast("Account Updated"); }
+    
+    function removeEditPhoto() {
+        document.getElementById('edit-photo-preview-wrap').style.display = 'none';
+        document.getElementById('edit-photo-preview').src = '';
+        window._pendingPhotoRemoval = true;
+    }
+
+    function openEditModal(id) { 
+        window._pendingPhotoRemoval = false;
+        lastCroppedBase64 = ''; // Reset for new edit
+        let c = db.find(x => x.id === id); 
+        document.getElementById('edit-id').value = id; 
+        document.getElementById('edit-name').value = c.name; 
+        document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
+        document.getElementById('edit-date').value = c.startDate; 
+        document.getElementById('edit-amt').value = c.principal; 
+        
+        const previewWrap = document.getElementById('edit-photo-preview-wrap');
+        const previewImg = document.getElementById('edit-photo-preview');
+        if(c.photo) {
+            previewImg.src = c.photo;
+            previewWrap.style.display = 'flex';
+        } else {
+            previewWrap.style.display = 'none';
+        }
+        
+        document.getElementById('edit-photo-input').value = '';
+        if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } document.getElementById('edit-modal').style.display = 'flex'; 
+    }
+    
+    async function saveEdit() { 
+        let id = parseInt(document.getElementById('edit-id').value); 
+        let c = db.find(x => x.id === id); 
+        let oldRate = c.rate; 
+        let oldInstallment = c.installment; 
+        let oldTotalPayable = c.totalPayable; 
+        let nameVal = document.getElementById('edit-name').value; 
+        if (nameVal) c.name = nameVal; 
+        
+        // Use last cropped image if target was 'edit'
+        if (currentCropTarget === 'edit' && lastCroppedBase64) {
+            c.photo = lastCroppedBase64;
+        } else if (window._pendingPhotoRemoval) {
+            c.photo = ""; 
+        } else {
+            const fileInput = document.getElementById('edit-photo-input');
+            if (fileInput.files && fileInput.files[0]) {
+                c.photo = await toBase64(fileInput.files[0]);
+            }
+        }
+
+        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } recalculateCase(c); closeModal('edit-modal'); saveAndRender(); showToast("Account Updated"); 
+    }
+    
     function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
     function deleteCustUI(id) { askConfirm("Are you sure you want to delete this entire account?", () => { db = db.filter(x => x.id !== id); saveAndRender(); showToast("Account Deleted!"); }); }
     function deleteHistoryUI(custId, originalIndex) { askConfirm("Delete this entry?", () => { let c = db.find(x => x.id === custId); c.history.splice(originalIndex, 1); recalculateCase(c); saveAndRender(); showToast("Entry Deleted!"); }); }
@@ -951,7 +1180,6 @@
         let paymentsDaily = [], paymentsMonthly = [], paymentsMeter = [];
         let pendingsInRange = [];
 
-        // STRICT Local YYYY-MM-DD compare strings
         const rangeEndStr = end;
         
         db.filter(x => x.type !== 'config').forEach(c => {
@@ -960,7 +1188,6 @@
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
             if (type !== 'all' && c.type !== type) return;
 
-            // 1. New Cases check
             if (c.startDate >= start && c.startDate <= end) {
                 totalGiven += c.principal;
                 let cCopy = {...c};
@@ -969,7 +1196,6 @@
                 else if (c.type === 'meter') newCasesMeter.push(cCopy);
             }
 
-            // 2. Recovered Payments logic
             let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
             let tempBalForRec = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
             let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0;
@@ -993,11 +1219,8 @@
                 if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
             }
 
-            // 3. STRICT PENDING LOGIC (LINKED TO ACCOUNTS)
             if (!c.isArchived && c.currentBalance > 0) {
                 let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
-                
-                // Pure Local Date Helper
                 const toLocalYMD = (d) => {
                     let y = d.getFullYear();
                     let m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1009,7 +1232,7 @@
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     let iterDate = new Date(sy, sm - 1, sd);
-                    iterDate.setDate(iterDate.getDate() + 1); // Start checking from next day
+                    iterDate.setDate(iterDate.getDate() + 1); 
                     
                     while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
@@ -1023,25 +1246,17 @@
                     amountPerUnit = c.principal * (c.rate || 0) / 100;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     let cycle = 1;
-                    
                     while (true) {
-                        // Calculate next due date strictly
                         let nextDue = new Date(sy, (sm - 1) + cycle, sd);
-                        // Fix for end-of-month drift
                         if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
-                        
                         let nextDueStr = toLocalYMD(nextDue);
-                        if (nextDueStr > rangeEndStr) break; // Hard stop at report end date
-
-                        // Check if this month/year has any interest payment in history
+                        if (nextDueStr > rangeEndStr) break; 
                         let targetY = nextDue.getFullYear();
-                        let targetM = nextDue.getMonth(); // 0-11
-                        
+                        let targetM = nextDue.getMonth(); 
                         let paidThisCycle = c.history && c.history.some(h => {
                             let [hy, hm, hd] = h.date.split('-').map(Number);
                             return hy === targetY && (hm - 1) === targetM;
                         });
-
                         if (!paidThisCycle) {
                             accumulatedTotal += amountPerUnit;
                             missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0'));
@@ -1049,7 +1264,6 @@
                         cycle++;
                     }
                 }
-                
                 if (missedDates.length > 0) { 
                     pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); 
                 }
@@ -1066,7 +1280,7 @@
         const renderCases = (list, title, color) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:15px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
-            list.forEach(c => { html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">Given on ${c.startDate}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">Profit Cut: ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; });
+            list.forEach(c => { html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">`:''}<div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">Given on ${c.startDate}</span></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">Profit Cut: ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; });
             return html;
         };
         reportHtml += renderCases(newCasesDaily, "🆕 New Daily Cases", "var(--accent-orange)");
@@ -1252,12 +1466,28 @@
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${h.date}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${h.date}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
+            
+            // Avatar with identification fix
+            const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
+
             accountsHtmlArray.push(`
             <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
                 ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
                 <div onclick="toggleView(${c.id})" style="cursor:pointer;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
-                    <div class="card-header"><div style="min-width:0; flex:1;"><div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div><div class="c-sub">Since ${c.startDate}</div></div><div style="flex-shrink:0;"><div class="c-bal">₹${c.currentBalance.toFixed(0)}</div><div class="c-sub" style="text-align:right">Balance</div></div></div>
+                    <div class="card-header">
+                        <div style="min-width:0; flex:1; display:flex; align-items:center; gap:12px;">
+                            ${avatarHtml}
+                            <div style="min-width:0;">
+                                <div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
+                                <div class="c-sub">Since ${c.startDate}</div>
+                            </div>
+                        </div>
+                        <div style="flex-shrink:0;">
+                            <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
+                            <div class="c-sub" style="text-align:right">Balance</div>
+                        </div>
+                    </div>
                 </div>
                 <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
                     <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;"><div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${c.type==='daily'?'Return Amt':'Principal'}</span><br><b style="font-size:14px;">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b></div><div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">Total Paid</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div><div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">Remaining</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div></div>
