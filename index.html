@@ -654,7 +654,7 @@
             appSub: "नमस्ते 👋", sumPrin: "कुल मूलधन", sumCases: "कुल खाते", sumOut: "बकाया", 
             addTitle: "नया खाता बनाएं", namePh: "ग्राहक का नाम", amtPh: "मूलधन (Principal)", addBtn: "खाता जोड़ें", 
             navDash: "होम", navCust: "खाते", navBulk: "फास्ट ऐड", navStats: "रिव्यू", 
-            setMainTitle: "ऐप सेटिंग्स", setBackup: "डेटा बैकअप", setRestore: "डेटा रिस्टोर", setPinStaff: "स्टाफ PIN बदलें", setPinOwner: "मालिक PIN बदलें 👑", setLogout: "लॉगआउट", setClose: "बंद करें", 
+            setMainTitle: "ऐप सेटिंग्स", setBackup: "डेटा बैकअप", setRestore: "डेटा रिस्टor", setPinStaff: "स्टाफ PIN बदलें", setPinOwner: "मालिक PIN बदलें 👑", setLogout: "लॉगआउट", setClose: "बंद करें", 
             searchPh: "नाम खोजें...", cleanDashTitle: "क्लीन डैशबोर्ड", cleanDashSub: "खाता देखने के लिए ऊपर नाम खोजें।<br>पूरी लिस्ट देखने के लिए <b>खाते</b> टैब पर जाएं।", 
             bizPort: "बिजनेस पोर्टफोलियो", recStatus: "रिकवरी स्टेटस", monthly: "महीना", daily: "रोज़ाना", meter: "मीटर", recovered: "रिकवर हुआ", remaining: "बाकी", 
             ownerGrowth: "👑 प्रॉफिट एनालिटिक्स", totInvested: "कुल निवेश", netProfit: "प्राप्त प्रॉफिट", ownerNote: "यह डेटा केवल मालिक के लिए है, स्टाफ को नहीं दिखेगा।",
@@ -665,7 +665,7 @@
             delCaseMsg: "क्या आप यह पूरा खाता हटाना चाहते हैं?", delCaseSuccess: "खाता हटा दिया गया!", editBtn: "एडिट", recBtn: "प्राप्त करें", bulkBtn: "⚡ बल्क",
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
             autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
-            repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं है।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "एडवांस प्रॉफिट (कटौती)",
+            repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं है।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "Advance Profit (Cut)",
             archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की Login ID या Owner PIN डालें",
             refStatTitle: "👑 रेफरेंस सारांश", refStatCases: "कुल खाते", refStatValue: "कुल वैल्यू", refStatRec: "प्राप्त", refStatOut: "बकाया",
             refStatCollection: "कुल रोज़ाना किश्त", refStatInterest: "कुल महीने का ब्याज", refStatProfit: "अनुमानित प्रॉफिट",
@@ -855,7 +855,7 @@
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
-    function recalculateCase(c) { if(!c.history) c.history = []; c.history.sort((a, b) => new Date(a.date) - new Date(b.date)); let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); c.history.forEach(h => { if(c.type === 'monthly' || c.type === 'meter') { let intDue = (tempBal * (c.rate||0) / 100); if(h.paid > intDue) tempBal -= (h.paid - intDue); } else { tempBal -= h.paid; } h.balance = tempBal; h.bal = tempBal.toFixed(0); }); c.currentBalance = tempBal; }
+    function recalculateCase(c) { if(!c.history) c.history = []; c.history.sort((a, b) => (a.date > b.date ? 1 : -1)); let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); c.history.forEach(h => { if(c.type === 'monthly' || c.type === 'meter') { let intDue = (tempBal * (c.rate||0) / 100); if(h.paid > intDue) tempBal -= (h.paid - intDue); } else { tempBal -= h.paid; } h.balance = tempBal; h.bal = tempBal.toFixed(0); }); c.currentBalance = tempBal; }
 
     function addCustomer() {
         const tLang = i18n[currentLang];
@@ -950,15 +950,17 @@
         let newCasesDaily = [], newCasesMonthly = [], newCasesMeter = [];
         let paymentsDaily = [], paymentsMonthly = [], paymentsMeter = [];
         let pendingsInRange = [];
-        let reportEndDateObj = new Date(end);
-        let reportEndYear = reportEndDateObj.getFullYear();
 
+        // STRICT Local YYYY-MM-DD compare strings
+        const rangeEndStr = end;
+        
         db.filter(x => x.type !== 'config').forEach(c => {
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
             if (type !== 'all' && c.type !== type) return;
 
+            // 1. New Cases check
             if (c.startDate >= start && c.startDate <= end) {
                 totalGiven += c.principal;
                 let cCopy = {...c};
@@ -967,17 +969,23 @@
                 else if (c.type === 'meter') newCasesMeter.push(cCopy);
             }
 
+            // 2. Recovered Payments logic
             let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
-            let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
+            let tempBalForRec = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
             let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0;
             
             if(c.history) {
-                let sortedHist = [...c.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+                let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
                 sortedHist.forEach(h => {
                     let paid = parseFloat(h.paid); let profitFromThisPayment = 0;
-                    if(c.type === 'monthly' || c.type === 'meter') { let intDue = tempBal * (c.rate / 100); if (paid <= intDue) profitFromThisPayment = paid; else { profitFromThisPayment = intDue; tempBal -= (paid - intDue); } }
-                    else { profitFromThisPayment = paid * cRatio; tempBal -= paid; }
-                    if (h.date >= start && h.date <= end) { customerTotalInRange += paid; totalReturned += paid; customerProfitInRange += profitFromThisPayment; totalProfitInRange += profitFromThisPayment; histHits.push({ date: h.date, amt: paid, profit: profitFromThisPayment }); }
+                    if(c.type === 'monthly' || c.type === 'meter') { let intDue = tempBalForRec * (c.rate / 100); if (paid <= intDue) profitFromThisPayment = paid; else { profitFromThisPayment = intDue; tempBalForRec -= (paid - intDue); } }
+                    else { profitFromThisPayment = paid * cRatio; tempBalForRec -= paid; }
+                    
+                    if (h.date >= start && h.date <= end) { 
+                        customerTotalInRange += paid; totalReturned += paid; 
+                        customerProfitInRange += profitFromThisPayment; totalProfitInRange += profitFromThisPayment; 
+                        histHits.push({ date: h.date, amt: paid, profit: profitFromThisPayment }); 
+                    }
                 });
             }
             if (customerTotalInRange > 0) {
@@ -985,21 +993,66 @@
                 if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
             }
 
+            // 3. STRICT PENDING LOGIC (LINKED TO ACCOUNTS)
             if (!c.isArchived && c.currentBalance > 0) {
                 let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
-                let startD = new Date(c.startDate), annivDay = startD.getDate();
+                
+                // Pure Local Date Helper
+                const toLocalYMD = (d) => {
+                    let y = d.getFullYear();
+                    let m = String(d.getMonth() + 1).padStart(2, '0');
+                    let day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+
                 if (c.type === 'daily' || c.type === 'meter') {
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
-                    let iterDate = new Date(c.startDate); iterDate.setDate(iterDate.getDate() + 1);
-                    while(iterDate <= reportEndDateObj) { let dStr = iterDate.toISOString().split('T')[0]; if (!c.history.some(h => h.date === dStr)) { accumulatedTotal += amountPerUnit; missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); } iterDate.setDate(iterDate.getDate() + 1); }
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let iterDate = new Date(sy, sm - 1, sd);
+                    iterDate.setDate(iterDate.getDate() + 1); // Start checking from next day
+                    
+                    while (toLocalYMD(iterDate) <= rangeEndStr) {
+                        let currentCheckStr = toLocalYMD(iterDate);
+                        if (!c.history || !c.history.some(h => h.date === currentCheckStr)) {
+                            accumulatedTotal += amountPerUnit;
+                            missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0'));
+                        }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
                 } else if (c.type === 'monthly') {
-                    let monthlyInt = c.principal * (c.rate || 0) / 100; amountPerUnit = monthlyInt;
-                    let totalPaidAllTime = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
-                    let monthsCleared = monthlyInt > 0 ? Math.floor(totalPaidAllTime / monthlyInt) : 0;
-                    let iterDate = new Date(c.startDate); iterDate.setMonth(iterDate.setMonth() + monthsCleared + 1);
-                    while(iterDate <= reportEndDateObj) { accumulatedTotal += amountPerUnit; missedDates.push(String(annivDay).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); iterDate.setMonth(iterDate.getMonth() + 1); }
+                    amountPerUnit = c.principal * (c.rate || 0) / 100;
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let cycle = 1;
+                    
+                    while (true) {
+                        // Calculate next due date strictly
+                        let nextDue = new Date(sy, (sm - 1) + cycle, sd);
+                        // Fix for end-of-month drift
+                        if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
+                        
+                        let nextDueStr = toLocalYMD(nextDue);
+                        if (nextDueStr > rangeEndStr) break; // Hard stop at report end date
+
+                        // Check if this month/year has any interest payment in history
+                        let targetY = nextDue.getFullYear();
+                        let targetM = nextDue.getMonth(); // 0-11
+                        
+                        let paidThisCycle = c.history && c.history.some(h => {
+                            let [hy, hm, hd] = h.date.split('-').map(Number);
+                            return hy === targetY && (hm - 1) === targetM;
+                        });
+
+                        if (!paidThisCycle) {
+                            accumulatedTotal += amountPerUnit;
+                            missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0'));
+                        }
+                        cycle++;
+                    }
                 }
-                if (missedDates.length > 0) { pendingsInRange.push({ ...c, displayPendingDate: missedDates[missedDates.length-1]+"/"+reportEndYear, pendingAmount: amountPerUnit, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
+                
+                if (missedDates.length > 0) { 
+                    pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); 
+                }
             }
         });
 
@@ -1115,11 +1168,10 @@
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY);
                 let totalMonthly = 0;
-                // FIX: Sort monthly payments by the earliest payment date in their hits
                 let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => {
                     let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99';
                     let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99';
-                    return new Date(dateA) - new Date(dateB);
+                    return (dateA > dateB ? 1 : -1);
                 });
                 let monthlyTableBody = sortedMonthlyPayments.map((p, i) => {
                     let dates = p.hits.map(h => h.date).sort().join(", ");
@@ -1178,7 +1230,7 @@
         let today = new Date().toISOString().split('T')[0];
         let pureDB = db.filter(x => x.type !== 'config');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
-        let sortedDB = mappedDB.sort((a, b) => { let dateA = new Date(a.startDate).getTime(); let dateB = new Date(b.startDate).getTime(); if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? dateB - dateA : dateA - dateB; });
+        let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
         sortedDB.forEach(c => {
             if(!isOwnerMode && c.isPersonal) return;
@@ -1190,7 +1242,8 @@
             if(!nameMatch && !refMatch) return;
             if (currentTab === 'dash' && sName === '') return;
             if (refMatch) { showSearchStat = true; searchCasesCount++; searchTotalValue += c.principal; searchTotalBal += c.currentBalance; let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; searchTotalRec += paid; if (c.type === 'daily') { searchTotalKishat += (c.installment || 0); let totalP = (c.totalPayable || c.principal) - c.principal; let ratio = totalP / (c.totalPayable || c.principal); searchTotalProfit += (c.installment * ratio); } else if (c.type === 'monthly' || c.type === 'meter') { let interest = (c.principal * (c.rate || 0) / 100); searchTotalKishat += interest; searchTotalProfit += interest; } }
-            let isDueToday = false, isPending = false, pendingDays = 0, todayDateObj = new Date(today);
+            let isDueToday = false, isPending = false, pendingDays = 0;
+            let todayDateObj = new Date(today);
             if (c.type === 'monthly') { let monthlyInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let monthsPaid = monthlyInt > 0 ? Math.floor(totalPaidThisCase / monthlyInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); nextDueDate.setMonth(nextDueDate.getMonth() + monthsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); if (pendingDays === 0) isDueToday = true; } }
             else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
             if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
@@ -1229,7 +1282,7 @@
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
             if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
-            if(isOwnerMode) { globalInvested += c.principal; let tBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0; if (c.type === 'monthly') globalProfit += (c.principal * (c.rate || 0) / 100); if(c.history) { [...c.history].sort((a,b) => new Date(a.date)-new Date(b.date)).forEach(h => { let paid = parseFloat(h.paid); if(c.type === 'monthly' || c.type === 'meter') { let intDue = tBal * (c.rate / 100); if (paid <= intDue) globalProfit += paid; else { globalProfit += intDue; tBal -= (paid - intDue); } } else { globalProfit += (paid * cRatio); tBal -= paid; } }); } }
+            if(isOwnerMode) { globalInvested += c.principal; let tBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0; if (c.type === 'monthly') globalProfit += (c.principal * (c.rate || 0) / 100); if(c.history) { [...c.history].sort((a,b) => (a.date > b.date ? 1 : -1)).forEach(h => { let paid = parseFloat(h.paid); if(c.type === 'monthly' || c.type === 'meter') { let intDue = tBal * (c.rate / 100); if (paid <= intDue) globalProfit += paid; else { globalProfit += intDue; tBal -= (paid - intDue); } } else { globalProfit += (paid * cRatio); tBal -= paid; } }); } }
         });
         if(isOwnerMode) { document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); }
         document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
