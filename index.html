@@ -1,3 +1,6 @@
+Firebase 
+
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -464,7 +467,7 @@
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700;" id="t-setMainTitle">App Settings</h3>
         <div style="margin-top:15px;">
-            <label class="modal-label">Language / भाषा / ਭਾਸ਼ა</label>
+            <label class="modal-label">Language / भाषा / ਭਾਸ਼ਾ</label>
             <div class="input-group">
                 <select id="lang-select" onchange="changeLang()">
                     <option value="en">English</option>
@@ -525,8 +528,7 @@
             <div class="key" onclick="press(7)">7</div><div class="key" onclick="press(8)">8</div><div class="key" onclick="press(9)">9</div>
             <div class="key clear-key" onclick="deletePinChar()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line>
-                    <line x1="12" y1="9" x2="18" y2="15"></line>
+                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line>
                 </svg>
             </div>
             <div class="key" onclick="press(0)">0</div>
@@ -721,26 +723,26 @@
         <span id="t-navDash">Home</span>
     </div>
     <div class="nav-item" id="nav-cust" onclick="switchTab('cust')"><span class="nav-icon">👤</span><span id="t-navCust">Accounts</span></div>
-    <div class="nav-item" id="nav-bulk" onclick="switchTab('dash')"><span class="nav-icon">⚡</span><span id="t-navBulk">Fast Add</span></div>
+    <div class="nav-item" id="nav-bulk" onclick="switchTab('bulk')"><span class="nav-icon">⚡</span><span id="t-navBulk">Fast Add</span></div>
     <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
 </div>
 
 <script>
     // --- FIREBASE SETUP ---
+    // IMPORTANT: Niche di gayi details ko apni Firebase project ki details se replace zaroor karna
     const firebaseConfig = {
-      apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
-      authDomain: "credixproapp.firebaseapp.com",
-      databaseURL: "https://credixproapp-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "credixproapp",
-      storageBucket: "credixproapp.firebasestorage.app",
-      messagingSenderId: "352314210837",
-      appId: "1:352314210837:web:45eaf4b4a7720d06c92c1c",
-      measurementId: "G-R7W6MCT0B8"
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const database = firebase.database('https://credixproapp-default-rtdb.asia-southeast1.firebasedatabase.app');
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
     // ----------------------
     
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
@@ -751,8 +753,7 @@
     let isOwnerMode = false; 
     let deviceStaffName = ''; 
     let activeStaffPhoto = '';
-    let currentTab = 'dash'; let openViews = {}; let openViewsIsOpen = {};
-    let openViews = {}; let multiDelMode = {}; let multiDelModeOpen = {}; let multiDelMode = {};
+    let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; 
     let confirmActionCallback = null;
     let isSaving = false;
     let lastGeneratedReportData = null;
@@ -871,7 +872,6 @@
     };
     
     let currentLang = localStorage.getItem('paymitra_lang') || 'en';
-    let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
 
     window.onload = function() { 
@@ -886,16 +886,10 @@
         applyLang();
         document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
         
-        const connectionTimeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Timeout")), 7500);
-        });
-
-        Promise.race([
-            database.ref('credix_db').once('value'),
-            connectionTimeout
-        ])
+        // --- FIREBASE INITIAL DATA LOAD ---
+        database.ref('credix_db').once('value')
         .then((snapshot) => {
-            if(snapshot && snapshot.exists()) {
+            if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
@@ -903,13 +897,9 @@
                 localStorage.setItem('paymitra_v11', JSON.stringify(db));
             }
             document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
         })
         .catch(e => {
             document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-            document.getElementById('sync-status').innerText = "Offline Mode";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
         });
 
         setInterval(backgroundSync, 15000); 
@@ -1174,7 +1164,6 @@
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
     function exportData() { let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); let fileName = "CredixBackup_" + dateStr + ".json"; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); a.download = fileName; a.click(); }
     function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
-    
     function press(n) { if(pin.length < 4) { pin += n; document.getElementById('d' + pin.length).classList.add('active'); } }
     function resetPin() { pin = ""; for(let i=1; i<=4; i++) document.getElementById('d'+i).classList.remove('active'); }
     function deletePinChar() { if(pin.length > 0) { document.getElementById('d' + pin.length).classList.remove('active'); pin = pin.slice(0, -1); } }
@@ -1207,7 +1196,6 @@
         } 
     }
 
-    function checkAutoBackupFrequency() { checkAutoBackup(); }
     function checkAutoBackup() { if(autoBackupFreq === 'never' || db.length === 0) return; let todayObj = new Date(); let todayStr = todayObj.toISOString().split('T')[0]; let lastBackup = localStorage.getItem('paymitra_lastbackup') || ''; if (autoBackupFreq === 'daily') { if (lastBackup !== todayStr) { exportData(); localStorage.setItem('paymitra_lastbackup', todayStr); setTimeout(() => showToast("Daily Auto Backup Complete!"), 1000); } } else if (autoBackupFreq === 'monthly') { let currentMonth = todayObj.getFullYear() + '-' + todayObj.getMonth(); let lastMonth = lastBackup ? new Date(lastBackup).getFullYear() + '-' + new Date(lastBackup).getMonth() : ''; if (currentMonth !== lastMonth) { exportData(); localStorage.setItem('paymitra_lastbackup', todayStr); setTimeout(() => showToast("Monthly Auto Backup Complete!"), 1000); } } }
 
     function unlockApp() { 
@@ -1449,7 +1437,6 @@
     function deleteCustUI(id) { askConfirm("Are you sure you want to delete this entire account?", () => { db = db.filter(x => x.id !== id); saveAndRender(); showToast("Account Deleted!"); }); }
     function deleteHistoryUI(custId, originalIndex) { askConfirm("Delete this entry?", () => { let c = db.find(x => x.id === custId); c.history.splice(originalIndex, 1); recalculateCase(c); saveAndRender(); showToast("Entry Deleted!"); }); }
     function deleteSelectedHistoryUI(id) { let checks = document.querySelectorAll(`.del-chk-${id}:checked`); if(checks.length === 0) return toggleMultiDel(id); askConfirm(`Delete ${checks.length} entries?`, () => { let c = db.find(x => x.id === id); let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); indices.forEach(idx => { c.history.splice(idx, 1); }); multiDelMode[id] = false; recalculateCase(c); saveAndRender(); showToast("Selected Deleted!"); }); }
-    function deleteHistoryWithCheck(id) { deleteSelectedHistoryUI(id); }
 
     function generateCustomerPDF(id) {
         const { jsPDF } = window.jspdf;
@@ -1535,7 +1522,7 @@
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     let iterDate = new Date(sy, sm - 1, sd); iterDate.setDate(iterDate.getDate() + 1); 
-                    while (toLocalYMD(iterDate) <= rangeStr) {
+                    while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
                         if (!c.history || !c.history.some(h => h.date === currentCheckStr)) { accumulatedTotal += amountPerUnit; missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); }
                         iterDate.setDate(iterDate.getDate() + 1);
@@ -1548,7 +1535,7 @@
                         let nextDue = new Date(sy, (sm - 1) + cycle, sd);
                         if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
                         let nextDueStr = toLocalYMD(nextDue);
-                        if (nextDueStr > rangeStr) break; 
+                        if (nextDueStr > rangeEndStr) break; 
                         let targetY = nextDue.getFullYear(); let targetM = nextDue.getMonth(); 
                         let paidThisCycle = c.history && c.history.some(h => { let [hy, hm, hd] = h.date.split('-').map(Number); return hy === targetY && (hm - 1) === targetM; });
                         if (!paidThisCycle) { accumulatedTotal += amountPerUnit; missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); }
@@ -1661,7 +1648,6 @@
         let tP = 0, tB = 0, tC = 0;
         let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
         let searchTotalKishat = 0, searchTotalProfit = 0;
-        let showStat = false;
         let showSearchStat = false;
         let today = new Date().toISOString().split('T')[0];
         let pureDB = db.filter(x => x.type !== 'config');
@@ -1679,25 +1665,7 @@
             let refMatch = (currentTab === 'dash' && isOwnerMode && sName !== '') && (c.staffRef || '').toLowerCase().includes(sName);
             if(!nameMatch && !refMatch) return;
             if (currentTab === 'dash' && sName === '') return;
-            if (refMatch) { 
-                showStat = true;
-                showSearchStat = true;
-                searchCasesCount++;
-                searchTotalValue += c.principal;
-                searchTotalBal += c.currentBalance;
-                let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
-                searchTotalRec += paid;
-                if (c.type === 'daily') {
-                    searchTotalKishat += (c.installment || 0);
-                    let totalP = (c.totalPayable || c.principal) - c.principal;
-                    let ratio = totalP / (c.totalPayable || c.principal);
-                    searchTotalProfit += (c.installment * ratio);
-                } else if (c.type === 'monthly' || c.type === 'meter') {
-                    let interest = (c.principal * (c.rate || 0) / 100);
-                    searchTotalKishat += interest;
-                    searchTotalProfit += interest;
-                }
-            }
+            if (refMatch) { showSearchStat = true; searchCasesCount++; searchTotalValue += c.principal; searchTotalBal += c.currentBalance; let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; searchTotalRec += paid; if (c.type === 'daily') { searchTotalKishat += (c.installment || 0); let totalP = (c.totalPayable || c.principal) - c.principal; let ratio = totalP / (c.totalPayable || c.principal); searchTotalProfit += (c.installment * ratio); } else if (c.type === 'monthly' || c.type === 'meter') { let interest = (c.principal * (c.rate || 0) / 100); searchTotalKishat += interest; searchTotalProfit += interest; } }
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
             if (c.type === 'monthly') { let monthlyInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let monthsPaid = monthlyInt > 0 ? Math.floor(totalPaidThisCase / monthlyInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); nextDueDate.setMonth(nextDueDate.getMonth() + monthsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); if (pendingDays === 0) isDueToday = true; } }
@@ -1720,7 +1688,7 @@
                             ${avatarHtml}
                             <div style="min-width:0;">
                                 <div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
-                                <div class="c-sub">Case Date: ${formatDateDisplay(c.startDate)}</div>
+                                <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
                             </div>
                         </div>
                         <div style="flex-shrink:0;">
@@ -1737,7 +1705,7 @@
                         ` : ''}
                         <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteHistoryWithCheck(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
                     <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
                 </div>
                 <div class="btn-row" style="margin-top:15px;"><button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button><button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button><button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button></div>
