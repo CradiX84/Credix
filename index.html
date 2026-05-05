@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Credix - Abstract Premium</title>
+    <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Cropper.js Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
+    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
@@ -306,10 +309,12 @@
 
 <div id="toast-box">Message</div>
 
+<!-- Photo Zoom Modal -->
 <div id="photo-zoom-modal" onclick="closePhotoZoom()">
     <img id="zoomed-img" src="" alt="Customer Photo">
 </div>
 
+<!-- Image Crop Modal -->
 <div id="crop-modal" class="modal">
     <div class="modal-cont" style="max-width: 450px;">
         <h3 style="margin-top:0; font-size:18px; color:var(--text-main);">Crop Photo</h3>
@@ -323,6 +328,7 @@
     </div>
 </div>
 
+<!-- Confirm Modal -->
 <div id="confirm-modal" class="modal" style="z-index: 2000000;">
     <div class="modal-cont" style="text-align: center;">
         <h3 style="margin-top:0; font-size:18px; color:var(--text-main);" id="confirm-text">Are you sure?</h3>
@@ -729,6 +735,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
       authDomain: "credixproapp.firebaseapp.com",
+      databaseURL: "https://credixproapp-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "credixproapp",
       storageBucket: "credixproapp.firebasestorage.app",
       messagingSenderId: "352314210837",
@@ -882,7 +889,6 @@
         applyLang();
         document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
         
-        // --- FIREBASE INITIAL DATA LOAD ---
         database.ref('credix_db').once('value')
         .then((snapshot) => {
             if(snapshot.exists()) {
@@ -1684,7 +1690,7 @@
                             ${avatarHtml}
                             <div style="min-width:0;">
                                 <div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
-                                <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
+                                <div class="c-sub">Case Date: ${formatDateDisplay(c.startDate)}</div>
                             </div>
                         </div>
                         <div style="flex-shrink:0;">
