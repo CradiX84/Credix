@@ -464,7 +464,7 @@
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700;" id="t-setMainTitle">App Settings</h3>
         <div style="margin-top:15px;">
-            <label class="modal-label">Language / भाषा / ਭਾਸ਼ਾ</label>
+            <label class="modal-label">Language / भाषा / ਭਾਸ਼ა</label>
             <div class="input-group">
                 <select id="lang-select" onchange="changeLang()">
                     <option value="en">English</option>
@@ -751,7 +751,8 @@
     let isOwnerMode = false; 
     let deviceStaffName = ''; 
     let activeStaffPhoto = '';
-    let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; // Adjusted
+    let currentTab = 'dash'; let openViews = {}; let openViewsIsOpen = {};
+    let openViews = {}; let multiDelMode = {}; let multiDelModeOpen = {}; let multiDelMode = {};
     let confirmActionCallback = null;
     let isSaving = false;
     let lastGeneratedReportData = null;
@@ -869,6 +870,7 @@
         }
     };
     
+    let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
 
@@ -1172,6 +1174,7 @@
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
     function exportData() { let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); let fileName = "CredixBackup_" + dateStr + ".json"; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); a.download = fileName; a.click(); }
     function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
+    
     function press(n) { if(pin.length < 4) { pin += n; document.getElementById('d' + pin.length).classList.add('active'); } }
     function resetPin() { pin = ""; for(let i=1; i<=4; i++) document.getElementById('d'+i).classList.remove('active'); }
     function deletePinChar() { if(pin.length > 0) { document.getElementById('d' + pin.length).classList.remove('active'); pin = pin.slice(0, -1); } }
@@ -1246,6 +1249,7 @@
         render(); loadFromCloud(); checkAutoBackup();
     }
 
+    // --- FIREBASE SYNC FUNCTIONS ---
     async function loadFromCloud() { 
         document.getElementById('sync-status').innerText = "Syncing..."; 
         try { 
@@ -1512,9 +1516,8 @@
             let tempBalForRec = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
             let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0;
             if(c.history) {
-                let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1)); // Adjusted variable reference if needed, leave as is
-                lastHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1)); // Adjusted variable modified to avoid scope issues
-                lastHist.forEach(h => {
+                let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
+                sortedHist.forEach(h => {
                     let paid = parseFloat(h.paid); let profitFromThisPayment = 0;
                     if(c.type === 'monthly' || c.type === 'meter') { let intDue = tempBalForRec * (c.rate / 100); if (paid <= intDue) profitFromThisPayment = paid; else { profitFromThisPayment = intDue; tempBalForRec -= (paid - intDue); } }
                     else { profitFromThisPayment = paid * cRatio; tempBalForRec -= paid; }
@@ -1532,7 +1535,7 @@
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     let iterDate = new Date(sy, sm - 1, sd); iterDate.setDate(iterDate.getDate() + 1); 
-                    while (toLocalYMD(iterDate) <= rangeEndStr) {
+                    while (toLocalYMD(iterDate) <= rangeStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
                         if (!c.history || !c.history.some(h => h.date === currentCheckStr)) { accumulatedTotal += amountPerUnit; missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); }
                         iterDate.setDate(iterDate.getDate() + 1);
@@ -1545,7 +1548,7 @@
                         let nextDue = new Date(sy, (sm - 1) + cycle, sd);
                         if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
                         let nextDueStr = toLocalYMD(nextDue);
-                        if (nextDueStr > rangeEndStr) break; 
+                        if (nextDueStr > rangeStr) break; 
                         let targetY = nextDue.getFullYear(); let targetM = nextDue.getMonth(); 
                         let paidThisCycle = c.history && c.history.some(h => { let [hy, hm, hd] = h.date.split('-').map(Number); return hy === targetY && (hm - 1) === targetM; });
                         if (!paidThisCycle) { accumulatedTotal += amountPerUnit; missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); }
@@ -1658,6 +1661,7 @@
         let tP = 0, tB = 0, tC = 0;
         let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
         let searchTotalKishat = 0, searchTotalProfit = 0;
+        let showStat = false;
         let showSearchStat = false;
         let today = new Date().toISOString().split('T')[0];
         let pureDB = db.filter(x => x.type !== 'config');
@@ -1676,6 +1680,7 @@
             if(!nameMatch && !refMatch) return;
             if (currentTab === 'dash' && sName === '') return;
             if (refMatch) { 
+                showStat = true;
                 showSearchStat = true;
                 searchCasesCount++;
                 searchTotalValue += c.principal;
@@ -1702,4 +1707,62 @@
             let histData = c.history ? [...c.history] : [], hideSNo = false;
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
-            const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-
+            const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
+            const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
+
+            accountsHtmlArray.push(`
+            <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
+                ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
+                <div onclick="toggleView(${c.id})" style="cursor:pointer;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
+                    <div class="card-header">
+                        <div style="min-width:0; flex:1; display:flex; align-items:center; gap:12px;">
+                            ${avatarHtml}
+                            <div style="min-width:0;">
+                                <div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
+                                <div class="c-sub">Case Date: ${formatDateDisplay(c.startDate)}</div>
+                            </div>
+                        </div>
+                        <div style="flex-shrink:0;">
+                            <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
+                            <div class="c-sub" style="text-align:right">Balance</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
+                    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;">
+                        <div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${c.type==='daily'?t.returnAmt:t.principal}</span><br><b style="font-size:14px;">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b></div>
+                        ${(isOwnerMode || c.type === 'daily') ? `
+                        <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
+                        ` : ''}
+                        <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteHistoryWithCheck(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
+                    <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
+                </div>
+                <div class="btn-row" style="margin-top:15px;"><button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button><button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button><button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button></div>
+            </div>`);
+        });
+        let finalHtml = ""; 
+        if (currentTab === 'dash' && sName === '') { finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`; }
+        else {
+            if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') { let collectionLabel = t.refStatCollection; if (fType === 'monthly') collectionLabel = t.refStatInterest; else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily'); finalHtml += `<div class="search-stat-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span><span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span></div><div class="search-stat-grid"><div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div><div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>${fType !== 'all' ? `<div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${collectionLabel}</label><value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div><div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${t.refStatProfit}</label><value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>` : ''}</div></div>`; }
+            finalHtml += accountsHtmlArray.join('');
+        }
+        document.getElementById('dashboard').innerHTML = finalHtml; document.getElementById('sum-cases').innerText = tC; document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
+    }
+
+    function renderStats() {
+        let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
+        db.filter(x => x.type !== 'config').forEach(c => {
+            if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
+            if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
+            if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
+            if(isOwnerMode) { globalInvested += c.principal; let tBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0; if (c.type === 'monthly') globalProfit += (c.principal * (c.rate || 0) / 100); if(c.history) { [...c.history].sort((a,b) => (a.date > b.date ? 1 : -1)).forEach(h => { let paid = parseFloat(h.paid); if(c.type === 'monthly' || c.type === 'meter') { let intDue = tBal * (c.rate / 100); if (paid <= intDue) globalProfit += paid; else { globalProfit += intDue; tBal -= (paid - intDue); } } else { globalProfit += (paid * cRatio); tBal -= paid; } }); } }
+        });
+        if(isOwnerMode) { document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); }
+        document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
+    }
+</script>
+</body>
+</html>
