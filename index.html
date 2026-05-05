@@ -1,6 +1,3 @@
-Firebase 
-
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -729,15 +726,16 @@ Firebase
 
 <script>
     // --- FIREBASE SETUP ---
-    // IMPORTANT: Niche di gayi details ko apni Firebase project ki details se replace zaroor karna
+    // Updated with your actual Firebase project details from the screenshot
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY_HERE",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
+      authDomain: "credixproapp.firebaseapp.com",
+      databaseURL: "https://credixproapp-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "credixproapp",
+      storageBucket: "credixproapp.firebasestorage.app",
+      messagingSenderId: "352314210837",
+      appId: "1:352314210837:web:7c59520c8e983654c92c1c",
+      measurementId: "G-7LZNQHW2KX"
     };
 
     // Initialize Firebase
@@ -1257,6 +1255,7 @@ Firebase
         } catch(e) { 
             document.getElementById('sync-status').innerText = "Offline Mode"; 
             document.getElementById('cloud-indicator').className = "status-dot offline"; 
+            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         } 
     }
     
@@ -1734,3 +1733,5 @@ Firebase
 </script>
 </body>
 </html>
+
+
