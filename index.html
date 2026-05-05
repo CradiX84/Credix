@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Credix - Abstract Premium</title>
-    <!-- PDF Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <!-- Cropper.js Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
@@ -197,7 +198,7 @@
         .main-btn { width: 100%; background: var(--accent-orange); border: none; color: white; padding: 16px; border-radius: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; font-size: 15px; box-shadow: 0 5px 15px var(--accent-glow); letter-spacing: 0.5px; transition: 0.05s ease; font-family: inherit;}
         .main-btn:active { transform: scale(0.96); }
 
-        /* --- FLOATING BOTTOM NAV (Adjusted padding and size) --- */
+        /* --- FLOATING BOTTOM NAV --- */
         .bottom-nav { 
             position: fixed; 
             bottom: calc(15px + env(safe-area-inset-bottom, 10px)); 
@@ -205,7 +206,7 @@
             width: 94%; max-width: 480px;
             background: #14151C; 
             display: flex; justify-content: space-around; 
-            padding: 14px 5px; /* Thoda chota kiya gaya (was 18px) */
+            padding: 14px 5px;
             border-radius: 40px; 
             border: 1px solid rgba(255,255,255,0.08); 
             box-shadow: 0 15px 40px rgba(0,0,0,0.95);
@@ -305,12 +306,10 @@
 
 <div id="toast-box">Message</div>
 
-<!-- Photo Zoom Modal -->
 <div id="photo-zoom-modal" onclick="closePhotoZoom()">
     <img id="zoomed-img" src="" alt="Customer Photo">
 </div>
 
-<!-- Image Crop Modal -->
 <div id="crop-modal" class="modal">
     <div class="modal-cont" style="max-width: 450px;">
         <h3 style="margin-top:0; font-size:18px; color:var(--text-main);">Crop Photo</h3>
@@ -324,7 +323,6 @@
     </div>
 </div>
 
-<!-- Confirm Modal (Updated z-index to show above other modals) -->
 <div id="confirm-modal" class="modal" style="z-index: 2000000;">
     <div class="modal-cont" style="text-align: center;">
         <h3 style="margin-top:0; font-size:18px; color:var(--text-main);" id="confirm-text">Are you sure?</h3>
@@ -553,7 +551,6 @@
         <div class="sync-btn" onclick="hardRefresh()">↻ <span id="t-refresh">Refresh</span></div>
     </div>
 
-    <!-- Dashboard Tab -->
     <div id="tab-dash">
         <div class="summary-row" id="section-summary">
             <div class="sum-card accent-card sum-card-full">
@@ -627,7 +624,6 @@
         <div id="dashboard"></div>
     </div>
 
-    <!-- Review / Stats Tab -->
     <div id="section-stats" style="display:none; margin-bottom:30px;">
         <div id="owner-analytics" class="sum-card" style="display:none; margin-bottom:15px; border-color:var(--owner-gold); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, #15161C 100%); padding: 22px 20px;">
             <span id="t-ownerGrowth" style="color:var(--owner-gold); font-weight:700;">👑 Owner Growth Analytics</span>
@@ -729,7 +725,21 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyw89eS_-VlsXxxdlL5su-WEkfopRxTGp3wsO6C5BZYEGo9gMW_7SYI79WauV2rBoGtXg/exec";
+    // --- FIREBASE SETUP ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
+      authDomain: "credixproapp.firebaseapp.com",
+      projectId: "credixproapp",
+      storageBucket: "credixproapp.firebasestorage.app",
+      messagingSenderId: "352314210837",
+      appId: "1:352314210837:web:45eaf4b4a7720d06c92c1c",
+      measurementId: "G-R7W6MCT0B8"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    // ----------------------
     
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
     let pin = ""; 
@@ -744,21 +754,17 @@
     let isSaving = false;
     let lastGeneratedReportData = null;
 
-    // Cropper specific globals
     let activeCropper = null;
-    let currentCropTarget = ''; // 'add', 'edit', 'staff-add', 'staff-edit'
+    let currentCropTarget = ''; 
     let lastCroppedBase64 = '';
 
-    // --- Helper function for Date Formatting ---
     function formatDateDisplay(dateStr) {
         if (!dateStr || typeof dateStr !== 'string') return dateStr;
         const parts = dateStr.split('-');
         if (parts.length !== 3) return dateStr;
-        // Convert YYYY-MM-DD to DD/MM/YY
         return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
     }
 
-    // --- PHOTO ZOOM LOGIC ---
     function openPhotoZoom(src) {
         if(!src) return;
         const modal = document.getElementById('photo-zoom-modal');
@@ -875,18 +881,23 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
-        fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" })
-        .then(res => res.text())
-        .then(text => {
-            if(text && text.length > 5) {
-                db = JSON.parse(text);
+        
+        // --- FIREBASE INITIAL DATA LOAD ---
+        database.ref('credix_db').once('value')
+        .then((snapshot) => {
+            if(snapshot.exists()) {
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+                newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
+                db = newDb;
                 localStorage.setItem('paymitra_v11', JSON.stringify(db));
             }
-            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub; 
+            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         })
         .catch(e => {
             document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         });
+
         setInterval(backgroundSync, 15000); 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") backgroundSync(); 
@@ -968,22 +979,17 @@
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    // --- Image Selection & Cropping Logic ---
     function handleImageSelect(input, target) {
         if (!input.files || !input.files[0]) return;
-        
         currentCropTarget = target;
         const reader = new FileReader();
         reader.onload = function(e) {
             const cropImg = document.getElementById('crop-image-el');
             cropImg.src = e.target.result;
             document.getElementById('crop-modal').style.display = 'flex';
-            
             if (activeCropper) activeCropper.destroy();
-            
-            // Initialize Cropper.js
             activeCropper = new Cropper(cropImg, {
-                aspectRatio: 3 / 4, // CHANGED: 3:4 Ratio set here
+                aspectRatio: 3 / 4,
                 viewMode: 1,
                 dragMode: 'move',
                 autoCropArea: 1,
@@ -1001,15 +1007,8 @@
 
     function confirmCrop() {
         if (!activeCropper) return;
-        
-        const canvas = activeCropper.getCroppedCanvas({
-            width: 300, // CHANGED: Canvas output set to respect 3:4 ratio exactly
-            height: 400,
-            imageSmoothingQuality: 'high'
-        });
-        
+        const canvas = activeCropper.getCroppedCanvas({ width: 300, height: 400, imageSmoothingQuality: 'high' });
         lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-        
         if (currentCropTarget === 'edit') {
             document.getElementById('edit-photo-preview').src = lastCroppedBase64;
             document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
@@ -1020,7 +1019,6 @@
             document.getElementById('edit-staff-photo-preview').src = lastCroppedBase64;
             document.getElementById('edit-staff-photo-preview-wrap').style.display = 'flex';
         }
-        
         closeCropModal();
         showToast("Photo Cropped!");
     }
@@ -1100,9 +1098,7 @@
         if (!name || pinVal.length !== 4) return showToast("Enter Name and 4-Digit ID!"); 
         let conf = getConfig(); 
         if (conf.staffList.some(s => s.pin === pinVal) || pinVal === secretPin) { return showToast("This ID is already taken!"); } 
-        
         let photo = (currentCropTarget === 'staff-add' && lastCroppedBase64) ? lastCroppedBase64 : "";
-        
         conf.staffList.push({ name: name, pin: pinVal, photo: photo }); 
         saveAndRender(); 
         document.getElementById('new-staff-name').value = ''; 
@@ -1119,7 +1115,6 @@
         document.getElementById('edit-staff-idx').value = idx; 
         document.getElementById('edit-staff-new-name').value = conf.staffList[idx].name;
         document.getElementById('edit-staff-new-pin').value = conf.staffList[idx].pin; 
-        
         const previewWrap = document.getElementById('edit-staff-photo-preview-wrap');
         const previewImg = document.getElementById('edit-staff-photo-preview');
         if(conf.staffList[idx].photo) {
@@ -1128,7 +1123,6 @@
         } else {
             previewWrap.style.display = 'none';
         }
-        
         document.getElementById('edit-staff-pin-modal').style.display = 'flex'; 
     }
     
@@ -1139,16 +1133,13 @@
         if(!newName || newPin.length !== 4) return showToast("Name & 4-Digit ID required!"); 
         let conf = getConfig(); 
         if(conf.staffList.some((s, i) => s.pin === newPin && i != idx) || newPin === secretPin) { return showToast("This ID is already taken!"); } 
-        
         conf.staffList[idx].name = newName;
         conf.staffList[idx].pin = newPin; 
-        
         if (currentCropTarget === 'staff-edit' && lastCroppedBase64) {
             conf.staffList[idx].photo = lastCroppedBase64;
         } else if (window._pendingStaffPhotoRemoval) {
             conf.staffList[idx].photo = "";
         }
-
         saveAndRender(); 
         renderStaffList(); 
         closeModal('edit-staff-pin-modal'); 
@@ -1242,8 +1233,73 @@
         render(); loadFromCloud(); checkAutoBackup();
     }
 
-    async function loadFromCloud() { document.getElementById('sync-status').innerText = "Syncing..."; try { const res = await fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" }); const text = await res.text(); if(text && text.length > 5) { let newDb = JSON.parse(text); if(!validateSession(newDb)) return; db = newDb; localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); } document.getElementById('sync-status').innerText = "Cloud Synced"; document.getElementById('cloud-indicator').className = "status-dot"; } catch(e) { document.getElementById('sync-status').innerText = "Offline Mode"; document.getElementById('cloud-indicator').className = "status-dot offline"; } }
-    async function backgroundSync() { let isAnyModalOpen = false; let modals = document.querySelectorAll('.modal'); modals.forEach(m => { if(m.style.display === 'flex' || m.style.display === 'block') isAnyModalOpen = true; }); if(document.getElementById('lock-screen').style.display !== 'none' || isSaving || isAnyModalOpen) return; try { const res = await fetch(SCRIPT_URL + "?action=load&t=" + new Date().getTime(), { method: "GET", cache: "no-store" }); const text = await res.text(); if(text && text.length > 5) { let newDb = JSON.parse(text); if(!validateSession(newDb)) return; if(JSON.stringify(newDb) !== JSON.stringify(db) && !isSaving) { db = newDb; localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); showToast("Data Auto-Updated!"); } } } catch(e) { } }
+    // --- FIREBASE SYNC FUNCTIONS ---
+    async function loadFromCloud() { 
+        document.getElementById('sync-status').innerText = "Syncing..."; 
+        try { 
+            const snapshot = await database.ref('credix_db').once('value');
+            if(snapshot.exists()) {
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+                newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
+
+                if(!validateSession(newDb)) return; 
+                db = newDb; 
+                localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
+                render(); 
+            }
+            document.getElementById('sync-status').innerText = "Cloud Synced"; 
+            document.getElementById('cloud-indicator').className = "status-dot"; 
+        } catch(e) { 
+            document.getElementById('sync-status').innerText = "Offline Mode"; 
+            document.getElementById('cloud-indicator').className = "status-dot offline"; 
+        } 
+    }
+    
+    async function backgroundSync() { 
+        let isAnyModalOpen = false; 
+        let modals = document.querySelectorAll('.modal'); 
+        modals.forEach(m => { if(m.style.display === 'flex' || m.style.display === 'block') isAnyModalOpen = true; }); 
+        if(document.getElementById('lock-screen').style.display !== 'none' || isSaving || isAnyModalOpen) return; 
+        
+        try { 
+            const snapshot = await database.ref('credix_db').once('value');
+            if(snapshot.exists()) {
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+                newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
+
+                if(!validateSession(newDb)) return; 
+                if(JSON.stringify(newDb) !== JSON.stringify(db) && !isSaving) { 
+                    db = newDb; 
+                    localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
+                    render(); 
+                    showToast("Data Auto-Updated!"); 
+                } 
+            }
+        } catch(e) { } 
+    }
+
+    function saveAndRender() { 
+        isSaving = true; 
+        localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
+        render(); 
+        document.getElementById('sync-status').innerText = "Saving to Cloud..."; 
+        document.getElementById('cloud-indicator').className = "status-dot"; 
+        
+        database.ref('credix_db').set(db)
+        .then(() => {
+            document.getElementById('sync-status').innerText = "Cloud Synced";
+            document.getElementById('cloud-indicator').className = "status-dot";
+            isSaving = false;
+        })
+        .catch((e) => {
+            document.getElementById('sync-status').innerText = "Saved Offline";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+            isSaving = false;
+        });
+    }
+
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
@@ -1317,8 +1373,6 @@
             reader.onerror = error => reject(error);
         });
     }
-
-    function saveAndRender() { isSaving = true; localStorage.setItem('paymitra_v11', JSON.stringify(db)); render(); document.getElementById('sync-status').innerText = "Saving to Cloud..."; document.getElementById('cloud-indicator').className = "status-dot"; fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "save", data: JSON.stringify(db) }) }).then(res => res.text()).then(res => { if(res === "Success") { document.getElementById('sync-status').innerText = "Cloud Synced"; } else { document.getElementById('sync-status').innerText = "Save Error"; document.getElementById('cloud-indicator').className = "status-dot offline"; } isSaving = false; }).catch(e => { document.getElementById('sync-status').innerText = "Saved Offline"; document.getElementById('cloud-indicator').className = "status-dot offline"; isSaving = false; }); }
 
     function toggleView(id) { 
         const viewEl = document.getElementById('view-' + id);
@@ -1520,7 +1574,6 @@
         reportHtml += renderPayments(paymentsMonthly, t.repRecMonthly, "var(--owner-gold)", true);
         reportHtml += renderPayments(paymentsMeter, t.repRecMeter, "#a855f7", false);
 
-        // CHANGED: Splitting Pending Collections into 3 sections (Daily, Monthly, Meter) with distinct colors
         const renderPendings = (list, title, color, bgColor) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1537,7 +1590,7 @@
 
             reportHtml += renderPendings(pendingDaily, t.repPendDaily, "var(--danger)", "rgba(255, 59, 107, 0.05)");
             reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
-            reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); // Lighter Purple Background & Text
+            reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
         }
 
         if(reportHtml === "") { reportHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12px; border:1px dashed rgba(255,255,255,0.1); border-radius:12px; margin-top:15px;">No activity found in selected date range.</div>`; }
@@ -1558,7 +1611,6 @@
             let combinedNewCases = [...data.newCasesDaily.map(c=>({...c, type:'DAILY'})), ...data.newCasesMonthly.map(c=>({...c, type:'MONTHLY'})), ...data.newCasesMeter.map(c=>({...c, type:'METER'}))];
             if (combinedNewCases.length > 0) { doc.setFontSize(11); doc.setTextColor(255, 107, 53); doc.text("NEW PORTFOLIO ADDITIONS (GIVEN)", marginX, currentY); let totalNewValue = 0; let casesTableBody = combinedNewCases.map((c, i) => { totalNewValue += Number(c.principal || 0); return [i + 1, c.name, formatDateDisplay(c.startDate), c.type, `RS. ${Number(c.principal).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: casesTableBody, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalNewValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [255, 107, 53] }, footStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
             
-            // CHANGED: Daily aur Meter ko PDF me alag kar diya
             if (data.paymentsDaily.length > 0) { 
                 if (currentY > 250) { doc.addPage(); currentY = 20; } 
                 doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); 
@@ -1678,5 +1730,3 @@
 </script>
 </body>
 </html>
-
-
