@@ -9,7 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <!-- ADDED: Firebase Auth Library for Background Security -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
     <style>
@@ -726,7 +729,6 @@
 
 <script>
     // --- FIREBASE SETUP ---
-    // Updated with your actual Firebase project details from the screenshot
     const firebaseConfig = {
       apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
       authDomain: "credixproapp.firebaseapp.com",
@@ -740,6 +742,7 @@
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth(); // Added for Background Security
     const database = firebase.database();
     // ----------------------
     
@@ -882,10 +885,23 @@
         if(document.getElementById('rep-start')) document.getElementById('rep-start').value = todayDate;
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
-        document.getElementById('t-lockSub').innerText = "Connecting to Cloud... ⏳";
         
-        // Setup Firebase Real-time Listener (Replaces old polling logic)
-        setupFirebaseListener();
+        // Security logic added here
+        document.getElementById('t-lockSub').innerText = "Securing Connection... ⏳";
+        
+        // Login Silently in Background
+        auth.signInAnonymously().catch(function(error) {
+            console.error("Security Auth Failed:", error);
+            document.getElementById('t-lockSub').innerText = "Security Auth Failed. Please Refresh.";
+        });
+
+        // Trigger when login is successful
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                // Now setup the real-time listener securely
+                setupFirebaseListener();
+            }
+        });
     };
 
     function changeLang() { currentLang = document.getElementById('lang-select').value; localStorage.setItem('paymitra_lang', currentLang); applyLang(); render(); showToast("Language Updated!"); }
@@ -1767,5 +1783,4 @@
 </script>
 </body>
 </html>
-
 
