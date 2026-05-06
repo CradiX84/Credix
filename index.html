@@ -726,6 +726,7 @@
 
 <script>
     // --- FIREBASE SETUP ---
+    // Updated with your actual Firebase project details from the screenshot
     const firebaseConfig = {
       apiKey: "AIzaSyCHFXLos4dhAsFNXWWUGjPq4aoTCvrJoTo",
       authDomain: "credixproapp.firebaseapp.com",
@@ -1224,11 +1225,13 @@
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
 
+                // If app is currently locked, just save silently in background and clear loading text
                 if (document.getElementById('main-app').style.display === 'none') {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
                     document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
                 } else {
+                    // Only update and re-render if data actually changed from outside and we aren't actively saving
                     if (!isSaving && JSON.stringify(newDb) !== JSON.stringify(db)) {
                         if(!validateSession(newDb)) return;
                         db = newDb;
@@ -1238,6 +1241,7 @@
                     }
                 }
             } else {
+                // If DB is empty, still allow login
                 document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
@@ -1249,6 +1253,7 @@
         });
     }
 
+    // Updated hardRefresh to just do a fast manual pull if needed, though real-time listener handles it
     function hardRefresh() { 
         document.getElementById('sync-status').innerText = "Syncing...";
         database.ref('credix_db').once('value').then(() => {
@@ -1282,20 +1287,17 @@
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
-    
-    // --- UPDATED recalculateCase FUNCTION (Fixes Monthly Balance Bug) ---
+
+    /* CORE LOGIC FIX HERE: Monthly/Meter interest payments will not decrease the principal balance */
     function recalculateCase(c) { 
         if(!c.history) c.history = []; 
-        c.history.sort((a, b) => new Date(a.date) - new Date(b.date)); 
-        
-        let tempBal = (c.type === 'monthly' || c.type === 'meter') ? parseFloat(c.principal) : (parseFloat(c.totalPayable) || parseFloat(c.principal)); 
-        
+        c.history.sort((a, b) => (a.date > b.date ? 1 : -1)); 
+        let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); 
         c.history.forEach(h => { 
-            let paid = parseFloat(h.paid);
             if(c.type === 'monthly' || c.type === 'meter') { 
-                // Fix applied: Do not subtract history payments from base principle logic. Remaining keeps strictly equal to the manually edited base Principal.
+                /* Vyaj (Interest) payments do not reduce principal */ 
             } else { 
-                tempBal -= paid; 
+                tempBal -= h.paid; 
             } 
             h.balance = tempBal; 
             h.bal = tempBal.toFixed(0); 
@@ -1304,315 +1306,466 @@
     }
 
     async function addCustomer() {
-        const name = document.getElementById('name').value.trim();
-        const amt = parseFloat(document.getElementById('amt').value);
-        const date = document.getElementById('date').value;
-        const type = document.getElementById('type').value;
-        const isPersonal = document.getElementById('is-personal').checked;
-        const staffRef = document.getElementById('staff-ref').value.trim() || deviceStaffName;
+        const tLang = i18n[currentLang];
+        const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
+        const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
+        const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
         
-        if(!name) return triggerShake('name');
-        if(!amt || amt <= 0) return triggerShake('amt');
-        if(!date) return triggerShake('date');
+        if(!name) { triggerShake('name'); return showToast(tLang.missingNameAmt || "Missing Name!"); }
+        if(isNaN(amt) || amt <= 0) { triggerShake('amt'); return showToast(tLang.missingNameAmt || "Missing Principal!"); }
         
-        let newRecord = {
-            id: Date.now().toString(),
-            name, type, principal: amt, date, history: [],
-            isPersonal: isOwnerMode ? isPersonal : false,
-            staffRef: isOwnerMode ? staffRef : deviceStaffName,
-            photo: lastCroppedBase64 || '',
-            status: 'active'
-        };
-
-        if(type === 'monthly') {
-            const rate = parseFloat(document.getElementById('rate').value);
-            if(!rate) return triggerShake('rate');
-            newRecord.rate = rate;
-            newRecord.currentBalance = amt;
-        } else if(type === 'daily') {
-            const ret = parseFloat(document.getElementById('total_ret').value);
-            const days = parseInt(document.getElementById('days').value);
-            if(!ret) return triggerShake('total_ret');
-            if(!days) return triggerShake('days');
-            newRecord.totalPayable = ret;
-            newRecord.days = days;
-            newRecord.currentBalance = ret;
-        } else if(type === 'meter') {
-            const meterAmt = parseFloat(document.getElementById('meter-amt').value);
-            if(!meterAmt) return triggerShake('meter-amt');
-            newRecord.meterAmt = meterAmt;
-            newRecord.currentBalance = amt;
+        let photoBase64 = "";
+        if (currentCropTarget === 'add' && lastCroppedBase64) {
+            photoBase64 = lastCroppedBase64;
+        } else {
+            const fileInput = document.getElementById('cust-photo');
+            if (fileInput.files && fileInput.files[0]) {
+                photoBase64 = await toBase64(fileInput.files[0]);
+            }
         }
 
-        db.push(newRecord);
-        
-        document.getElementById('name').value = '';
-        document.getElementById('amt').value = '';
-        document.getElementById('rate').value = '';
-        document.getElementById('total_ret').value = '';
-        document.getElementById('days').value = '';
-        document.getElementById('meter-amt').value = '';
+        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64 };
+        if(type === 'monthly') { 
+            let rateVal = parseFloat(document.getElementById('rate').value);
+            if(isNaN(rateVal)) { triggerShake('rate'); return showToast(tLang.missingRate || "Missing Interest Rate!"); }
+            cust.rate = rateVal; cust.currentBalance = amt; 
+        } else if (type === 'meter') { 
+            let mAmt = parseFloat(document.getElementById('meter-amt').value);
+            if(isNaN(mAmt)) { triggerShake('meter-amt'); return showToast(tLang.missingMeter || "Missing Rozana Vyaj!"); }
+            cust.rate = (mAmt / amt) * 100; cust.currentBalance = amt; 
+        } else { 
+            let tRet = parseFloat(document.getElementById('total_ret').value);
+            let dVals = parseInt(document.getElementById('days').value);
+            if(isNaN(tRet)) { triggerShake('total_ret'); return showToast(tLang.missingRet || "Missing Return Amount!"); }
+            if(isNaN(dVals) || dVals <= 0) { triggerShake('days'); return showToast(tLang.missingDays || "Missing Total Days!"); }
+            cust.totalPayable = tRet; cust.currentBalance = cust.totalPayable; cust.installment = cust.totalPayable / dVals; 
+        }
+        db.push(cust); saveAndRender(); 
+        document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
-        document.getElementById('is-personal').checked = false;
-        document.getElementById('staff-ref').value = '';
-        lastCroppedBase64 = '';
-        
-        saveAndRender();
-        showToast("Record Added!");
+        lastCroppedBase64 = ''; 
+        if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
+        if(document.getElementById('days')) document.getElementById('days').value = '';
+        if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
+        showToast("Record Created!");
     }
 
-    function render() {
-        let list = document.getElementById('dashboard');
-        if(!list) return;
-        
-        let filter = document.getElementById('filter-box') ? document.getElementById('filter-box').value : 'all';
-        let search = document.getElementById('search-box') ? document.getElementById('search-box').value.toLowerCase() : '';
-        let sort = document.getElementById('sort-box') ? document.getElementById('sort-box').value : 'new';
-        
-        let totalPrin = 0, totalCases = 0, totalOut = 0;
-        let mPrin = 0, dPrin = 0, meterPrin = 0;
-        let recoveredGlobal = 0, remainingGlobal = 0;
-        let globalInvested = 0, globalProfit = 0;
-
-        list.innerHTML = '';
-        
-        let records = db.filter(c => c.type !== 'config');
-        
-        records.forEach(c => {
-            recalculateCase(c);
-            if(c.status === 'archived') return; 
-
-            let prin = parseFloat(c.principal) || 0;
-            totalPrin += prin;
-            totalCases++;
-            totalOut += parseFloat(c.currentBalance) || 0;
-            
-            if(c.type === 'monthly') mPrin += prin;
-            if(c.type === 'daily') dPrin += prin;
-            if(c.type === 'meter') meterPrin += prin;
-
-            let paidTot = c.history.reduce((s, h) => s + parseFloat(h.paid), 0);
-            recoveredGlobal += paidTot;
-            remainingGlobal += c.currentBalance;
-
-            let tBal = parseFloat(c.principal);
-            c.history.forEach(h => {
-                let paid = parseFloat(h.paid);
-                if(c.type === 'monthly' || c.type === 'meter') {
-                    let intDue = tBal * ((c.rate || 0) / 100);
-                    if (paid <= intDue) globalProfit += paid;
-                    else { globalProfit += intDue; tBal -= (paid - intDue); }
-                } else {
-                    let cRatio = (c.totalPayable - c.principal) / c.totalPayable || 0;
-                    globalProfit += (paid * cRatio);
-                    tBal -= paid;
-                }
-            });
-            globalInvested += prin;
-        });
-
-        document.getElementById('sum-principal').innerText = '₹' + totalPrin.toLocaleString();
-        document.getElementById('sum-cases').innerText = totalCases;
-        document.getElementById('sum-balance').innerText = '₹' + totalOut.toLocaleString();
-        
-        if(isOwnerMode && document.getElementById('owner-invested')) { 
-            document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); 
-            document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); 
-        }
-        
-        if(document.getElementById('bar-m-prin')) {
-            document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%';
-            document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%';
-            document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%';
-            document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`;
-            document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`;
-            document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`;
-            document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${recoveredGlobal.toLocaleString()}`;
-            document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${remainingGlobal.toLocaleString()}`;
-        }
-
-        records = records.filter(c => {
-            if(filter === 'archived' && c.status !== 'archived') return false;
-            if(filter !== 'all' && filter !== 'archived' && c.type !== filter) return false;
-            if(filter !== 'archived' && c.status === 'archived') return false;
-            if(search && !c.name.toLowerCase().includes(search)) return false;
-            if(!isOwnerMode && c.isPersonal) return false;
-            return true;
-        });
-
-        if(sort === 'new') records.sort((a,b) => b.date.localeCompare(a.date));
-        else records.sort((a,b) => a.date.localeCompare(b.date));
-
-        records.forEach(c => {
-            let card = document.createElement('div');
-            card.className = 'cust-card';
-            let photo = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>`;
-            
-            let histHtml = c.history.length ? c.history.map(h => `<tr><td>${formatDateDisplay(h.date)}</td><td>₹${h.paid}</td><td>₹${h.bal}</td></tr>`).join('') : `<tr><td colspan="3" style="color:var(--text-muted);">No payments yet</td></tr>`;
-
-            card.innerHTML = `
-                <div class="card-header">
-                    ${photo}
-                    <div class="c-name">${c.name} ${c.isPersonal ? '<span style="color:gold; font-size:12px;">👑</span>' : ''}</div>
-                    <div class="c-bal">₹${c.currentBalance}</div>
-                </div>
-                <div class="c-sub" style="margin-bottom:8px;">${c.type.toUpperCase()} • ${formatDateDisplay(c.date)} • Prin: ₹${c.principal}</div>
-                ${c.type==='monthly' ? `<div class="pill-tag">Rate: ${c.rate}%</div>` : ''}
-                ${c.type==='daily' ? `<div class="pill-tag">Return: ₹${c.totalPayable}</div>` : ''}
-                ${c.type==='meter' ? `<div class="pill-tag">Meter: ₹${c.meterAmt}/day</div>` : ''}
-                
-                <table class="view-table">
-                    <tr><th>Date</th><th>Paid</th><th>Bal</th></tr>
-                    ${histHtml}
-                </table>
-                
-                <div class="btn-row">
-                    <button class="s-btn" onclick="openEdit('${c.id}')">Edit</button>
-                    <button class="s-btn" onclick="openPay('${c.id}')">Receive</button>
-                    <button class="s-btn collect" onclick="openBulk('${c.id}')">⚡ Bulk</button>
-                    <button class="s-btn" style="color:var(--danger);" onclick="deleteCustomer('${c.id}')">Delete</button>
-                </div>
-            `;
-            list.appendChild(card);
+    function toBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 400; 
+                    if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+                    else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+            reader.onerror = error => reject(error);
         });
     }
 
-    function openEdit(id) {
-        let c = db.find(x => x.id === id);
-        if(!c) return;
-        document.getElementById('edit-id').value = id;
-        document.getElementById('edit-name').value = c.name;
-        document.getElementById('edit-date').value = c.date;
-        document.getElementById('edit-amt').value = c.principal;
-        document.getElementById('edit-extra').value = c.rate || c.days || c.meterAmt || '';
-        document.getElementById('edit-ret').value = c.totalPayable || '';
+    function toggleView(id) { 
+        const viewEl = document.getElementById('view-' + id);
+        if (!viewEl) return;
         
-        if(c.type === 'daily') document.getElementById('edit-ret-wrap').style.display = 'block';
-        else document.getElementById('edit-ret-wrap').style.display = 'none';
-
-        if(isOwnerMode) {
-            document.getElementById('edit-personal-wrap').style.display = 'flex';
-            document.getElementById('edit-is-personal').checked = c.isPersonal || false;
-            document.getElementById('edit-staff-wrap').style.display = 'block';
-            document.getElementById('edit-staff-ref').value = c.staffRef || '';
-        } else {
-            document.getElementById('edit-personal-wrap').style.display = 'none';
-            document.getElementById('edit-staff-wrap').style.display = 'none';
-        }
-
-        if(c.photo) {
-            document.getElementById('edit-photo-preview').src = c.photo;
-            document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
-            lastCroppedBase64 = c.photo;
-        } else {
-            document.getElementById('edit-photo-preview-wrap').style.display = 'none';
-            lastCroppedBase64 = '';
-        }
-        document.getElementById('edit-modal').style.display = 'flex';
+        if (openViews[id]) { 
+            delete openViews[id]; 
+            multiDelMode[id] = false; 
+            viewEl.style.display = 'none';
+        } else { 
+            openViews[id] = true; 
+            viewEl.style.display = 'block';
+        } 
     }
 
+    function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
+    function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
+    function openPayModal(id) { let c = db.find(x => x.id === id); document.getElementById('pay-id').value = id; document.getElementById('pay-date').value = new Date().toISOString().split('T')[0]; let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); document.getElementById('pay-amt').value = amt.toFixed(0); document.getElementById('pay-modal').style.display = 'flex'; }
+    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
+    function openBulkModal(id) { let c = db.find(x => x.id === id); document.getElementById('bulk-id').value = id; document.getElementById('bulk-start-date').value = new Date().toISOString().split('T')[0]; document.getElementById('bulk-end-date').value = new Date().toISOString().split('T')[0]; let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); document.getElementById('bulk-amt').value = amt.toFixed(0); const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); document.getElementById('bulk-freq-label').innerText = `(${freqText})`; document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt; document.getElementById('bulk-modal').style.display = 'flex'; }
+    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
+    
     function removeEditPhoto() {
-        lastCroppedBase64 = '';
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
+        document.getElementById('edit-photo-preview').src = '';
+        window._pendingPhotoRemoval = true;
     }
 
-    function saveEdit() {
-        let id = document.getElementById('edit-id').value;
-        let c = db.find(x => x.id === id);
-        if(!c) return;
-        
-        c.name = document.getElementById('edit-name').value;
-        c.date = document.getElementById('edit-date').value;
-        c.principal = parseFloat(document.getElementById('edit-amt').value); 
-        
-        let extra = parseFloat(document.getElementById('edit-extra').value);
-        if(c.type === 'monthly') c.rate = extra;
-        if(c.type === 'daily') { c.days = extra; c.totalPayable = parseFloat(document.getElementById('edit-ret').value); }
-        if(c.type === 'meter') c.meterAmt = extra;
+    function openEditModal(id) { 
+        window._pendingPhotoRemoval = false;
+        lastCroppedBase64 = ''; 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('edit-id').value = id; 
+        document.getElementById('edit-name').value = c.name; 
+        document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
+        document.getElementById('edit-date').value = c.startDate; 
+        document.getElementById('edit-amt').value = c.principal; 
+        const previewWrap = document.getElementById('edit-photo-preview-wrap');
+        const previewImg = document.getElementById('edit-photo-preview');
+        if(c.photo) { previewImg.src = c.photo; previewWrap.style.display = 'flex'; } else { previewWrap.style.display = 'none'; }
+        document.getElementById('edit-photo-input').value = '';
+        if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } document.getElementById('edit-modal').style.display = 'flex'; 
+    }
+    
+    async function saveEdit() { 
+        let id = parseInt(document.getElementById('edit-id').value); 
+        let c = db.find(x => x.id === id); 
+        let oldRate = c.rate; 
+        let oldInstallment = c.installment; 
+        let oldTotalPayable = c.totalPayable; 
+        let nameVal = document.getElementById('edit-name').value; 
+        if (nameVal) c.name = nameVal; 
+        if (currentCropTarget === 'edit' && lastCroppedBase64) { c.photo = lastCroppedBase64; } else if (window._pendingPhotoRemoval) { c.photo = ""; } else { const fileInput = document.getElementById('edit-photo-input'); if (fileInput.files && fileInput.files[0]) { c.photo = await toBase64(fileInput.files[0]); } }
+        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } recalculateCase(c); closeModal('edit-modal'); saveAndRender(); showToast("Account Updated"); 
+    }
+    
+    function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
+    function deleteCustUI(id) { askConfirm("Are you sure you want to delete this entire account?", () => { db = db.filter(x => x.id !== id); saveAndRender(); showToast("Account Deleted!"); }); }
+    function deleteHistoryUI(custId, originalIndex) { askConfirm("Delete this entry?", () => { let c = db.find(x => x.id === custId); c.history.splice(originalIndex, 1); recalculateCase(c); saveAndRender(); showToast("Entry Deleted!"); }); }
+    function deleteSelectedHistoryUI(id) { let checks = document.querySelectorAll(`.del-chk-${id}:checked`); if(checks.length === 0) return toggleMultiDel(id); askConfirm(`Delete ${checks.length} entries?`, () => { let c = db.find(x => x.id === id); let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); indices.forEach(idx => { c.history.splice(idx, 1); }); multiDelMode[id] = false; recalculateCase(c); saveAndRender(); showToast("Selected Deleted!"); }); }
 
-        if(isOwnerMode) {
-            c.isPersonal = document.getElementById('edit-is-personal').checked;
-            c.staffRef = document.getElementById('edit-staff-ref').value;
+    function generateCustomerPDF(id) {
+        const { jsPDF } = window.jspdf;
+        const c = db.find(x => x.id === id);
+        if(!c) return;
+        const doc = new jsPDF();
+        doc.setFontSize(22); doc.setTextColor(255, 107, 53); doc.text("Credix.", 14, 20);
+        doc.setFontSize(10); doc.setTextColor(100); doc.text("Statement of Account", 14, 28);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 140, 28);
+        doc.setDrawColor(200); doc.line(14, 32, 196, 32);
+        doc.setFontSize(12); doc.setTextColor(0); doc.text(`Customer Name: ${c.name}`, 14, 42);
+        doc.text(`Account Type: ${c.type.toUpperCase()}`, 14, 48); doc.text(`${i18n[currentLang].caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}`, 14, 54);
+        let principalLabel = c.type === 'daily' ? 'Total Return Value' : 'Principal Amount';
+        let principalValue = c.type === 'daily' ? (c.totalPayable || c.principal) : c.principal;
+        doc.text(`${principalLabel}: RS. ${principalValue.toLocaleString()}`, 120, 42);
+        doc.text(`Current Balance: RS. ${c.currentBalance.toFixed(0).toLocaleString()}`, 120, 48);
+        if(c.staffRef) doc.text(`Ref: ${c.staffRef}`, 120, 54);
+        const tableData = []; let totalPaid = 0;
+        if(c.history) {
+            c.history.forEach((h, index) => {
+                tableData.push([index + 1, formatDateDisplay(h.date), `RS. ${h.paid.toLocaleString()}`, `RS. ${Number(h.balance||0).toFixed(0).toLocaleString()}`]);
+                totalPaid += parseFloat(h.paid);
+            });
         }
-
-        c.photo = lastCroppedBase64;
-        
-        recalculateCase(c);
-        saveAndRender();
-        closeModal('edit-modal');
-        showToast('Account Updated!');
-    }
-
-    function openPay(id) {
-        document.getElementById('pay-id').value = id;
-        document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('pay-amt').value = '';
-        document.getElementById('pay-modal').style.display = 'flex';
-    }
-
-    function savePayment() {
-        let id = document.getElementById('pay-id').value;
-        let amt = parseFloat(document.getElementById('pay-amt').value);
-        let d = document.getElementById('pay-date').value;
-        if(!amt || !d) return triggerShake('pay-amt');
-        let c = db.find(x => x.id === id);
-        if(!c) return;
-        c.history.push({ id: Date.now().toString(), date: d, paid: amt });
-        recalculateCase(c);
-        saveAndRender();
-        closeModal('pay-modal');
-        showToast('Payment Added!');
-    }
-
-    function openBulk(id) {
-        document.getElementById('bulk-id').value = id;
-        document.getElementById('bulk-modal').style.display = 'flex';
-        let today = new Date().toISOString().split('T')[0];
-        document.getElementById('bulk-start-date').value = today;
-        document.getElementById('bulk-end-date').value = today;
-        document.getElementById('bulk-amt').value = '';
-    }
-
-    function saveBulkPayment() {
-        let id = document.getElementById('bulk-id').value;
-        let amt = parseFloat(document.getElementById('bulk-amt').value);
-        let start = document.getElementById('bulk-start-date').value;
-        let end = document.getElementById('bulk-end-date').value;
-        if(!amt || !start || !end) return triggerShake('bulk-amt');
-        let c = db.find(x => x.id === id);
-        if(!c) return;
-
-        let sDate = new Date(start);
-        let eDate = new Date(end);
-        while(sDate <= eDate) {
-            c.history.push({ id: Date.now().toString() + Math.random(), date: sDate.toISOString().split('T')[0], paid: amt });
-            sDate.setDate(sDate.getDate() + 1);
-        }
-        recalculateCase(c);
-        saveAndRender();
-        closeModal('bulk-modal');
-        showToast('Bulk Payment Saved!');
-    }
-
-    function deleteCustomer(id) {
-        askConfirm("Are you sure you want to delete this case completely?", () => {
-            db = db.filter(x => x.id !== id);
-            saveAndRender();
-            showToast('Account Deleted!');
+        doc.autoTable({
+            startY: 65, head: [['S.No', 'Date', 'Paid Amount', 'Remaining Balance']], body: tableData, theme: 'striped',
+            headStyles: { fillColor: [26, 28, 35], textColor: [255, 255, 255] }, alternateRowStyles: { fillColor: [245, 245, 245] }
         });
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(12); doc.setFont(undefined, 'bold');
+        doc.text(`Total Amount Paid: RS. ${totalPaid.toLocaleString()}`, 14, finalY);
+        doc.setTextColor(255, 59, 107); doc.text(`Net Outstanding: RS. ${c.currentBalance.toFixed(0).toLocaleString()}`, 14, finalY + 7);
+        doc.save(`${c.name}_Report.pdf`);
+        showToast("PDF Downloaded!");
     }
 
     function generateReport() {
-        showToast("Report generation initiated.");
-    }
-    
-    function downloadReportPDF() {
-        showToast("Downloading Professional PDF...");
+        const start = document.getElementById('rep-start').value;
+        const end = document.getElementById('rep-end').value;
+        const type = document.getElementById('rep-type').value;
+        const searchQ = document.getElementById('rep-search').value.toLowerCase().trim();
+        const t = i18n[currentLang];
+        if (!start || !end) return showToast("Select both dates!");
+        
+        let totalGiven = 0, totalReturned = 0, totalProfitInRange = 0; 
+        let newCasesDaily = [], newCasesMonthly = [], newCasesMeter = [];
+        let paymentsDaily = [], paymentsMonthly = [], paymentsMeter = [];
+        let pendingsInRange = [];
+        const rangeEndStr = end;
+        
+        db.filter(x => x.type !== 'config').forEach(c => {
+            if (!isOwnerMode && c.isPersonal) return;
+            if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
+            if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
+            if (type !== 'all' && c.type !== type) return;
+            if (c.startDate >= start && c.startDate <= end) {
+                totalGiven += c.principal;
+                let cCopy = {...c};
+                if (c.type === 'daily') newCasesDaily.push(cCopy);
+                else if (c.type === 'monthly') { if(isOwnerMode) { let upfrontProfit = c.principal * ((c.rate || 0) / 100); totalProfitInRange += upfrontProfit; cCopy.tempUpfrontProfit = upfrontProfit; } newCasesMonthly.push(cCopy); }
+                else if (c.type === 'meter') newCasesMeter.push(cCopy);
+            }
+            let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
+            let tempBalForRec = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
+            let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0;
+            if(c.history) {
+                let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
+                sortedHist.forEach(h => {
+                    let paid = parseFloat(h.paid); let profitFromThisPayment = 0;
+                    
+                    /* CORE LOGIC FIX: Vyaj payments considered 100% profit for Monthly/Meter */
+                    if(c.type === 'monthly' || c.type === 'meter') { 
+                        profitFromThisPayment = paid; 
+                    }
+                    else { 
+                        profitFromThisPayment = paid * cRatio; 
+                        tempBalForRec -= paid; 
+                    }
+                    
+                    if (h.date >= start && h.date <= end) { customerTotalInRange += paid; totalReturned += paid; customerProfitInRange += profitFromThisPayment; totalProfitInRange += profitFromThisPayment; histHits.push({ date: h.date, amt: paid, profit: profitFromThisPayment }); }
+                });
+            }
+            if (customerTotalInRange > 0) {
+                let pData = { name: c.name, total: customerTotalInRange, profit: customerProfitInRange, count: histHits.length, type: c.type, installment: c.installment, rate: c.rate, hits: histHits };
+                if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
+            }
+            if (!c.isArchived && c.currentBalance > 0) {
+                let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
+                const toLocalYMD = (d) => { let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); let day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
+                if (c.type === 'daily' || c.type === 'meter') {
+                    amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let iterDate = new Date(sy, sm - 1, sd); iterDate.setDate(iterDate.getDate() + 1); 
+                    while (toLocalYMD(iterDate) <= rangeEndStr) {
+                        let currentCheckStr = toLocalYMD(iterDate);
+                        if (!c.history || !c.history.some(h => h.date === currentCheckStr)) { accumulatedTotal += amountPerUnit; missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
+                } else if (c.type === 'monthly') {
+                    amountPerUnit = c.principal * (c.rate || 0) / 100;
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let cycle = 1;
+                    while (true) {
+                        let nextDue = new Date(sy, (sm - 1) + cycle, sd);
+                        if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
+                        let nextDueStr = toLocalYMD(nextDue);
+                        if (nextDueStr > rangeEndStr) break; 
+                        let targetY = nextDue.getFullYear(); let targetM = nextDue.getMonth(); 
+                        let paidThisCycle = c.history && c.history.some(h => { let [hy, hm, hd] = h.date.split('-').map(Number); return hy === targetY && (hm - 1) === targetM; });
+                        if (!paidThisCycle) { accumulatedTotal += amountPerUnit; missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); }
+                        cycle++;
+                    }
+                }
+                if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
+            }
+        });
+
+        lastGeneratedReportData = { start, end, type, totalGiven, totalReturned, newCasesDaily, newCasesMonthly, newCasesMeter, paymentsDaily, paymentsMonthly, paymentsMeter, pendingsInRange };
+        document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
+        document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
+        if(isOwnerMode) { document.getElementById('rep-profit-container').style.display = 'block'; document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('btn-rep-pdf').style.display = 'block'; }
+        else { document.getElementById('rep-profit-container').style.display = 'none'; document.getElementById('btn-rep-pdf').style.display = 'none'; }
+
+        let reportHtml = "";
+        const renderCases = (list, title, color) => {
+            if (list.length === 0) return "";
+            let html = `<div style="color:${color}; font-size:11px; margin:15px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
+            let sectionTotal = 0;
+            list.forEach(c => { 
+                sectionTotal += c.principal;
+                html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
+            });
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toLocaleString()}</div>`;
+            return html;
+        };
+        reportHtml += renderCases(newCasesDaily, t.repNewDaily, "var(--accent-orange)");
+        reportHtml += renderCases(newCasesMonthly, t.repNewMonthly, "var(--owner-gold)");
+        reportHtml += renderCases(newCasesMeter, t.repNewMeter, "#a855f7");
+
+        const renderPayments = (list, title, color, isMonthly) => {
+            if (list.length === 0) return "";
+            let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
+            let sectionTotal = 0;
+            list.sort((a,b) => b.total - a.total).forEach(p => { 
+                sectionTotal += p.total;
+                let dates = p.hits.map(h => h.date).sort(); 
+                let dateSummary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); 
+                let detailStr = isMonthly ? `${t.intRec} (${p.hits.length} ${t.monthsText})` : `₹${(p.installment||0).toFixed(0)} × ${p.count} ${t.kishatsText}`; 
+                html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-break:break-word;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
+            });
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toLocaleString()}</div>`;
+            return html;
+        };
+        reportHtml += renderPayments(paymentsDaily, t.repRecDaily, "var(--success)", false);
+        reportHtml += renderPayments(paymentsMonthly, t.repRecMonthly, "var(--owner-gold)", true);
+        reportHtml += renderPayments(paymentsMeter, t.repRecMeter, "#a855f7", false);
+
+        const renderPendings = (list, title, color, bgColor) => {
+            if (list.length === 0) return "";
+            let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
+            let sectionTotal = 0;
+            list.forEach(p => {
+                sectionTotal += p.accumulatedTotal;
+                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${p.type.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-break:break-all; overflow-wrap:anywhere;">${t.missedText} ${p.missedDatesStr}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
+            });
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
+            return html;
+        };
+
+        if (pendingsInRange.length > 0) {
+            let pendingDaily = pendingsInRange.filter(p => p.type === 'daily');
+            let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
+            let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
+
+            reportHtml += renderPendings(pendingDaily, t.repPendDaily, "var(--danger)", "rgba(255, 59, 107, 0.05)");
+            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
+            reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
+        }
+
+        if(reportHtml === "") { reportHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12px; border:1px dashed rgba(255,255,255,0.1); border-radius:12px; margin-top:15px;">No activity found in selected date range.</div>`; }
+        document.getElementById('rep-list').innerHTML = reportHtml; document.getElementById('rep-results').style.display = 'block'; document.getElementById('rep-list').scrollTop = 0;
     }
 
+    function downloadReportPDF() {
+        if(!lastGeneratedReportData) return showToast("Generate report first!");
+        try {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const data = lastGeneratedReportData; const marginX = 14; let currentY = 20;
+            doc.setFontSize(24); doc.setTextColor(255, 107, 53); doc.text("Credix.", marginX, currentY);
+            doc.setFontSize(10); doc.setTextColor(100); doc.text(`Business Activity Statement`, marginX, currentY + 8);
+            doc.text(`Period: ${formatDateDisplay(data.start)} to ${formatDateDisplay(data.end)}`, 140, currentY + 8);
+            currentY += 14; doc.setDrawColor(220); doc.line(marginX, currentY, 196, currentY); currentY += 10;
+            doc.setFontSize(12); doc.setTextColor(0); doc.setFont(undefined, 'bold'); doc.text("Financial Summary", marginX, currentY); currentY += 6;
+            doc.autoTable({ startY: currentY, head: [['Description', 'Total Amount (INR)']], body: [['Total Capital Given (New Cases)', `RS. ${Number(data.totalGiven).toLocaleString()}`], ['Total Cash Recovered (Recoveries)', `RS. ${Number(data.totalReturned).toLocaleString()}`]], theme: 'grid', styles: { fontSize: 10 }, headStyles: { fillColor: [50, 50, 50] } });
+            currentY = doc.lastAutoTable.finalY + 15;
+            let combinedNewCases = [...data.newCasesDaily.map(c=>({...c, type:'DAILY'})), ...data.newCasesMonthly.map(c=>({...c, type:'MONTHLY'})), ...data.newCasesMeter.map(c=>({...c, type:'METER'}))];
+            if (combinedNewCases.length > 0) { doc.setFontSize(11); doc.setTextColor(255, 107, 53); doc.text("NEW PORTFOLIO ADDITIONS (GIVEN)", marginX, currentY); let totalNewValue = 0; let casesTableBody = combinedNewCases.map((c, i) => { totalNewValue += Number(c.principal || 0); return [i + 1, c.name, formatDateDisplay(c.startDate), c.type, `RS. ${Number(c.principal).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: casesTableBody, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalNewValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [255, 107, 53] }, footStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            
+            if (data.paymentsDaily.length > 0) { 
+                if (currentY > 250) { doc.addPage(); currentY = 20; } 
+                doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); 
+                let totalDaily = 0; 
+                let dailyTableBody = data.paymentsDaily.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalDaily += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); 
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: dailyTableBody, foot: [['', '', '', 'TOTAL DAILY RECOVERY', `RS. ${totalDaily.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] } }); 
+                currentY = doc.lastAutoTable.finalY + 12; 
+            }
+
+            if (data.paymentsMeter.length > 0) { 
+                if (currentY > 250) { doc.addPage(); currentY = 20; } 
+                doc.setFontSize(11); doc.setTextColor(168, 85, 247); doc.text("METER RECOVERY LOG", marginX, currentY); 
+                let totalMeter = 0; 
+                let meterTableBody = data.paymentsMeter.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalMeter += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'METER').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); 
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: meterTableBody, foot: [['', '', '', 'TOTAL METER RECOVERY', `RS. ${totalMeter.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [168, 85, 247] }, footStyles: { fillColor: [168, 85, 247], textColor: [255, 255, 255] } }); 
+                currentY = doc.lastAutoTable.finalY + 12; 
+            }
+
+            if (data.paymentsMonthly.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY); let totalMonthly = 0; let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => { let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99'; let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99'; return (dateA > dateB ? 1 : -1); }); let monthlyTableBody = sortedMonthlyPayments.map((p, i) => { let dates = p.hits.map(h => formatDateDisplay(h.date)).sort().join(", "); totalMonthly += Number(p.total || 0); return [i + 1, p.name, dates, `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']], body: monthlyTableBody, foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [184, 134, 11] }, footStyles: { fillColor: [184, 134, 11], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            if (data.pendingsInRange && data.pendingsInRange.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(255, 59, 107); doc.text("PENDING COLLECTIONS SUMMARY", marginX, currentY); let totalPending = 0; let pendingTableBody = data.pendingsInRange.map((p, i) => { totalPending += Number(p.accumulatedTotal || 0); return [i + 1, p.name, (p.type || 'DAILY').toUpperCase(), p.missedDatesStr, `RS. ${Number(p.accumulatedTotal).toFixed(0).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']], body: pendingTableBody, foot: [['', '', '', 'TOTAL PENDING AMOUNT', `RS. ${totalPending.toFixed(0).toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [255, 59, 107] }, footStyles: { fillColor: [255, 59, 107], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            if (currentY > 270) { doc.addPage(); currentY = 20; } doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic'); doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); showToast("Professional PDF Downloaded!");
+        } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
+    }
+
+    function render() {
+        if(currentTab === 'stats') { renderStats(); return; }
+        const dash = document.getElementById('dashboard'); dash.innerHTML = '';
+        let sName = document.getElementById('search-box').value.toLowerCase().trim();
+        let fType = document.getElementById('filter-box').value;
+        let sortType = document.getElementById('sort-box').value;
+        let tP = 0, tB = 0, tC = 0;
+        let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
+        let searchTotalKishat = 0, searchTotalProfit = 0;
+        let showSearchStat = false;
+        let today = new Date().toISOString().split('T')[0];
+        let pureDB = db.filter(x => x.type !== 'config');
+        let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
+        let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
+        const accountsHtmlArray = [];
+        const t = i18n[currentLang]; 
+        
+        sortedDB.forEach(c => {
+            if(!isOwnerMode && c.isPersonal) return;
+            if(!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
+            if(fType === 'archived') { if(!c.isArchived) return; } else { if(c.isArchived) return; if(fType !== 'all' && c.type !== fType) return; }
+            tP += c.principal; tB += c.currentBalance; tC++;
+            let nameMatch = c.name.toLowerCase().includes(sName);
+            let refMatch = (currentTab === 'dash' && isOwnerMode && sName !== '') && (c.staffRef || '').toLowerCase().includes(sName);
+            if(!nameMatch && !refMatch) return;
+            if (currentTab === 'dash' && sName === '') return;
+            if (refMatch) { showSearchStat = true; searchCasesCount++; searchTotalValue += c.principal; searchTotalBal += c.currentBalance; let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; searchTotalRec += paid; if (c.type === 'daily') { searchTotalKishat += (c.installment || 0); let totalP = (c.totalPayable || c.principal) - c.principal; let ratio = totalP / (c.totalPayable || c.principal); searchTotalProfit += (c.installment * ratio); } else if (c.type === 'monthly' || c.type === 'meter') { let interest = (c.principal * (c.rate || 0) / 100); searchTotalKishat += interest; searchTotalProfit += interest; } }
+            let isDueToday = false, isPending = false, pendingDays = 0;
+            let todayDateObj = new Date(today);
+            if (c.type === 'monthly') { let monthlyInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let monthsPaid = monthlyInt > 0 ? Math.floor(totalPaidThisCase / monthlyInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); nextDueDate.setMonth(nextDueDate.getMonth() + monthsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); if (pendingDays === 0) isDueToday = true; } }
+            else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
+            if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
+            let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
+            let histData = c.history ? [...c.history] : [], hideSNo = false;
+            if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
+            let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
+            const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
+            const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
+
+            accountsHtmlArray.push(`
+            <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
+                ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
+                <div onclick="toggleView(${c.id})" style="cursor:pointer;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
+                    <div class="card-header">
+                        <div style="min-width:0; flex:1; display:flex; align-items:center; gap:12px;">
+                            ${avatarHtml}
+                            <div style="min-width:0;">
+                                <div class="c-name">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
+                                <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
+                            </div>
+                        </div>
+                        <div style="flex-shrink:0;">
+                            <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
+                            <div class="c-sub" style="text-align:right">Balance</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
+                    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;">
+                        <div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${c.type==='daily'?t.returnAmt:t.principal}</span><br><b style="font-size:14px;">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b></div>
+                        ${(isOwnerMode || c.type === 'daily') ? `
+                        <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
+                        ` : ''}
+                        <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
+                    <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
+                </div>
+                <div class="btn-row" style="margin-top:15px;"><button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button><button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button><button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button></div>
+            </div>`);
+        });
+        let finalHtml = ""; 
+        if (currentTab === 'dash' && sName === '') { finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`; }
+        else {
+            if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') { let collectionLabel = t.refStatCollection; if (fType === 'monthly') collectionLabel = t.refStatInterest; else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily'); finalHtml += `<div class="search-stat-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span><span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span></div><div class="search-stat-grid"><div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div><div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>${fType !== 'all' ? `<div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${collectionLabel}</label><value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div><div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${t.refStatProfit}</label><value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>` : ''}</div></div>`; }
+            finalHtml += accountsHtmlArray.join('');
+        }
+        document.getElementById('dashboard').innerHTML = finalHtml; document.getElementById('sum-cases').innerText = tC; document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
+    }
+
+    function renderStats() {
+        let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
+        db.filter(x => x.type !== 'config').forEach(c => {
+            if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
+            if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
+            if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
+            if(isOwnerMode) { 
+                globalInvested += c.principal; 
+                let tBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); 
+                let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0; 
+                if (c.type === 'monthly') globalProfit += (c.principal * (c.rate || 0) / 100); 
+                if(c.history) { 
+                    [...c.history].sort((a,b) => (a.date > b.date ? 1 : -1)).forEach(h => { 
+                        let paid = parseFloat(h.paid); 
+                        
+                        /* CORE LOGIC FIX: Vyaj payments considered 100% profit */
+                        if(c.type === 'monthly' || c.type === 'meter') { 
+                            globalProfit += paid; 
+                        } else { 
+                            globalProfit += (paid * cRatio); 
+                            tBal -= paid; 
+                        } 
+                    }); 
+                } 
+            }
+        });
+        if(isOwnerMode) { document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); }
+        document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
+    }
 </script>
 </body>
 </html>
-
 
 
