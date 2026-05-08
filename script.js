@@ -15,6 +15,16 @@
     const auth = firebase.auth(); 
     const database = firebase.database();
     // ----------------------
+
+    // --- INDIAN TIMEZONE HELPER ---
+    function getISTDate() {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+    }
     
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
     let pin = ""; 
@@ -103,7 +113,7 @@
             delCaseMsg: "क्या आप यह पूरा खाता हटाना चाहते हैं?", delCaseSuccess: "खाता हटा दिया गया!", editBtn: "एडिट", recBtn: "प्राप्त करें", bulkBtn: "⚡ बल्क",
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
             autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
-            repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा نہیں۔", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "Advance Profit (Cut)",
+            repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "Advance Profit (Cut)",
             archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की Login ID या Owner PIN डालें",
             refStatTitle: "👑 रेफरेंस सारांश", refStatCases: "कुल खाते", refStatValue: "कुल वैल्यू", refStatRec: "प्राप्त", refStatOut: "बकाया",
             refStatCollection: "कुल रोज़ाना किश्त", refStatInterest: "कुल महीने का ब्याज", refStatProfit: "अनुमानित प्रॉफिट",
@@ -150,7 +160,8 @@
         document.getElementById('main-app').style.display = 'none'; 
         if(document.getElementById('lang-select')) document.getElementById('lang-select').value = currentLang;
         if(document.getElementById('auto-backup-select')) document.getElementById('auto-backup-select').value = autoBackupFreq;
-        let todayDate = new Date().toISOString().split('T')[0];
+        
+        let todayDate = getISTDate(); // IST FIX
         if(document.getElementById('date')) document.getElementById('date').value = todayDate;
         if(document.getElementById('rep-start')) document.getElementById('rep-start').value = todayDate;
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
@@ -171,7 +182,7 @@
     };
 
     function changeLang() { currentLang = document.getElementById('lang-select').value; localStorage.setItem('paymitra_lang', currentLang); applyLang(); render(); showToast("Language Updated!"); }
-    function changeAutoBackup() { autoBackupFreq = document.getElementById('auto-backup-select').value; localStorage.setItem('paymitra_autobackup', currentLang); showToast("Auto Backup Saved!"); }
+    function changeAutoBackup() { autoBackupFreq = document.getElementById('auto-backup-select').value; localStorage.setItem('paymitra_autobackup', autoBackupFreq); showToast("Auto Backup Saved!"); }
 
     function applyLang() {
         const t = i18n[currentLang];
@@ -241,12 +252,11 @@
     function showToast(msg) { let t = document.getElementById('toast-box'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
     function askConfirm(msg, callback) { document.getElementById('confirm-text').innerText = msg; confirmActionCallback = callback; document.getElementById('confirm-modal').style.display = 'flex'; }
     function executeConfirm() { if(confirmActionCallback) confirmActionCallback(); closeModal('confirm-modal'); confirmActionCallback = null; }
-    function switchTab(tab) { currentTab = tab; openViews = {}; multiDelMode = {}; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + tab).classList.add('active'); document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none'; document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none'; document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none'; document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block'; if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; if(tab === 'stats') { let todayDate = new Date().toISOString().split('T')[0]; document.getElementById('rep-start').value = todayDate; document.getElementById('rep-end').value = todayDate; if(document.getElementById('rep-type')) document.getElementById('rep-type').value = 'all'; if(document.getElementById('rep-search')) document.getElementById('rep-search').value = ''; document.getElementById('rep-results').style.display = 'none'; document.getElementById('rep-list').scrollTop = 0; window.scrollTo(0, 0); } render(); }
+    function switchTab(tab) { currentTab = tab; openViews = {}; multiDelMode = {}; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + tab).classList.add('active'); document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none'; document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none'; document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none'; document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block'; if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; if(tab === 'stats') { let todayDate = getISTDate(); // IST FIX
+        document.getElementById('rep-start').value = todayDate; document.getElementById('rep-end').value = todayDate; if(document.getElementById('rep-type')) document.getElementById('rep-type').value = 'all'; if(document.getElementById('rep-search')) document.getElementById('rep-search').value = ''; document.getElementById('rep-results').style.display = 'none'; document.getElementById('rep-list').scrollTop = 0; window.scrollTo(0, 0); } render(); }
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    // --- THE MAGIC FALLBACK FIX ---
-    // Agar user crop tool bypass karta hai, tab bhi hum image ko zabardasti 1:1 Square banayenge!
     function toSquareBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -256,15 +266,13 @@
                 img.src = reader.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const size = 400; // Perfect square
+                    const size = 400; 
                     canvas.width = size;
                     canvas.height = size;
                     const ctx = canvas.getContext('2d');
-                    
                     let sWidth = img.width;
                     let sHeight = img.height;
                     let sx = 0, sy = 0;
-                    
                     if (sWidth > sHeight) {
                         sx = (sWidth - sHeight) / 2;
                         sWidth = sHeight;
@@ -272,7 +280,6 @@
                         sy = (sHeight - sWidth) / 2;
                         sHeight = sWidth;
                     }
-                    
                     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
@@ -281,7 +288,6 @@
         });
     }
 
-    // UPDATED: Standard Base64 for loading INTO crop tool
     function toBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -309,20 +315,15 @@
     async function handleImageSelect(input, target) {
         if (!input.files || !input.files[0]) return;
         currentCropTarget = target;
-        lastCroppedBase64 = ''; // Reset on new selection
+        lastCroppedBase64 = ''; 
         try {
             showToast("Loading Crop Tool ⏳...");
             const safeBase64 = await toBase64(input.files[0]);
-            
             const cropModal = document.getElementById('crop-modal');
             cropModal.style.display = 'flex';
-            // Z-INDEX LOCK FIX: Crop Modal ko zabardasti sabse aage (9999999) kar diya! 
-            // Ab user background edit modal pe click nahi payega.
             cropModal.style.zIndex = '9999999'; 
-            
             const cropImg = document.getElementById('crop-image-el');
             cropImg.src = safeBase64;
-            
             if (activeCropper) activeCropper.destroy();
             activeCropper = new Cropper(cropImg, {
                 aspectRatio: 1, 
@@ -348,9 +349,7 @@
         try {
             const canvas = activeCropper.getCroppedCanvas({ width: 400, height: 400, fillColor: '#fff' });
             if (!canvas) return showToast("Cropping failed. Try again.");
-            
             lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-            
             if (currentCropTarget === 'edit') {
                 document.getElementById('edit-photo-preview').src = lastCroppedBase64;
                 document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
@@ -361,7 +360,6 @@
                 document.getElementById('edit-staff-photo-preview').src = lastCroppedBase64;
                 document.getElementById('edit-staff-photo-preview-wrap').style.display = 'flex';
             }
-            
             closeCropModal();
             showToast("Photo Cropped & Ready! ✅");
         } catch(e) {
@@ -374,7 +372,6 @@
         if (activeCropper) activeCropper.destroy();
         activeCropper = null;
         document.getElementById('crop-modal').style.display = 'none';
-        
         if (currentCropTarget === 'add') {
             const fi = document.getElementById('cust-photo');
             if (fi) fi.value = '';
@@ -547,7 +544,26 @@
         } 
     }
 
-    function checkAutoBackup() { if(autoBackupFreq === 'never' || db.length === 0) return; let todayObj = new Date(); let todayStr = todayObj.toISOString().split('T')[0]; let lastBackup = localStorage.getItem('paymitra_lastbackup') || ''; if (autoBackupFreq === 'daily') { if (lastBackup !== todayStr) { exportData(); localStorage.setItem('paymitra_lastbackup', todayStr); setTimeout(() => showToast("Daily Auto Backup Complete!"), 1000); } } else if (autoBackupFreq === 'monthly') { let currentMonth = todayObj.getFullYear() + '-' + todayObj.getMonth(); let lastMonth = lastBackup ? new Date(lastBackup).getFullYear() + '-' + new Date(lastBackup).getMonth() : ''; if (currentMonth !== lastMonth) { exportData(); localStorage.setItem('paymitra_lastbackup', todayStr); setTimeout(() => showToast("Monthly Auto Backup Complete!"), 1000); } } }
+    function checkAutoBackup() { 
+        if(autoBackupFreq === 'never' || db.length === 0) return; 
+        let todayStr = getISTDate(); // IST FIX
+        let lastBackup = localStorage.getItem('paymitra_lastbackup') || ''; 
+        if (autoBackupFreq === 'daily') { 
+            if (lastBackup !== todayStr) { 
+                exportData(); 
+                localStorage.setItem('paymitra_lastbackup', todayStr); 
+                setTimeout(() => showToast("Daily Auto Backup Complete!"), 1000); 
+            } 
+        } else if (autoBackupFreq === 'monthly') { 
+            let currentMonth = todayStr.substring(0, 7); 
+            let lastMonth = lastBackup.substring(0, 7); 
+            if (currentMonth !== lastMonth) { 
+                exportData(); 
+                localStorage.setItem('paymitra_lastbackup', todayStr); 
+                setTimeout(() => showToast("Monthly Auto Backup Complete!"), 1000); 
+            } 
+        } 
+    }
 
     function unlockApp() { 
         document.getElementById('lock-screen').style.display = 'none'; 
@@ -555,14 +571,12 @@
         if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all';
         if(document.getElementById('search-box')) document.getElementById('search-box').value = '';
         if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new';
-        
         const profArea = document.getElementById('profile-icon-area');
         if (activeStaffPhoto) {
             profArea.innerHTML = `<img src="${activeStaffPhoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:1px solid var(--accent-orange);">`;
         } else {
             profArea.innerHTML = '⚙️';
         }
-
         if(isOwnerMode) {
             document.getElementById('owner-badge').style.display = 'block';
             document.getElementById('owner-title-badge').style.display = 'inline';
@@ -594,7 +608,6 @@
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
-
                 if (document.getElementById('main-app').style.display === 'none') {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
@@ -637,41 +650,31 @@
         render();
         document.getElementById('sync-status').innerText = "Saving to Cloud...";
         document.getElementById('cloud-indicator').className = "status-dot";
-
-        // Pichla saved data nikalenge "Smart Compare" ke liye
         let oldDb = [];
         try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
-
         const successCb = () => {
-            window.lastSyncedDbStr = currentDbStr; // Agli baar ke liye memory update kar di
+            window.lastSyncedDbStr = currentDbStr; 
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
         };
-
         const errCb = (e) => {
             document.getElementById('sync-status').innerText = "Saved Offline";
             document.getElementById('cloud-indicator').className = "status-dot offline";
             isSaving = false;
         };
-
-        // --- SMART UPDATE LOGIC (CHILD UPDATE) ---
-        // Agar list ki length alag hai (koi delete ya naya add hua hai) toh safe side poora db update hoga
         if (oldDb.length !== db.length || oldDb.length === 0) {
             database.ref('credix_db').set(db).then(successCb).catch(errCb);
         } else {
-            // Agar sirf kishat/edit aayi hai, toh sirf changed wala child update hoga (Bandwidth saver!)
             let updates = {};
             let hasChanges = false;
             for (let i = 0; i < db.length; i++) {
                 if (JSON.stringify(db[i]) !== JSON.stringify(oldDb[i])) {
-                    updates[i] = db[i]; // Sirf 1 entry jo badli hai, usi ko nikal liya
+                    updates[i] = db[i]; 
                     hasChanges = true;
                 }
             }
-
             if (hasChanges) {
-                // Yahan 'set' ki jagah Firebase ka smart 'update' command lagaya gaya hai
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
             } else {
                 successCb();
@@ -698,30 +701,23 @@
         c.currentBalance = tempBal; 
     }
 
-    // --- ADD CUSTOMER FIX WITH AUTO-SQUARE FALLBACK ---
     async function addCustomer() {
         const tLang = i18n[currentLang];
         const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
         const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
         const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
-        
         if(!name) { triggerShake('name'); return showToast(tLang.missingNameAmt || "Missing Name!"); }
         if(isNaN(amt) || amt <= 0) { triggerShake('amt'); return showToast(tLang.missingNameAmt || "Missing Principal!"); }
-        
         let photoBase64 = "";
-        
-        // Agar user ne Crop kiya hai:
         if (lastCroppedBase64) {
             photoBase64 = lastCroppedBase64;
         } 
-        // Auto-Square Fallback: Agar user ne sirf file choose ki par crop bypass kar diya:
         else {
             const fileInput = document.getElementById('cust-photo');
             if (fileInput.files && fileInput.files[0]) {
                 photoBase64 = await toSquareBase64(fileInput.files[0]);
             }
         }
-
         let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64 };
         if(type === 'monthly') { 
             let rateVal = parseFloat(document.getElementById('rate').value);
@@ -739,12 +735,9 @@
             cust.totalPayable = tRet; cust.currentBalance = cust.totalPayable; cust.installment = cust.totalPayable / dVals; 
         }
         db.push(cust); saveAndRender(); 
-        
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
-        
         lastCroppedBase64 = ''; 
-        
         if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
         if(document.getElementById('days')) document.getElementById('days').value = '';
         if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
@@ -754,7 +747,6 @@
     function toggleView(id) { 
         const viewEl = document.getElementById('view-' + id);
         if (!viewEl) return;
-        
         if (openViews[id]) { 
             delete openViews[id]; 
             multiDelMode[id] = false; 
@@ -767,9 +759,32 @@
 
     function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
-    function openPayModal(id) { let c = db.find(x => x.id === id); document.getElementById('pay-id').value = id; document.getElementById('pay-date').value = new Date().toISOString().split('T')[0]; let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); document.getElementById('pay-amt').value = amt.toFixed(0); document.getElementById('pay-modal').style.display = 'flex'; }
+    
+    function openPayModal(id) { 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('pay-id').value = id; 
+        document.getElementById('pay-date').value = getISTDate(); // IST FIX
+        let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
+        document.getElementById('pay-amt').value = amt.toFixed(0); 
+        document.getElementById('pay-modal').style.display = 'flex'; 
+    }
+
     function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
-    function openBulkModal(id) { let c = db.find(x => x.id === id); document.getElementById('bulk-id').value = id; document.getElementById('bulk-start-date').value = new Date().toISOString().split('T')[0]; document.getElementById('bulk-end-date').value = new Date().toISOString().split('T')[0]; let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); document.getElementById('bulk-amt').value = amt.toFixed(0); const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); document.getElementById('bulk-freq-label').innerText = `(${freqText})`; document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt; document.getElementById('bulk-modal').style.display = 'flex'; }
+    
+    function openBulkModal(id) { 
+        let c = db.find(x => x.id === id); 
+        document.getElementById('bulk-id').value = id; 
+        let todayStr = getISTDate(); // IST FIX
+        document.getElementById('bulk-start-date').value = todayStr; 
+        document.getElementById('bulk-end-date').value = todayStr; 
+        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); 
+        document.getElementById('bulk-amt').value = amt.toFixed(0); 
+        const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); 
+        document.getElementById('bulk-freq-label').innerText = `(${freqText})`; 
+        document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt; 
+        document.getElementById('bulk-modal').style.display = 'flex'; 
+    }
+
     function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
     
     function removeEditPhoto() {
@@ -789,21 +804,17 @@
         document.getElementById('edit-amt').value = c.principal; 
         const previewWrap = document.getElementById('edit-photo-preview-wrap');
         const previewImg = document.getElementById('edit-photo-preview');
-        
         if(c.photo) { 
             previewImg.src = c.photo; 
             previewWrap.style.display = 'flex'; 
         } else { 
             previewWrap.style.display = 'none'; 
         }
-        
         document.getElementById('edit-photo-input').value = '';
-        
         if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } 
         document.getElementById('edit-modal').style.display = 'flex'; 
     }
     
-    // --- EDIT FIX WITH AUTO-SQUARE FALLBACK ---
     async function saveEdit() { 
         let id = parseInt(document.getElementById('edit-id').value); 
         let c = db.find(x => x.id === id); 
@@ -812,31 +823,23 @@
         let oldTotalPayable = c.totalPayable; 
         let nameVal = document.getElementById('edit-name').value; 
         if (nameVal) c.name = nameVal; 
-        
-        // 1. Agar crop use kiya hai
         if (lastCroppedBase64) { 
             c.photo = lastCroppedBase64; 
         } 
-        // 2. Agar remove click kiya hai
         else if (window._pendingPhotoRemoval) { 
             c.photo = ""; 
         } 
-        // 3. Fallback: Agar file choose ki hai par crop nahi kiya (Auto-Square it!)
         else { 
             const fileInput = document.getElementById('edit-photo-input'); 
             if (fileInput.files && fileInput.files[0]) { 
                 c.photo = await toSquareBase64(fileInput.files[0]); 
             } 
         }
-
         if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } 
-        
         recalculateCase(c); 
         closeModal('edit-modal'); 
         saveAndRender(); 
-        
         lastCroppedBase64 = ''; 
-        
         showToast("Account Updated ✅"); 
     }
     
@@ -887,13 +890,11 @@
         const searchQ = document.getElementById('rep-search').value.toLowerCase().trim();
         const t = i18n[currentLang];
         if (!start || !end) return showToast("Select both dates!");
-        
         let totalGiven = 0, totalReturned = 0, totalProfitInRange = 0; 
         let newCasesDaily = [], newCasesMonthly = [], newCasesMeter = [];
         let paymentsDaily = [], paymentsMonthly = [], paymentsMeter = [];
         let pendingsInRange = [];
         const rangeEndStr = end;
-        
         db.filter(x => x.type !== 'config').forEach(c => {
             if (c.isArchived) return; 
             if (!isOwnerMode && c.isPersonal) return;
@@ -914,15 +915,8 @@
                 let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
                 sortedHist.forEach(h => {
                     let paid = parseFloat(h.paid); let profitFromThisPayment = 0;
-                    
-                    if(c.type === 'monthly' || c.type === 'meter') { 
-                        profitFromThisPayment = paid; 
-                    }
-                    else { 
-                        profitFromThisPayment = paid * cRatio; 
-                        tempBalForRec -= paid; 
-                    }
-                    
+                    if(c.type === 'monthly' || c.type === 'meter') { profitFromThisPayment = paid; }
+                    else { profitFromThisPayment = paid * cRatio; tempBalForRec -= paid; }
                     if (h.date >= start && h.date <= end) { customerTotalInRange += paid; totalReturned += paid; customerProfitInRange += profitFromThisPayment; totalProfitInRange += profitFromThisPayment; histHits.push({ date: h.date, amt: paid, profit: profitFromThisPayment }); }
                 });
             }
@@ -960,13 +954,11 @@
                 if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
             }
         });
-
         lastGeneratedReportData = { start, end, type, totalGiven, totalReturned, newCasesDaily, newCasesMonthly, newCasesMeter, paymentsDaily, paymentsMonthly, paymentsMeter, pendingsInRange };
         document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
         document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
         if(isOwnerMode) { document.getElementById('rep-profit-container').style.display = 'block'; document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('btn-rep-pdf').style.display = 'block'; }
         else { document.getElementById('rep-profit-container').style.display = 'none'; document.getElementById('btn-rep-pdf').style.display = 'none'; }
-
         let reportHtml = "";
         const renderCases = (list, title, color) => {
             if (list.length === 0) return "";
@@ -982,7 +974,6 @@
         reportHtml += renderCases(newCasesDaily, t.repNewDaily, "var(--accent-orange)");
         reportHtml += renderCases(newCasesMonthly, t.repNewMonthly, "var(--owner-gold)");
         reportHtml += renderCases(newCasesMeter, t.repNewMeter, "#a855f7");
-
         const renderPayments = (list, title, color, isMonthly) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1000,7 +991,6 @@
         reportHtml += renderPayments(paymentsDaily, t.repRecDaily, "var(--success)", false);
         reportHtml += renderPayments(paymentsMonthly, t.repRecMonthly, "var(--owner-gold)", true);
         reportHtml += renderPayments(paymentsMeter, t.repRecMeter, "#a855f7", false);
-
         const renderPendings = (list, title, color, bgColor) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1011,23 +1001,19 @@
                 let perUnit = p.type === 'daily' ? (p.installment || 0) : (p.principal * (p.rate || 0) / 100);
                 let calcNote = `${count} × ₹${perUnit.toFixed(0)}`;
                 let typeTranslated = p.type === 'daily' ? t.fDaily : (p.type === 'monthly' ? t.fMonthly : t.fMeter);
-
                 html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-break:break-all; overflow-wrap:anywhere;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
         };
-
         if (pendingsInRange.length > 0) {
             let pendingDaily = pendingsInRange.filter(p => p.type === 'daily');
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
             let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
-
             reportHtml += renderPendings(pendingDaily, t.repPendDaily, "var(--danger)", "rgba(255, 59, 107, 0.05)");
             reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
             reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
         }
-
         if(reportHtml === "") { reportHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12px; border:1px dashed rgba(255,255,255,0.1); border-radius:12px; margin-top:15px;">No activity found in selected date range.</div>`; }
         document.getElementById('rep-list').innerHTML = reportHtml; document.getElementById('rep-results').style.display = 'block'; document.getElementById('rep-list').scrollTop = 0;
     }
@@ -1045,25 +1031,8 @@
             currentY = doc.lastAutoTable.finalY + 15;
             let combinedNewCases = [...data.newCasesDaily.map(c=>({...c, type:'DAILY'})), ...data.newCasesMonthly.map(c=>({...c, type:'MONTHLY'})), ...data.newCasesMeter.map(c=>({...c, type:'METER'}))];
             if (combinedNewCases.length > 0) { doc.setFontSize(11); doc.setTextColor(255, 107, 53); doc.text("NEW PORTFOLIO ADDITIONS (GIVEN)", marginX, currentY); let totalNewValue = 0; let casesTableBody = combinedNewCases.map((c, i) => { totalNewValue += Number(c.principal || 0); return [i + 1, c.name, formatDateDisplay(c.startDate), c.type, `RS. ${Number(c.principal).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: casesTableBody, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalNewValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [255, 107, 53] }, footStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
-            
-            if (data.paymentsDaily.length > 0) { 
-                if (currentY > 250) { doc.addPage(); currentY = 20; } 
-                doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); 
-                let totalDaily = 0; 
-                let dailyTableBody = data.paymentsDaily.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalDaily += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); 
-                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: dailyTableBody, foot: [['', '', '', 'TOTAL DAILY RECOVERY', `RS. ${totalDaily.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] } }); 
-                currentY = doc.lastAutoTable.finalY + 12; 
-            }
-
-            if (data.paymentsMeter.length > 0) { 
-                if (currentY > 250) { doc.addPage(); currentY = 20; } 
-                doc.setFontSize(11); doc.setTextColor(168, 85, 247); doc.text("METER RECOVERY LOG", marginX, currentY); 
-                let totalMeter = 0; 
-                let meterTableBody = data.paymentsMeter.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalMeter += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'METER').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); 
-                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: meterTableBody, foot: [['', '', '', 'TOTAL METER RECOVERY', `RS. ${totalMeter.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [168, 85, 247] }, footStyles: { fillColor: [168, 85, 247], textColor: [255, 255, 255] } }); 
-                currentY = doc.lastAutoTable.finalY + 12; 
-            }
-
+            if (data.paymentsDaily.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); let totalDaily = 0; let dailyTableBody = data.paymentsDaily.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalDaily += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: dailyTableBody, foot: [['', '', '', 'TOTAL DAILY RECOVERY', `RS. ${totalDaily.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            if (data.paymentsMeter.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(168, 85, 247); doc.text("METER RECOVERY LOG", marginX, currentY); let totalMeter = 0; let meterTableBody = data.paymentsMeter.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalMeter += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'METER').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: meterTableBody, foot: [['', '', '', 'TOTAL METER RECOVERY', `RS. ${totalMeter.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [168, 85, 247] }, footStyles: { fillColor: [168, 85, 247], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
             if (data.paymentsMonthly.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY); let totalMonthly = 0; let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => { let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99'; let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99'; return (dateA > dateB ? 1 : -1); }); let monthlyTableBody = sortedMonthlyPayments.map((p, i) => { let dates = p.hits.map(h => formatDateDisplay(h.date)).sort().join(", "); totalMonthly += Number(p.total || 0); return [i + 1, p.name, dates, `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']], body: monthlyTableBody, foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [184, 134, 11] }, footStyles: { fillColor: [184, 134, 11], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
             if (data.pendingsInRange && data.pendingsInRange.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(255, 59, 107); doc.text("PENDING COLLECTIONS SUMMARY", marginX, currentY); let totalPending = 0; let pendingTableBody = data.pendingsInRange.map((p, i) => { totalPending += Number(p.accumulatedTotal || 0); return [i + 1, p.name, (p.type || 'DAILY').toUpperCase(), p.missedDatesStr, `RS. ${Number(p.accumulatedTotal).toFixed(0).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']], body: pendingTableBody, foot: [['', '', '', 'TOTAL PENDING AMOUNT', `RS. ${totalPending.toFixed(0).toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [255, 59, 107] }, footStyles: { fillColor: [255, 59, 107], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
             if (currentY > 270) { doc.addPage(); currentY = 20; } doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic'); doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); showToast("Professional PDF Downloaded!");
@@ -1080,13 +1049,12 @@
         let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
         let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
-        let today = new Date().toISOString().split('T')[0];
+        let today = getISTDate(); // IST FIX
         let pureDB = db.filter(x => x.type !== 'config');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
         const t = i18n[currentLang]; 
-        
         sortedDB.forEach(c => {
             if(!isOwnerMode && c.isPersonal) return;
             if(!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
@@ -1108,7 +1076,6 @@
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
-
             accountsHtmlArray.push(`
             <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
                 ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
@@ -1165,13 +1132,8 @@
                 if(c.history) { 
                     [...c.history].sort((a,b) => (a.date > b.date ? 1 : -1)).forEach(h => { 
                         let paid = parseFloat(h.paid); 
-                        
-                        if(c.type === 'monthly' || c.type === 'meter') { 
-                            globalProfit += paid; 
-                        } else { 
-                            globalProfit += (paid * cRatio); 
-                            tBal -= paid; 
-                        } 
+                        if(c.type === 'monthly' || c.type === 'meter') { globalProfit += paid; } 
+                        else { globalProfit += (paid * cRatio); tBal -= paid; } 
                     }); 
                 } 
             }
@@ -1182,10 +1144,9 @@
 
     document.addEventListener("visibilitychange", function() {
         if (document.hidden) {
-            console.log("App is in background. Going offline...");
             firebase.database().goOffline();
         } else {
-            console.log("App is active. Going online...");
             firebase.database().goOnline();
         }
     });
+
