@@ -245,19 +245,83 @@
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    // --- MAIN FIX 1: DOWNSCALE IMAGE BEFORE CROPPING ---
-    // Ab bhari image pehle compress hogi taaki iOS Safari mein crop tool crash na ho.
+    // --- THE MAGIC FALLBACK FIX ---
+    // Agar user crop tool bypass karta hai, tab bhi hum image ko zabardasti 1:1 Square banayenge!
+    function toSquareBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const size = 400; // Perfect square
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    
+                    let sWidth = img.width;
+                    let sHeight = img.height;
+                    let sx = 0, sy = 0;
+                    
+                    if (sWidth > sHeight) {
+                        sx = (sWidth - sHeight) / 2;
+                        sWidth = sHeight;
+                    } else {
+                        sy = (sHeight - sWidth) / 2;
+                        sHeight = sWidth;
+                    }
+                    
+                    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // UPDATED: Standard Base64 for loading INTO crop tool
+    function toBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 800; 
+                    if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+                    else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
     async function handleImageSelect(input, target) {
         if (!input.files || !input.files[0]) return;
         currentCropTarget = target;
+        lastCroppedBase64 = ''; // Reset on new selection
         try {
-            showToast("Loading Photo...");
-            // Use existing toBase64 to safely compress heavy phone pictures first
+            showToast("Loading Crop Tool ⏳...");
             const safeBase64 = await toBase64(input.files[0]);
+            
+            const cropModal = document.getElementById('crop-modal');
+            cropModal.style.display = 'flex';
+            // Z-INDEX LOCK FIX: Crop Modal ko zabardasti sabse aage (9999999) kar diya! 
+            // Ab user background edit modal pe click nahi kar payega.
+            cropModal.style.zIndex = '9999999'; 
             
             const cropImg = document.getElementById('crop-image-el');
             cropImg.src = safeBase64;
-            document.getElementById('crop-modal').style.display = 'flex';
             
             if (activeCropper) activeCropper.destroy();
             activeCropper = new Cropper(cropImg, {
@@ -279,15 +343,11 @@
         }
     }
 
-    // --- MAIN FIX 2: BULLETPROOF CONFIRM CROP ---
     function confirmCrop() {
         if (!activeCropper) return;
         try {
-            // Get cropped square image
             const canvas = activeCropper.getCroppedCanvas({ width: 400, height: 400, fillColor: '#fff' });
-            if (!canvas) {
-                return showToast("Cropping failed. Try again.");
-            }
+            if (!canvas) return showToast("Cropping failed. Try again.");
             
             lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
             
@@ -314,6 +374,14 @@
         if (activeCropper) activeCropper.destroy();
         activeCropper = null;
         document.getElementById('crop-modal').style.display = 'none';
+        
+        if (currentCropTarget === 'add') {
+            const fi = document.getElementById('cust-photo');
+            if (fi) fi.value = '';
+        } else if (currentCropTarget === 'edit') {
+            const fi = document.getElementById('edit-photo-input');
+            if (fi) fi.value = '';
+        }
     }
 
     function logout() { 
@@ -601,7 +669,7 @@
         c.currentBalance = tempBal; 
     }
 
-    // --- MAIN FIX 3: ADD RECORD FIX ---
+    // --- ADD CUSTOMER FIX WITH AUTO-SQUARE FALLBACK ---
     async function addCustomer() {
         const tLang = i18n[currentLang];
         const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
@@ -613,12 +681,15 @@
         
         let photoBase64 = "";
         
+        // Agar user ne Crop kiya hai:
         if (lastCroppedBase64) {
             photoBase64 = lastCroppedBase64;
-        } else {
+        } 
+        // Auto-Square Fallback: Agar user ne sirf file choose ki par crop bypass kar diya:
+        else {
             const fileInput = document.getElementById('cust-photo');
             if (fileInput.files && fileInput.files[0]) {
-                photoBase64 = await toBase64(fileInput.files[0]);
+                photoBase64 = await toSquareBase64(fileInput.files[0]);
             }
         }
 
@@ -643,38 +714,12 @@
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
         
-        // Reset crop data after successful save
         lastCroppedBase64 = ''; 
         
         if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
         if(document.getElementById('days')) document.getElementById('days').value = '';
         if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
         showToast("Record Created!");
-    }
-
-    // UPDATED: Quality max_size increased to 800 to maintain crisp quality before Cropper handles it
-    function toBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                const img = new Image();
-                img.src = reader.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const max_size = 800; // Increased base quality limit 
-                    if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
-                    else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
-                };
-            };
-            reader.onerror = error => reject(error);
-        });
     }
 
     function toggleView(id) { 
@@ -729,7 +774,7 @@
         document.getElementById('edit-modal').style.display = 'flex'; 
     }
     
-    // --- MAIN FIX 4: SAVE EDIT FIX ---
+    // --- EDIT FIX WITH AUTO-SQUARE FALLBACK ---
     async function saveEdit() { 
         let id = parseInt(document.getElementById('edit-id').value); 
         let c = db.find(x => x.id === id); 
@@ -739,14 +784,19 @@
         let nameVal = document.getElementById('edit-name').value; 
         if (nameVal) c.name = nameVal; 
         
+        // 1. Agar crop use kiya hai
         if (lastCroppedBase64) { 
             c.photo = lastCroppedBase64; 
-        } else if (window._pendingPhotoRemoval) { 
+        } 
+        // 2. Agar remove click kiya hai
+        else if (window._pendingPhotoRemoval) { 
             c.photo = ""; 
-        } else { 
+        } 
+        // 3. Fallback: Agar file choose ki hai par crop nahi kiya (Auto-Square it!)
+        else { 
             const fileInput = document.getElementById('edit-photo-input'); 
             if (fileInput.files && fileInput.files[0]) { 
-                c.photo = await toBase64(fileInput.files[0]); 
+                c.photo = await toSquareBase64(fileInput.files[0]); 
             } 
         }
 
@@ -756,7 +806,6 @@
         closeModal('edit-modal'); 
         saveAndRender(); 
         
-        // Ensure reset of variables after save to prevent overlapping to other records
         lastCroppedBase64 = ''; 
         
         showToast("Account Updated ✅"); 
