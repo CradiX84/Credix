@@ -9,9 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <!-- ADDED: Firebase Auth Library for Background Security -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
@@ -433,12 +431,10 @@
 
 <div class="bottom-nav">
     <div class="nav-item active" id="nav-dash" onclick="switchTab('dash')">
-        <span class="nav-icon" style="height:24px; display:flex; align-items:center;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 22 15 12"></polyline></svg>
-        </span>
+        <span class="nav-icon" style="font-size: 24px;">🏠</span>
         <span id="t-navDash">Home</span>
     </div>
-    <div class="nav-item" id="nav-cust" onclick="switchTab('cust')"><span class="nav-icon">👤</span><span id="t-navCust">Accounts</span></div>
+    <div class="nav-item" id="nav-cust" onclick="switchTab('cust')"><span class="nav-icon">💼</span><span id="t-navCust">Accounts</span></div>
     <div class="nav-item" id="nav-bulk" onclick="switchTab('bulk')"><span class="nav-icon">⚡</span><span id="t-navBulk">Fast Add</span></div>
     <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
 </div>
@@ -446,4 +442,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-

@@ -84,9 +84,9 @@
             repPendings: "⚠️ PENDING COLLECTIONS", caseDate: "Case Date",
             returnAmt: "Return Amt", principal: "Principal", totalPaid: "Total Paid", remainingAcc: "Remaining", payHistory: "Payment History",
             repNewDaily: "🆕 New Daily Cases", repNewMonthly: "🆕 New Monthly Cases", repNewMeter: "🆕 New Meter Cases",
-            repRecDaily: "✅ Daily Recoveries", repRecMonthly: "✅ Monthly Recoveries", repRecMeter: "✅ Meter Recoveries",
+            repRecDaily: "✅ Daily Recoveries", repRecMonthly: "✅ Monthly Recoveries", repRecMeter: "✅ Pending Collections (Meter)",
             repPendDaily: "⚠️ Pending Collections (Daily)", repPendMonthly: "⚠️ Pending Collections (Monthly)", repPendMeter: "⚠️ Pending Collections (Meter)",
-            givenOn: "Given on", profitCut: "Profit Cut:", intRec: "Interest Received", monthsText: "Months", kishatsText: "Kishats", profitText: "Profit:", missedText: "Missed:", basisText: "BASIS"
+            givenOn: "Given on", profitCut: "Profit Cut:", intRec: "Interest Received", monthsText: "Months", kishatsText: "Kishats", profitText: "Profit:", missedText: "Missed:", basisText: "BASIS", repTotal: "TOTAL:"
         },
         'hi': { 
             appSub: "नमस्ते 👋", sumPrin: "कुल मूलधन", sumCases: "कुल खाते", sumOut: "बकाया", 
@@ -112,7 +112,7 @@
             repNewDaily: "🆕 नए रोज़ाना खाते", repNewMonthly: "🆕 नए महीने के खाते", repNewMeter: "🆕 नए मीटर खाते",
             repRecDaily: "✅ रोज़ाना रिकवरी", repRecMonthly: "✅ महीने की रिकवरी", repRecMeter: "✅ मीटर रिकवरी",
             repPendDaily: "⚠️ पेंडिंग कलेक्शन (रोज़ाना)", repPendMonthly: "⚠️ पेंडिंग कलेक्शन (महीना)", repPendMeter: "⚠️ पेंडिंग कलेक्शन (मीटर)",
-            givenOn: "तारीख:", profitCut: "प्रॉफिट कट:", intRec: "ब्याज मिला", monthsText: "महीने", kishatsText: "किश्तें", profitText: "प्रॉफिट:", missedText: "छूटा:", basisText: "आधार"
+            givenOn: "तारीख:", profitCut: "प्रॉफिट कट:", intRec: "ब्याज मिला", monthsText: "महीने", kishatsText: "किश्तें", profitText: "प्रॉफिट:", missedText: "छूटा:", basisText: "आधार", repTotal: "कुल जोड़:"
         },
         'pa': { 
             appSub: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ 👋", sumPrin: "ਕੁੱਲ ਰਕਮ", sumCases: "ਕੁੱਲ ਖਾਤੇ", sumOut: "ਬਕਾਇਆ", 
@@ -138,7 +138,7 @@
             repNewDaily: "🆕 ਨਵੇਂ ਰੋਜ਼ਾਨਾ ਖਾਤੇ", repNewMonthly: "🆕 ਨਵੇਂ ਮਹੀਨੇ ਦੇ ਖਾਤੇ", repNewMeter: "🆕 ਨਵੇਂ ਮੀਟਰ ਖਾਤੇ",
             repRecDaily: "✅ ਰੋਜ਼ਾਨਾ ਰਿਕਵਰੀ", repRecMonthly: "✅ ਮਹੀਨੇ ਦੀ ਰਿਕਵਰੀ", repRecMeter: "✅ ਮੀਟਰ ਰਿਕਵਰੀ",
             repPendDaily: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਰੋਜ਼ਾਨਾ)", repPendMonthly: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮਹੀਨਾਵਾਰ)", repPendMeter: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮੀਟਰ)",
-            givenOn: "ਤਾਰੀਖ:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ"
+            givenOn: "ਤਾਰੀਖ:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ", repTotal: "ਕੁੱਲ ਜੋੜ:"
         }
     };
     
@@ -317,7 +317,7 @@
             const cropModal = document.getElementById('crop-modal');
             cropModal.style.display = 'flex';
             // Z-INDEX LOCK FIX: Crop Modal ko zabardasti sabse aage (9999999) kar diya! 
-            // Ab user background edit modal pe click nahi kar payega.
+            // Ab user background edit modal pe click nahi payega.
             cropModal.style.zIndex = '9999999'; 
             
             const cropImg = document.getElementById('crop-image-el');
@@ -630,24 +630,53 @@
         });
     }
 
-    function saveAndRender() { 
-        isSaving = true; 
-        localStorage.setItem('paymitra_v11', JSON.stringify(db)); 
-        render(); 
-        document.getElementById('sync-status').innerText = "Saving to Cloud..."; 
-        document.getElementById('cloud-indicator').className = "status-dot"; 
-        
-        database.ref('credix_db').set(db)
-        .then(() => {
+    function saveAndRender() {
+        isSaving = true;
+        let currentDbStr = JSON.stringify(db);
+        localStorage.setItem('paymitra_v11', currentDbStr);
+        render();
+        document.getElementById('sync-status').innerText = "Saving to Cloud...";
+        document.getElementById('cloud-indicator').className = "status-dot";
+
+        // Pichla saved data nikalenge "Smart Compare" ke liye
+        let oldDb = [];
+        try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
+
+        const successCb = () => {
+            window.lastSyncedDbStr = currentDbStr; // Agli baar ke liye memory update kar di
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
-        })
-        .catch((e) => {
+        };
+
+        const errCb = (e) => {
             document.getElementById('sync-status').innerText = "Saved Offline";
             document.getElementById('cloud-indicator').className = "status-dot offline";
             isSaving = false;
-        });
+        };
+
+        // --- SMART UPDATE LOGIC (CHILD UPDATE) ---
+        // Agar list ki length alag hai (koi delete ya naya add hua hai) toh safe side poora db update hoga
+        if (oldDb.length !== db.length || oldDb.length === 0) {
+            database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        } else {
+            // Agar sirf kishat/edit aayi hai, toh sirf changed wala child update hoga (Bandwidth saver!)
+            let updates = {};
+            let hasChanges = false;
+            for (let i = 0; i < db.length; i++) {
+                if (JSON.stringify(db[i]) !== JSON.stringify(oldDb[i])) {
+                    updates[i] = db[i]; // Sirf 1 entry jo badli hai, usi ko nikal liya
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges) {
+                // Yahan 'set' ki jagah Firebase ka smart 'update' command lagaya gaya hai
+                database.ref('credix_db').update(updates).then(successCb).catch(errCb);
+            } else {
+                successCb();
+            }
+        }
     }
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
@@ -947,7 +976,7 @@
                 sectionTotal += c.principal;
                 html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
             });
-            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toLocaleString()}</div>`;
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
         };
         reportHtml += renderCases(newCasesDaily, t.repNewDaily, "var(--accent-orange)");
@@ -965,7 +994,7 @@
                 let detailStr = isMonthly ? `${t.intRec} (${p.hits.length} ${t.monthsText})` : `₹${(p.installment||0).toFixed(0)} × ${p.count} ${t.kishatsText}`; 
                 html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-break:break-word;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
             });
-            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toLocaleString()}</div>`;
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
         };
         reportHtml += renderPayments(paymentsDaily, t.repRecDaily, "var(--success)", false);
@@ -978,9 +1007,14 @@
             let sectionTotal = 0;
             list.forEach(p => {
                 sectionTotal += p.accumulatedTotal;
-                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${p.type.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-break:break-all; overflow-wrap:anywhere;">${t.missedText} ${p.missedDatesStr}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
+                let count = p.missedDatesStr.split(',').length;
+                let perUnit = p.type === 'daily' ? (p.installment || 0) : (p.principal * (p.rate || 0) / 100);
+                let calcNote = `${count} × ₹${perUnit.toFixed(0)}`;
+                let typeTranslated = p.type === 'daily' ? t.fDaily : (p.type === 'monthly' ? t.fMonthly : t.fMeter);
+
+                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-break:break-all; overflow-wrap:anywhere;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
             });
-            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">TOTAL: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
+            html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
         };
 
@@ -1155,4 +1189,3 @@
             firebase.database().goOnline();
         }
     });
-
