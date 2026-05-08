@@ -12,7 +12,7 @@
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth(); // Added for Background Security
+    const auth = firebase.auth(); 
     const database = firebase.database();
     // ----------------------
     
@@ -156,19 +156,15 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-        // Security logic added here
         document.getElementById('t-lockSub').innerText = "Securing Connection... ⏳";
         
-        // Login Silently in Background
         auth.signInAnonymously().catch(function(error) {
             console.error("Security Auth Failed:", error);
             document.getElementById('t-lockSub').innerText = "Security Auth Failed. Please Refresh.";
         });
 
-        // Trigger when login is successful
         auth.onAuthStateChanged(function(user) {
             if (user) {
-                // Now setup the real-time listener securely
                 setupFirebaseListener();
             }
         });
@@ -249,17 +245,22 @@
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    function handleImageSelect(input, target) {
+    // --- MAIN FIX 1: DOWNSCALE IMAGE BEFORE CROPPING ---
+    // Ab bhari image pehle compress hogi taaki iOS Safari mein crop tool crash na ho.
+    async function handleImageSelect(input, target) {
         if (!input.files || !input.files[0]) return;
         currentCropTarget = target;
-        const reader = new FileReader();
-        reader.onload = function(e) {
+        try {
+            showToast("Loading Photo...");
+            // Use existing toBase64 to safely compress heavy phone pictures first
+            const safeBase64 = await toBase64(input.files[0]);
+            
             const cropImg = document.getElementById('crop-image-el');
-            cropImg.src = e.target.result;
+            cropImg.src = safeBase64;
             document.getElementById('crop-modal').style.display = 'flex';
+            
             if (activeCropper) activeCropper.destroy();
             activeCropper = new Cropper(cropImg, {
-                // FIXED: Set to 1 for 1:1 Aspect Ratio (WhatsApp DP style)
                 aspectRatio: 1, 
                 viewMode: 1,
                 dragMode: 'move',
@@ -272,27 +273,41 @@
                 cropBoxResizable: true,
                 toggleDragModeOnDblclick: false,
             });
-        };
-        reader.readAsDataURL(input.files[0]);
+        } catch (e) {
+            showToast("Failed to load photo.");
+            console.error(e);
+        }
     }
 
+    // --- MAIN FIX 2: BULLETPROOF CONFIRM CROP ---
     function confirmCrop() {
         if (!activeCropper) return;
-        // FIXED: Set width & height to 400x400 for 1:1 ratio
-        const canvas = activeCropper.getCroppedCanvas({ width: 400, height: 400, imageSmoothingQuality: 'high' });
-        lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-        if (currentCropTarget === 'edit') {
-            document.getElementById('edit-photo-preview').src = lastCroppedBase64;
-            document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
-        } else if (currentCropTarget === 'staff-add') {
-            document.getElementById('new-staff-photo-preview').src = lastCroppedBase64;
-            document.getElementById('new-staff-photo-preview-wrap').style.display = 'flex';
-        } else if (currentCropTarget === 'staff-edit') {
-            document.getElementById('edit-staff-photo-preview').src = lastCroppedBase64;
-            document.getElementById('edit-staff-photo-preview-wrap').style.display = 'flex';
+        try {
+            // Get cropped square image
+            const canvas = activeCropper.getCroppedCanvas({ width: 400, height: 400, fillColor: '#fff' });
+            if (!canvas) {
+                return showToast("Cropping failed. Try again.");
+            }
+            
+            lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            if (currentCropTarget === 'edit') {
+                document.getElementById('edit-photo-preview').src = lastCroppedBase64;
+                document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
+            } else if (currentCropTarget === 'staff-add') {
+                document.getElementById('new-staff-photo-preview').src = lastCroppedBase64;
+                document.getElementById('new-staff-photo-preview-wrap').style.display = 'flex';
+            } else if (currentCropTarget === 'staff-edit') {
+                document.getElementById('edit-staff-photo-preview').src = lastCroppedBase64;
+                document.getElementById('edit-staff-photo-preview-wrap').style.display = 'flex';
+            }
+            
+            closeCropModal();
+            showToast("Photo Cropped & Ready! ✅");
+        } catch(e) {
+            showToast("Crop Error!");
+            console.error(e);
         }
-        closeCropModal();
-        showToast("Photo Cropped!");
     }
 
     function closeCropModal() {
@@ -505,7 +520,6 @@
         render(); checkAutoBackup();
     }
 
-    // --- FIREBASE REAL-TIME SYNC ---
     function setupFirebaseListener() {
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
@@ -513,13 +527,11 @@
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
 
-                // If app is currently locked, just save silently in background and clear loading text
                 if (document.getElementById('main-app').style.display === 'none') {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
                     document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
                 } else {
-                    // Only update and re-render if data actually changed from outside and we aren't actively saving
                     if (!isSaving && JSON.stringify(newDb) !== JSON.stringify(db)) {
                         if(!validateSession(newDb)) return;
                         db = newDb;
@@ -529,7 +541,6 @@
                     }
                 }
             } else {
-                // If DB is empty, still allow login
                 document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
@@ -541,7 +552,6 @@
         });
     }
 
-    // Updated hardRefresh to just do a fast manual pull if needed, though real-time listener handles it
     function hardRefresh() { 
         document.getElementById('sync-status').innerText = "Syncing...";
         database.ref('credix_db').once('value').then(() => {
@@ -576,14 +586,12 @@
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
 
-    /* CORE LOGIC FIX HERE: Monthly/Meter interest payments will not decrease the principal balance */
     function recalculateCase(c) { 
         if(!c.history) c.history = []; 
         c.history.sort((a, b) => (a.date > b.date ? 1 : -1)); 
         let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); 
         c.history.forEach(h => { 
             if(c.type === 'monthly' || c.type === 'meter') { 
-                /* Vyaj (Interest) payments do not reduce principal */ 
             } else { 
                 tempBal -= h.paid; 
             } 
@@ -593,6 +601,7 @@
         c.currentBalance = tempBal; 
     }
 
+    // --- MAIN FIX 3: ADD RECORD FIX ---
     async function addCustomer() {
         const tLang = i18n[currentLang];
         const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
@@ -603,7 +612,8 @@
         if(isNaN(amt) || amt <= 0) { triggerShake('amt'); return showToast(tLang.missingNameAmt || "Missing Principal!"); }
         
         let photoBase64 = "";
-        if (currentCropTarget === 'add' && lastCroppedBase64) {
+        
+        if (lastCroppedBase64) {
             photoBase64 = lastCroppedBase64;
         } else {
             const fileInput = document.getElementById('cust-photo');
@@ -629,15 +639,20 @@
             cust.totalPayable = tRet; cust.currentBalance = cust.totalPayable; cust.installment = cust.totalPayable / dVals; 
         }
         db.push(cust); saveAndRender(); 
+        
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
+        
+        // Reset crop data after successful save
         lastCroppedBase64 = ''; 
+        
         if(document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
         if(document.getElementById('days')) document.getElementById('days').value = '';
         if(document.getElementById('meter-amt')) document.getElementById('meter-amt').value = '';
         showToast("Record Created!");
     }
 
+    // UPDATED: Quality max_size increased to 800 to maintain crisp quality before Cropper handles it
     function toBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -649,13 +664,13 @@
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    const max_size = 400; 
+                    const max_size = 800; // Increased base quality limit 
                     if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
                     else { if (height > max_size) { width *= max_size / height; height = max_size; } }
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
             };
             reader.onerror = error => reject(error);
@@ -700,11 +715,21 @@
         document.getElementById('edit-amt').value = c.principal; 
         const previewWrap = document.getElementById('edit-photo-preview-wrap');
         const previewImg = document.getElementById('edit-photo-preview');
-        if(c.photo) { previewImg.src = c.photo; previewWrap.style.display = 'flex'; } else { previewWrap.style.display = 'none'; }
+        
+        if(c.photo) { 
+            previewImg.src = c.photo; 
+            previewWrap.style.display = 'flex'; 
+        } else { 
+            previewWrap.style.display = 'none'; 
+        }
+        
         document.getElementById('edit-photo-input').value = '';
-        if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } document.getElementById('edit-modal').style.display = 'flex'; 
+        
+        if(c.type === 'monthly') { document.getElementById('edit-extra-label').innerText = "Monthly Rate (%)"; document.getElementById('edit-extra').value = c.rate; document.getElementById('edit-ret-wrap').style.display = 'none'; } else if(c.type === 'meter') { document.getElementById('edit-extra-label').innerText = "Rozana Vyaj Amount (₹)"; document.getElementById('edit-extra').value = (c.principal * c.rate / 100).toFixed(0); document.getElementById('edit-ret-wrap').style.display = 'none'; } else { document.getElementById('edit-extra-label').innerText = "Kishat Amount (₹)"; document.getElementById('edit-extra').value = c.installment; document.getElementById('edit-ret-wrap').style.display = 'block'; document.getElementById('edit-ret').value = c.totalPayable || c.principal; } if(isOwnerMode) { document.getElementById('edit-staff-wrap').style.display = 'block'; document.getElementById('edit-personal-wrap').style.display = 'flex'; document.getElementById('edit-is-personal').checked = !!c.isPersonal; } else { document.getElementById('edit-staff-wrap').style.display = 'none'; document.getElementById('edit-personal-wrap').style.display = 'none'; } 
+        document.getElementById('edit-modal').style.display = 'flex'; 
     }
     
+    // --- MAIN FIX 4: SAVE EDIT FIX ---
     async function saveEdit() { 
         let id = parseInt(document.getElementById('edit-id').value); 
         let c = db.find(x => x.id === id); 
@@ -713,8 +738,28 @@
         let oldTotalPayable = c.totalPayable; 
         let nameVal = document.getElementById('edit-name').value; 
         if (nameVal) c.name = nameVal; 
-        if (currentCropTarget === 'edit' && lastCroppedBase64) { c.photo = lastCroppedBase64; } else if (window._pendingPhotoRemoval) { c.photo = ""; } else { const fileInput = document.getElementById('edit-photo-input'); if (fileInput.files && fileInput.files[0]) { c.photo = await toBase64(fileInput.files[0]); } }
-        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } recalculateCase(c); closeModal('edit-modal'); saveAndRender(); showToast("Account Updated"); 
+        
+        if (lastCroppedBase64) { 
+            c.photo = lastCroppedBase64; 
+        } else if (window._pendingPhotoRemoval) { 
+            c.photo = ""; 
+        } else { 
+            const fileInput = document.getElementById('edit-photo-input'); 
+            if (fileInput.files && fileInput.files[0]) { 
+                c.photo = await toBase64(fileInput.files[0]); 
+            } 
+        }
+
+        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } 
+        
+        recalculateCase(c); 
+        closeModal('edit-modal'); 
+        saveAndRender(); 
+        
+        // Ensure reset of variables after save to prevent overlapping to other records
+        lastCroppedBase64 = ''; 
+        
+        showToast("Account Updated ✅"); 
     }
     
     function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
@@ -772,7 +817,6 @@
         const rangeEndStr = end;
         
         db.filter(x => x.type !== 'config').forEach(c => {
-            // FIXED: Exclude archived cases from the generated report
             if (c.isArchived) return; 
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
@@ -793,7 +837,6 @@
                 sortedHist.forEach(h => {
                     let paid = parseFloat(h.paid); let profitFromThisPayment = 0;
                     
-                    /* CORE LOGIC FIX: Vyaj payments considered 100% profit for Monthly/Meter */
                     if(c.type === 'monthly' || c.type === 'meter') { 
                         profitFromThisPayment = paid; 
                     }
@@ -1040,7 +1083,6 @@
                     [...c.history].sort((a,b) => (a.date > b.date ? 1 : -1)).forEach(h => { 
                         let paid = parseFloat(h.paid); 
                         
-                        /* CORE LOGIC FIX: Vyaj payments considered 100% profit */
                         if(c.type === 'monthly' || c.type === 'meter') { 
                             globalProfit += paid; 
                         } else { 
@@ -1055,18 +1097,13 @@
         document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
     }
 
-    // --- SMART CONNECTION MANAGER ---
-    // Yeh code check karta hai ki app screen par hai ya background mein
     document.addEventListener("visibilitychange", function() {
         if (document.hidden) {
-            // Jab phone minimize ho ya screen band ho jaye
             console.log("App is in background. Going offline...");
             firebase.database().goOffline();
         } else {
-            // Jab user wapas app par aaye
             console.log("App is active. Going online...");
             firebase.database().goOnline();
         }
     });
-    // ---------------------------------
 
