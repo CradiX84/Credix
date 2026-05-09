@@ -1177,9 +1177,8 @@
         const recognition = new SpeechRecognition();
         window.currentRecognition = recognition; // Current session save karein
 
-        if (currentLang === 'hi') recognition.lang = 'hi-IN';
-        else if (currentLang === 'pa') recognition.lang = 'pa-IN';
-        else recognition.lang = 'en-IN';
+        // FIX: Naam hamesha English alphabets mein aana chahiye taaki search kaam kare
+        recognition.lang = 'en-IN'; 
 
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
