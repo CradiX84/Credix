@@ -322,14 +322,14 @@
             </div>
         </div>
 
-        <div id="section-search">
-            <div class="input-group" style="display: flex; align-items: center;">
-                <span class="input-icon">🔍</span>
-                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1;">
-                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding: 0 10px; font-size: 18px;" title="Voice Search">🎤</span>
+        <div id="section-search" style="display: flex; gap: 10px; align-items: center; width: 100%;">
+            <div class="input-group" style="flex: 1; display: flex; align-items: center; position: relative; margin-bottom: 0;">
+                <span class="input-icon" style="padding: 0 5px;">🔍</span>
+                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white;">
+                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding: 0 5px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
             
-            <select id="filter-box" onchange="render()">
+            <select id="filter-box" onchange="render()" style="margin-bottom: 0; min-width: 110px; cursor: pointer;">
                 <option value="all" id="f-opt-all">All Types</option>
                 <option value="daily" id="f-opt-daily">Daily</option>
                 <option value="monthly" id="f-opt-monthly">Monthly</option>
@@ -378,10 +378,10 @@
                 </select>
             </div>
             
-            <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none; align-items: center;">
-                <span class="input-icon">🔍</span>
-                <input type="text" id="rep-search" placeholder="Search Staff or Customer Name..." style="flex: 1;">
-                <span onclick="startVoiceSearch('rep-search')" style="cursor: pointer; padding: 0 10px; font-size: 18px;" title="Voice Search">🎤</span>
+            <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none; align-items: center; position: relative;">
+                <span class="input-icon" style="padding: 0 5px;">🔍</span>
+                <input type="text" id="rep-search" placeholder="Search Staff or Customer Name..." style="flex: 1; border: none; background: transparent; outline: none; color: white;">
+                <span onclick="startVoiceSearch('rep-search')" style="cursor: pointer; padding: 0 5px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
             
             <button class="main-btn" onclick="generateReport()" id="t-repBtn" style="padding:14px; margin-top:0; font-size:15px;">Generate Report</button>
