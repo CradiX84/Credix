@@ -1142,30 +1142,54 @@
         document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
     }
 
+    // --- APP VISIBILITY & BACKGROUND HANDLING ---
     document.addEventListener("visibilitychange", function() {
         if (document.hidden) {
+            // App minimize ho gayi hai - Firebase offline karein aur Mic band karein
             firebase.database().goOffline();
+            if (window.currentRecognition) {
+                try {
+                    window.currentRecognition.stop();
+                    window.currentRecognition.abort(); // Force stop mic for iPad/iOS
+                } catch(e) {}
+            }
         } else {
+            // App wapas khul gayi hai
             firebase.database().goOnline();
         }
     });
 
     // --- VOICE SEARCH FEATURE ---
+    window.currentRecognition = null; // Mic session ko track karne ke liye
+
     function startVoiceSearch(targetId) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             showToast("Voice search is not supported in your browser.");
             return;
         }
+
+        // Agar pehle se koi mic chal raha hai toh use force stop karein
+        if (window.currentRecognition) {
+            try { window.currentRecognition.abort(); } catch(e) {}
+        }
+
         const recognition = new SpeechRecognition();
+        window.currentRecognition = recognition; // Current session save karein
+
         if (currentLang === 'hi') recognition.lang = 'hi-IN';
         else if (currentLang === 'pa') recognition.lang = 'pa-IN';
         else recognition.lang = 'en-IN';
 
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
-        recognition.start();
-        showToast("Listening... 🎤 Speak now");
+        
+        try {
+            recognition.start();
+            showToast("Listening... 🎤 Speak now");
+        } catch(e) {
+            console.log("Mic already started");
+        }
 
         recognition.onresult = function(event) {
             let speechResult = event.results[0][0].transcript;
@@ -1182,9 +1206,25 @@
             }
         };
 
+        // Jab user bolna band kar de toh mic automatically band ho jaye
+        recognition.onspeechend = function() {
+            recognition.stop();
+        }
+
         recognition.onerror = function(event) {
             console.error("Microphone error:", event.error);
-            showToast("Microphone error: Please allow mic access.");
+            if (event.error === 'not-allowed') {
+                // Agar permission denied hai
+                showToast("Mic blocked! Please click the lock icon in address bar to allow.");
+            } else if (event.error === 'no-speech') {
+                showToast("No speech detected.");
+            } else {
+                showToast("Mic error: " + event.error);
+            }
+        };
+
+        recognition.onend = function() {
+            window.currentRecognition = null; // Session clear karein
         };
     }
     // ----------------------------
