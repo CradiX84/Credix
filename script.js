@@ -1150,3 +1150,41 @@
         }
     });
 
+    // --- VOICE SEARCH FEATURE ---
+    function startVoiceSearch(targetId) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showToast("Voice search is not supported in your browser.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        if (currentLang === 'hi') recognition.lang = 'hi-IN';
+        else if (currentLang === 'pa') recognition.lang = 'pa-IN';
+        else recognition.lang = 'en-IN';
+
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.start();
+        showToast("Listening... 🎤 Speak now");
+
+        recognition.onresult = function(event) {
+            let speechResult = event.results[0][0].transcript;
+            speechResult = speechResult.replace(/[.,]/g, "").trim(); 
+            const targetInput = document.getElementById(targetId);
+            if(targetInput) {
+                targetInput.value = speechResult; 
+                if (targetId === 'search-box') {
+                    render();
+                    showToast("Searching for: " + speechResult);
+                } else if (targetId === 'rep-search') {
+                    showToast("Added: " + speechResult);
+                }
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error("Microphone error:", event.error);
+            showToast("Microphone error: Please allow mic access.");
+        };
+    }
+    // ----------------------------

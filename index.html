@@ -323,7 +323,12 @@
         </div>
 
         <div id="section-search">
-            <div class="input-group"><span class="input-icon">🔍</span><input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()"></div>
+            <div class="input-group" style="display: flex; align-items: center;">
+                <span class="input-icon">🔍</span>
+                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1;">
+                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding: 0 10px; font-size: 18px;" title="Voice Search">🎤</span>
+            </div>
+            
             <select id="filter-box" onchange="render()">
                 <option value="all" id="f-opt-all">All Types</option>
                 <option value="daily" id="f-opt-daily">Daily</option>
@@ -372,10 +377,13 @@
                     <option value="meter" id="t-repMeter">Meter</option>
                 </select>
             </div>
-            <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none;">
+            
+            <div class="input-group" id="rep-search-wrap" style="margin-bottom:12px; display:none; align-items: center;">
                 <span class="input-icon">🔍</span>
-                <input type="text" id="rep-search" placeholder="Search Staff or Customer Name...">
+                <input type="text" id="rep-search" placeholder="Search Staff or Customer Name..." style="flex: 1;">
+                <span onclick="startVoiceSearch('rep-search')" style="cursor: pointer; padding: 0 10px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
+            
             <button class="main-btn" onclick="generateReport()" id="t-repBtn" style="padding:14px; margin-top:0; font-size:15px;">Generate Report</button>
             <div id="rep-results" style="display:none; margin-top:20px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
