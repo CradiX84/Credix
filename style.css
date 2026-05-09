@@ -151,7 +151,7 @@
         /* --- INPUTS --- */
         .input-group { display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; margin-bottom: 12px; padding: 0 15px; transition: 0.1s ease;}
         .input-group:focus-within { border-color: rgba(255, 107, 53, 0.5); background: rgba(255,255,255,0.05); }
-        .input-group input, .input-group select { flex: 1; background: transparent; border: none; color: white; padding: 16px 0; font-size: 16px; font-family: inherit; outline: none; font-weight: 500; -webkit-appearance: none;}
+        .input-group input, .input-group select { flex: 1; min-width: 0; background: transparent; border: none; color: white; padding: 16px 0; font-size: 16px; font-family: inherit; outline: none; font-weight: 500; -webkit-appearance: none;}
         .input-icon { font-size: 16px; opacity: 0.4; margin-right: 12px; width: 20px; text-align: center; }
 
         #section-search { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -281,3 +281,4 @@
         }
         #photo-zoom-modal.active { display: flex; }
         #photo-zoom-modal.active #zoomed-img { transform: scale(1); }
+
