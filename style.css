@@ -178,6 +178,7 @@ body {
     box-sizing: border-box;
     box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
+    height: 54px; /* NEW FIX: Strictly fixed height for perfect alignment */
 }
 .input-group:focus-within {
     border-color: var(--accent-orange);
@@ -210,7 +211,7 @@ body {
 /* SEARCH DROPDOWN FIX (ACCOUNTS SECTION) */
 .filter-dropdown {
     padding: 0 15px !important; 
-    height: 52px !important; /* Fix: Match exact height of the search bar */
+    height: 54px !important; /* UPDATED FIX: Match exactly 54px like the input-group */
     margin-bottom: 12px; /* Fix: Align properly with search bar's bottom margin */
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: #FFFFFF !important;
@@ -356,10 +357,18 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 }
 
 /* --- REVIEW SECTION FIXES (ADD TO END) --- */
-#section-stats .sum-card-full div[style*="display:flex"] {
+/* FIX: Sirf pehle wale div (jisme text/labels hain) ko wrap karein, progress bar ko chod dein */
+#section-stats .sum-card-full > div:nth-of-type(1)[style*="display:flex"] {
     flex-wrap: wrap !important;
     gap: 8px;
     justify-content: space-between !important;
+}
+
+/* FIX: Ensure the progress bar solid line is completely unaffected */
+#section-stats .sum-card-full > div:nth-of-type(2)[style*="display:flex"] {
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    justify-content: flex-start !important;
 }
 
 #section-stats .sum-card-full span[id^="txt-"] {
@@ -369,5 +378,3 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 
 #txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
 #txt-remaining { text-align: right; flex: 1; min-width: fit-content; }
-
-}
