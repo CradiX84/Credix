@@ -173,6 +173,8 @@ body {
     border: 1px solid rgba(255, 106, 0, 0.5);
     border-radius: 14px; 
     width: 100%; 
+    flex: 1; /* Fix: Allow searchbar to shrink alongside the dropdown */
+    min-width: 0; /* Fix: Prevent searchbar from pushing dropdown out of screen */
     box-sizing: border-box;
     box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
@@ -207,18 +209,22 @@ body {
 
 /* SEARCH DROPDOWN FIX (ACCOUNTS SECTION) */
 .filter-dropdown {
-    padding: 12px 10px !important; 
+    padding: 0 15px !important; 
+    height: 52px !important; /* Fix: Match exact height of the search bar */
+    margin-bottom: 12px; /* Fix: Align properly with search bar's bottom margin */
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 16px !important;
-    font-size: 13px !important; 
-    font-weight: 700; 
+    border-radius: 14px !important; /* Fix: Match border-radius of the search bar (14px) */
+    font-size: 14px !important; 
+    font-weight: 600; 
     outline: none;
     cursor: pointer;
     -webkit-appearance: none !important;
     appearance: none !important;
-    min-width: 90px !important; /* Fixed: Reduced from 200px */
+    min-width: 100px !important; 
+    max-width: 35%; /* Fix: Prevent it from taking too much space on mobile */
+    flex-shrink: 0; /* Fix: Maintain the box shape */
     text-align: center;
 }
 
@@ -349,10 +355,10 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     display: none !important; 
 }
 
-/* --- REVIEW SECTION FIXES --- */
+/* --- REVIEW SECTION FIXES (ADD TO END) --- */
 #section-stats .sum-card-full div[style*="display:flex"] {
     flex-wrap: wrap !important;
-    gap: 8px !important;
+    gap: 8px;
     justify-content: space-between !important;
 }
 
@@ -361,5 +367,7 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     white-space: nowrap;
 }
 
-#txt-recovered { text-align: left !important; flex: 1 !important; min-width: fit-content; }
-#txt-remaining { text-align: right !important; flex: 1 !important; min-width: fit-content; }
+#txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
+#txt-remaining { text-align: right; flex: 1; min-width: fit-content; }
+
+}

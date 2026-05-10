@@ -335,8 +335,8 @@
 
         <div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px;">
             <div class="input-group" style="flex: 2; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px;">
-                <span class="input-icon" style="margin-right: 5px;">🔍</span>
-                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
+                <span class="input-icon" style="margin-right: 8px;">🔍</span>
+                <input type="text" id="search-box" placeholder="Search..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
                 <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding-left: 5px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
             
@@ -346,7 +346,7 @@
                     <option value="daily" id="f-opt-daily" style="color: black;">Daily</option>
                     <option value="monthly" id="f-opt-monthly" style="color: black;">Monthly</option>
                     <option value="meter" id="f-opt-meter" style="color: black;">Meter</option>
-                    <option value="archived" id="f-opt-archived" style="color: black;">Archived (Closed)</option>
+                    <option value="archived" id="f-opt-archived" style="color: black;">Archived</option>
                 </select>
             </div>
         </div>
@@ -445,7 +445,7 @@
         <div class="sum-card sum-card-full">
             <span id="t-recStatus">Recovery Status</span>
             <div style="display:flex; justify-content:space-between; align-items: center; font-size:14px; margin-top:15px; color:white;">
-                <div id="txt-recovered" style="color:var(--success); font-weight:bold; flex: 1; text-align: left;">Recovered: ₹0</div>
+                <div id="txt-recovered" style="color:var(--success); font-weight:bold; flex: 1;">Recovered: ₹0</div>
                 <div id="txt-remaining" style="color:var(--danger); font-weight:bold; flex: 1; text-align: right;">Remaining: ₹0</div>
             </div>
         </div>
