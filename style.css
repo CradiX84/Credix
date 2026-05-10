@@ -19,19 +19,24 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-deep);
-    
-    /* --- DOTTED GRID BACKGROUND --- */
-    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
-    background-attachment: fixed;
-    /* -------------------------------------- */
-
     color: var(--text-main); 
     margin: 0; padding: 20px 12px;
     padding-bottom: 140px; 
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
+}
+
+/* NAYA CODE: Scroll ko makhan (smooth) banane ke liye background alag se fix kiya hai */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: var(--bg-deep);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    z-index: -1;
+    pointer-events: none;
 }
 
 .container { position: relative; z-index: 10; }
@@ -173,12 +178,12 @@ body {
     border: 1px solid rgba(255, 106, 0, 0.5);
     border-radius: 14px; 
     width: 100%; 
-    flex: 1; /* Fix: Allow searchbar to shrink alongside the dropdown */
-    min-width: 0; /* Fix: Prevent searchbar from pushing dropdown out of screen */
+    flex: 1; 
+    min-width: 0; 
     box-sizing: border-box;
     box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
-    height: 54px; /* NEW FIX: Strictly fixed height for perfect alignment */
+    height: 54px; 
 }
 .input-group:focus-within {
     border-color: var(--accent-orange);
@@ -211,12 +216,12 @@ body {
 /* SEARCH DROPDOWN FIX (ACCOUNTS SECTION) */
 .filter-dropdown {
     padding: 0 15px !important; 
-    height: 54px !important; /* UPDATED FIX: Match exactly 54px like the input-group */
-    margin-bottom: 12px; /* Fix: Align properly with search bar's bottom margin */
+    height: 54px !important; 
+    margin-bottom: 12px; 
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 14px !important; /* Fix: Match border-radius of the search bar (14px) */
+    border-radius: 14px !important; 
     font-size: 14px !important; 
     font-weight: 600; 
     outline: none;
@@ -224,8 +229,8 @@ body {
     -webkit-appearance: none !important;
     appearance: none !important;
     min-width: 100px !important; 
-    max-width: 35%; /* Fix: Prevent it from taking too much space on mobile */
-    flex-shrink: 0; /* Fix: Maintain the box shape */
+    max-width: 35%; 
+    flex-shrink: 0; 
     text-align: center;
 }
 
@@ -378,3 +383,20 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 
 #txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
 #txt-remaining { text-align: right; flex: 1; min-width: fit-content; }
+
+/* --- MOBILE PERFORMANCE OPTIMIZATION (GPU ACCELERATION) --- */
+/* FIX: Bottom Nav ko list se hataya taaki side mein na bhage */
+.cust-card, .sum-card, .search-stat-card, .glass-card, .calc-btn {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, opacity;
+}
+
+/* FIX: Center align aur GPU fast dono ek saath lagaye */
+.bottom-nav {
+    transform: translateX(-50%) translateZ(0) !important;
+    -webkit-transform: translateX(-50%) translateZ(0) !important;
+    will-change: transform, backdrop-filter;
+}
