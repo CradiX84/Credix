@@ -207,18 +207,18 @@ body {
 
 /* SEARCH DROPDOWN FIX (ACCOUNTS SECTION) */
 .filter-dropdown {
-    padding: 12px 15px !important; 
+    padding: 12px 10px !important; 
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 16px !important;
-    font-size: 14px !important; 
-    font-weight: 600; 
+    font-size: 13px !important; 
+    font-weight: 700; 
     outline: none;
     cursor: pointer;
     -webkit-appearance: none !important;
     appearance: none !important;
-    min-width: 110px !important; /* Fixed: Reduced from 200px */
+    min-width: 90px !important; /* Fixed: Reduced from 200px */
     text-align: center;
 }
 
@@ -349,10 +349,10 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     display: none !important; 
 }
 
-/* --- REVIEW SECTION FIXES (ADD TO END) --- */
+/* --- REVIEW SECTION FIXES --- */
 #section-stats .sum-card-full div[style*="display:flex"] {
     flex-wrap: wrap !important;
-    gap: 8px;
+    gap: 8px !important;
     justify-content: space-between !important;
 }
 
@@ -361,5 +361,5 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     white-space: nowrap;
 }
 
-#txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
-#txt-remaining { text-align: right; flex: 1; min-width: fit-content; }
+#txt-recovered { text-align: left !important; flex: 1 !important; min-width: fit-content; }
+#txt-remaining { text-align: right !important; flex: 1 !important; min-width: fit-content; }
