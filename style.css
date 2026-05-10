@@ -163,7 +163,7 @@ body {
 .view-table th { background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 12px 8px; font-weight: 500; font-size: 10px; text-transform: uppercase;}
 .view-table td { padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); text-align: center; color: var(--text-main);}
 
-/* --- INPUTS (Android Fix Added) --- */
+/* --- INPUTS --- */
 .input-group { 
     display: flex; 
     align-items: center; 
@@ -182,7 +182,6 @@ body {
     background-color: #25252a;
     box-shadow: 0 0 20px rgba(255, 106, 0, 0.6), inset 0 0 5px rgba(0,0,0,0.5);
 }
-/* Android specific fixes for inputs and selects */
 .input-group input, .input-group select { 
     flex: 1; min-width: 0; background: transparent !important; 
     border: none !important; color: white !important; padding: 16px 0; 
@@ -206,19 +205,20 @@ body {
     appearance: none !important;
 }
 
+/* SEARCH DROPDOWN FIX (ACCOUNTS SECTION) */
 .filter-dropdown {
-    padding: 22px 25px !important; 
+    padding: 12px 15px !important; 
     background-color: rgba(255, 255, 255, 0.05) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 20px !important;
-    font-size: 16px !important; 
+    border-radius: 16px !important;
+    font-size: 14px !important; 
     font-weight: 600; 
     outline: none;
     cursor: pointer;
     -webkit-appearance: none !important;
     appearance: none !important;
-    min-width: 200px; 
+    min-width: 110px !important; /* Fixed: Reduced from 200px */
     text-align: center;
 }
 
@@ -283,7 +283,7 @@ body {
 .crop-area-wrap { width: 100%; height: 300px; background: #000; margin-top: 15px; border-radius: 15px; overflow: hidden; position: relative; }
 .crop-area-wrap img { max-width: 100%; display: block; }
 
-/* --- CLEAN PREMIUM LOCK SCREEN (Android Fix Added) --- */
+/* --- LOCK SCREEN --- */
 #lock-screen { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background-color: transparent; 
@@ -299,7 +299,6 @@ body {
 .dot { width: 12px; height: 12px; border-radius: 50%; background-color: #222225; border: 1px solid #44444a; transition: all 0.2s ease; }
 .dot.active { background-color: #ffffff; border-color: #ffffff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.6); transform: scale(1.1); }
 
-/* Grid Layout Fix for Android */
 .calc-keypad { 
     display: grid; 
     grid-template-columns: repeat(3, 1fr); 
@@ -309,7 +308,6 @@ body {
     place-items: center; 
 }
 
-/* Button sizing fix for Android */
 .calc-btn {
     width: 100%;
     max-width: 76px;
@@ -346,7 +344,22 @@ body {
 #photo-zoom-modal.active { display: flex; }
 #photo-zoom-modal.active #zoomed-img { transform: scale(1); }
 
-/* --- STATE RULES (HIDDEN NAV ON LOCK) --- */
+/* --- STATE RULES --- */
 body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"]):not(.hidden):not(.d-none)) .bottom-nav { 
     display: none !important; 
 }
+
+/* --- REVIEW SECTION FIXES (ADD TO END) --- */
+#section-stats .sum-card-full div[style*="display:flex"] {
+    flex-wrap: wrap !important;
+    gap: 8px;
+    justify-content: space-between !important;
+}
+
+#section-stats .sum-card-full span[id^="txt-"] {
+    font-size: 11px !important;
+    white-space: nowrap;
+}
+
+#txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
+#txt-remaining { text-align: right; flex: 1; min-width: fit-content; }

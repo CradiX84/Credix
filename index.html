@@ -333,22 +333,21 @@
             </div>
         </div>
 
-        <div id="section-search" style="display: flex; gap: 10px; align-items: center; width: 100%; margin-bottom: 15px;">
-            <div class="input-group" style="flex: 1.5; margin-bottom: 0; display: flex; align-items: center; padding: 0 15px;">
-                <span class="input-icon" style="margin-right: 10px;">🔍</span>
-                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
-                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding-left: 10px; font-size: 18px;" title="Voice Search">🎤</span>
+        <div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px;">
+            <div class="input-group" style="flex: 2; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px;">
+                <span class="input-icon" style="margin-right: 8px;">🔍</span>
+                <input type="text" id="search-box" placeholder="Search..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
+                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding-left: 5px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
             
-            <div class="input-group" style="flex: 1; margin-bottom: 0; display: flex; align-items: center; padding: 0 15px;">
-                <select id="filter-box" onchange="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-appearance: none;">
+            <div class="input-group" style="flex: 1.2; margin-bottom: 0; display: flex; align-items: center; padding: 0 5px; justify-content: center;">
+                <select id="filter-box" onchange="render()" class="filter-dropdown" style="width: 100%; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; -webkit-appearance: none;">
                     <option value="all" id="f-opt-all" style="color: black;">All Types</option>
                     <option value="daily" id="f-opt-daily" style="color: black;">Daily</option>
                     <option value="monthly" id="f-opt-monthly" style="color: black;">Monthly</option>
                     <option value="meter" id="f-opt-meter" style="color: black;">Meter</option>
-                    <option value="archived" id="f-opt-archived" style="color: black;">Archived (Closed)</option>
+                    <option value="archived" id="f-opt-archived" style="color: black;">Archived</option>
                 </select>
-                <span style="font-size: 10px; color: var(--text-muted); pointer-events: none;">▼</span>
             </div>
         </div>
         
@@ -422,17 +421,17 @@
 
         <div class="sum-card accent-card sum-card-full" style="margin-bottom:15px;">
             <span id="t-bizPort">Business Portfolio</span>
-            <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:15px; color:white;">
-                <div style="flex:1; display:flex; align-items:center; gap:6px;">
-                    <div style="width:10px; height:10px; border-radius:50%; background:var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange);"></div>
+            <div style="display:flex; justify-content:space-between; flex-wrap: wrap; gap: 8px; font-size:11px; margin-top:15px; color:white;">
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <div style="width:8px; height:8px; border-radius:50%; background:var(--accent-orange); box-shadow: 0 0 8px var(--accent-orange);"></div>
                     <span id="txt-m-prin">Monthly: ₹0</span>
                 </div>
-                <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px;">
-                    <div style="width:10px; height:10px; border-radius:50%; background:#0ea5e9; box-shadow: 0 0 8px #0ea5e9;"></div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <div style="width:8px; height:8px; border-radius:50%; background:#0ea5e9; box-shadow: 0 0 8px #0ea5e9;"></div>
                     <span id="txt-d-prin">Daily: ₹0</span>
                 </div>
-                <div style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:6px;">
-                    <div style="width:10px; height:10px; border-radius:50%; background:#a855f7; box-shadow: 0 0 8px #a855f7;"></div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <div style="width:8px; height:8px; border-radius:50%; background:#a855f7; box-shadow: 0 0 8px #a855f7;"></div>
                     <span id="txt-meter-prin">Meter: ₹0</span>
                 </div>
             </div>
@@ -442,11 +441,12 @@
                 <div id="bar-meter-prin" style="background:#a855f7; width:34%;"></div>
             </div>
         </div>
+
         <div class="sum-card sum-card-full">
             <span id="t-recStatus">Recovery Status</span>
-            <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:15px; color:white;">
-                <div id="txt-recovered" style="color:var(--success); font-weight:bold;">Recovered: ₹0</div>
-                <div id="txt-remaining" style="color:var(--danger); font-weight:bold;">Remaining: ₹0</div>
+            <div style="display:flex; justify-content:space-between; align-items: center; font-size:14px; margin-top:15px; color:white;">
+                <div id="txt-recovered" style="color:var(--success); font-weight:bold; flex: 1;">Recovered: ₹0</div>
+                <div id="txt-remaining" style="color:var(--danger); font-weight:bold; flex: 1; text-align: right;">Remaining: ₹0</div>
             </div>
         </div>
     </div>
