@@ -512,15 +512,12 @@
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
     function exportData() { let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); let fileName = "CredixBackup_" + dateStr + ".json"; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); a.download = fileName; a.click(); }
     function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
-    
-    // --- GLASS UI LOCK SCREEN LOGIC WITH VIBRATION ---
-    function triggerShakeLock() { const dotsContainer = document.getElementById('dots-container'); if(dotsContainer) { dotsContainer.classList.remove('shake'); void dotsContainer.offsetWidth; dotsContainer.classList.add('shake'); } }
-    function press(n) { if(pin.length < 4) { if (navigator.vibrate) navigator.vibrate(20); pin += n; let d = document.getElementById('d' + pin.length); if(d) d.classList.add('active'); } }
-    function resetPin() { pin = ""; for(let i=1; i<=4; i++) { let d = document.getElementById('d'+i); if(d) d.classList.remove('active'); } }
-    function deletePinChar() { if(pin.length > 0) { if (navigator.vibrate) navigator.vibrate(20); let d = document.getElementById('d' + pin.length); if(d) d.classList.remove('active'); pin = pin.slice(0, -1); } }
+    function press(n) { if(pin.length < 4) { pin += n; document.getElementById('d' + pin.length).classList.add('active'); } }
+    function resetPin() { pin = ""; for(let i=1; i<=4; i++) document.getElementById('d'+i).classList.remove('active'); }
+    function deletePinChar() { if(pin.length > 0) { document.getElementById('d' + pin.length).classList.remove('active'); pin = pin.slice(0, -1); } }
     
     function checkPin() { 
-        let conf = getConfig(); if (navigator.vibrate) navigator.vibrate(30);
+        let conf = getConfig(); 
         if (pin === secretPin || pin === "1984") { 
             isOwnerMode = true; 
             deviceStaffName = "Owner"; 
@@ -542,7 +539,6 @@
                 activeLoginPin = pin; 
                 showToast("Staff Mode Active"); unlockApp(); 
             } else { 
-                triggerShakeLock();
                 showToast("Invalid ID / PIN"); resetPin(); 
             } 
         } 
@@ -1081,7 +1077,7 @@
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
             accountsHtmlArray.push(`
-            <div class="cust-card glass-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
+            <div class="cust-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
                 ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
                 <div onclick="toggleView(${c.id})" style="cursor:pointer;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
@@ -1149,21 +1145,22 @@
     // --- APP VISIBILITY & BACKGROUND HANDLING ---
     document.addEventListener("visibilitychange", function() {
         if (document.hidden) {
-            console.log("App is in background. Going offline...");
+            // App minimize ho gayi hai - Firebase offline karein aur Mic band karein
             firebase.database().goOffline();
             if (window.currentRecognition) {
                 try {
                     window.currentRecognition.stop();
+                    window.currentRecognition.abort(); // Force stop mic for iPad/iOS
                 } catch(e) {}
             }
         } else {
-            console.log("App is active. Going online...");
+            // App wapas khul gayi hai
             firebase.database().goOnline();
         }
     });
 
     // --- VOICE SEARCH FEATURE ---
-    window.currentRecognition = null; 
+    window.currentRecognition = null; // Mic session ko track karne ke liye
 
     function startVoiceSearch(targetId) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1172,14 +1169,17 @@
             return;
         }
 
+        // Agar pehle se koi mic chal raha hai toh use force stop karein
         if (window.currentRecognition) {
             try { window.currentRecognition.abort(); } catch(e) {}
         }
 
         const recognition = new SpeechRecognition();
-        window.currentRecognition = recognition; 
+        window.currentRecognition = recognition; // Current session save karein
 
+        // FIX: Naam hamesha English alphabets mein aana chahiye taaki search kaam kare
         recognition.lang = 'en-IN'; 
+
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
         
@@ -1205,6 +1205,7 @@
             }
         };
 
+        // Jab user bolna band kar de toh mic automatically band ho jaye
         recognition.onspeechend = function() {
             recognition.stop();
         }
@@ -1212,6 +1213,7 @@
         recognition.onerror = function(event) {
             console.error("Microphone error:", event.error);
             if (event.error === 'not-allowed') {
+                // Agar permission denied hai
                 showToast("Mic blocked! Please click the lock icon in address bar to allow.");
             } else if (event.error === 'no-speech') {
                 showToast("No speech detected.");
@@ -1221,6 +1223,7 @@
         };
 
         recognition.onend = function() {
-            window.currentRecognition = null; 
+            window.currentRecognition = null; // Session clear karein
         };
     }
+    // ----------------------------
