@@ -17,10 +17,6 @@
 </head>
 <body>
 
-<div class="abstract-glow-1"></div>
-<div class="abstract-glow-2"></div>
-<div class="abstract-dots"></div>
-
 <div id="toast-box">Message</div>
 
 <div id="photo-zoom-modal" onclick="closePhotoZoom()">
@@ -183,7 +179,7 @@
         <div style="margin-top:15px;">
             <label class="modal-label">Language / भाषा / ਭਾਸ਼ਾ</label>
             <div class="input-group">
-                <select id="lang-select" onchange="changeLang()">
+                <select id="lang-select" class="settings-dropdown" onchange="changeLang()">
                     <option value="en">English</option>
                     <option value="hi">हिंदी (Hindi)</option>
                     <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
@@ -193,7 +189,7 @@
         <div style="margin-top:10px; margin-bottom: 20px;">
             <label class="modal-label" id="t-autoBackupLabel">Auto Backup Data</label>
             <div class="input-group">
-                <select id="auto-backup-select" onchange="changeAutoBackup()">
+                <select id="auto-backup-select" class="settings-dropdown" onchange="changeAutoBackup()">
                     <option value="never" id="t-abNever">Never</option>
                     <option value="daily" id="t-abDaily">Daily (On First Open)</option>
                     <option value="monthly" id="t-abMonthly">Monthly</option>
@@ -226,27 +222,42 @@
 </div>
 
 <div id="lock-screen">
-    <div class="abstract-glow-1"></div>
-    <div class="abstract-dots" style="top: 20%; left: 10%;"></div>
-    <div style="text-align:center;">
-        <div style="font-size: 40px; font-weight: 800; letter-spacing: 2px;">Credix.</div>
-        <div id="t-lockSub" style="font-size: 13px; color: var(--accent-orange); margin-top: 5px; font-weight: 500; letter-spacing: 1px;">Enter 4-Digit Login ID or Owner PIN</div>
-    </div>
-    <div>
-        <div class="pin-dots">
-            <div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div>
+
+    <div class="lock-content">
+        <h1 class="lock-title">Credix.</h1>
+        <p id="t-lockSub" class="lock-sub">Enter 4-Digit Login ID or Owner PIN</p>
+
+        <div class="pin-dots" id="dots-container">
+            <div class="dot" id="d1"></div>
+            <div class="dot" id="d2"></div>
+            <div class="dot" id="d3"></div>
+            <div class="dot" id="d4"></div>
         </div>
-        <div class="keypad">
-            <div class="key" onclick="press(1)">1</div><div class="key" onclick="press(2)">2</div><div class="key" onclick="press(3)">3</div>
-            <div class="key" onclick="press(4)">4</div><div class="key" onclick="press(5)">5</div><div class="key" onclick="press(6)">6</div>
-            <div class="key" onclick="press(7)">7</div><div class="key" onclick="press(8)">8</div><div class="key" onclick="press(9)">9</div>
-            <div class="key clear-key" onclick="deletePinChar()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="18" y1="9" x2="12" y2="15"></line><line x1="12" y1="9" x2="18" y2="15"></line>
+
+        <div class="calc-keypad">
+            <button class="calc-btn" data-key="1" onclick="press(1)">1</button>
+            <button class="calc-btn" data-key="2" onclick="press(2)">2</button>
+            <button class="calc-btn" data-key="3" onclick="press(3)">3</button>
+
+            <button class="calc-btn" data-key="4" onclick="press(4)">4</button>
+            <button class="calc-btn" data-key="5" onclick="press(5)">5</button>
+            <button class="calc-btn" data-key="6" onclick="press(6)">6</button>
+
+            <button class="calc-btn" data-key="7" onclick="press(7)">7</button>
+            <button class="calc-btn" data-key="8" onclick="press(8)">8</button>
+            <button class="calc-btn" data-key="9" onclick="press(9)">9</button>
+
+            <button class="calc-btn" data-key="Backspace" onclick="deletePinChar()">
+                <svg class="delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                    <line x1="18" y1="9" x2="12" y2="15"></line>
+                    <line x1="12" y1="9" x2="18" y2="15"></line>
                 </svg>
-            </div>
-            <div class="key" onclick="press(0)">0</div>
-            <div class="key enter-key" onclick="checkPin()">Enter</div>
+            </button>
+            
+            <button class="calc-btn" data-key="0" onclick="press(0)">0</button>
+            
+            <button class="calc-btn calc-btn-orange" data-key="Enter" onclick="checkPin()">Enter</button>
         </div>
     </div>
 </div>
@@ -322,21 +333,25 @@
             </div>
         </div>
 
-        <div id="section-search" style="display: flex; gap: 10px; align-items: center; width: 100%;">
-            <div class="input-group" style="flex: 1.5; display: flex; align-items: center; position: relative; margin-bottom: 0; overflow: hidden;">
-                <span class="input-icon" style="padding: 0 5px;">🔍</span>
-                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1; min-width: 0; border: none; background: transparent; outline: none; color: white;">
-                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding: 0 5px; font-size: 18px; position: relative; z-index: 10;" title="Voice Search">🎤</span>
+        <div id="section-search" style="display: flex; gap: 10px; align-items: center; width: 100%; margin-bottom: 15px;">
+            <div class="input-group" style="flex: 1.5; margin-bottom: 0; display: flex; align-items: center; padding: 0 15px;">
+                <span class="input-icon" style="margin-right: 10px;">🔍</span>
+                <input type="text" id="search-box" placeholder="Search Name..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
+                <span onclick="startVoiceSearch('search-box')" style="cursor: pointer; padding-left: 10px; font-size: 18px;" title="Voice Search">🎤</span>
             </div>
             
-            <select id="filter-box" onchange="render()" style="flex: 1; margin-bottom: 0; min-width: 100px; cursor: pointer; position: relative; z-index: 1;">
-                <option value="all" id="f-opt-all">All Types</option>
-                <option value="daily" id="f-opt-daily">Daily</option>
-                <option value="monthly" id="f-opt-monthly">Monthly</option>
-                <option value="meter" id="f-opt-meter">Meter</option>
-                <option value="archived" id="f-opt-archived">Archived (Closed)</option>
-            </select>
+            <div class="input-group" style="flex: 1; margin-bottom: 0; display: flex; align-items: center; padding: 0 15px;">
+                <select id="filter-box" onchange="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-appearance: none;">
+                    <option value="all" id="f-opt-all" style="color: black;">All Types</option>
+                    <option value="daily" id="f-opt-daily" style="color: black;">Daily</option>
+                    <option value="monthly" id="f-opt-monthly" style="color: black;">Monthly</option>
+                    <option value="meter" id="f-opt-meter" style="color: black;">Meter</option>
+                    <option value="archived" id="f-opt-archived" style="color: black;">Archived (Closed)</option>
+                </select>
+                <span style="font-size: 10px; color: var(--text-muted); pointer-events: none;">▼</span>
+            </div>
         </div>
+        
         <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;" id="section-sort">
             <select id="sort-box" onchange="render()" style="background:transparent; border:none; color:var(--text-muted); font-size:13px; outline:none; -webkit-appearance:none;">
                 <option value="new" id="s-opt-new">Latest First ▼</option>
