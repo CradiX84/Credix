@@ -898,13 +898,15 @@
         let newCasesDaily = [], newCasesMonthly = [], newCasesMeter = [];
         let paymentsDaily = [], paymentsMonthly = [], paymentsMeter = [];
         let pendingsInRange = [];
+        let closedCasesInRange = [];
         const rangeEndStr = end;
+        
         db.filter(x => x.type !== 'config').forEach(c => {
-            if (c.isArchived) return; 
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
             if (type !== 'all' && c.type !== type) return;
+            
             if (c.startDate >= start && c.startDate <= end) {
                 totalGiven += c.principal;
                 let cCopy = {...c};
@@ -912,9 +914,11 @@
                 else if (c.type === 'monthly') { if(isOwnerMode) { let upfrontProfit = c.principal * ((c.rate || 0) / 100); totalProfitInRange += upfrontProfit; cCopy.tempUpfrontProfit = upfrontProfit; } newCasesMonthly.push(cCopy); }
                 else if (c.type === 'meter') newCasesMeter.push(cCopy);
             }
+            
             let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
             let tempBalForRec = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal);
             let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0;
+            
             if(c.history) {
                 let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
                 sortedHist.forEach(h => {
@@ -924,10 +928,12 @@
                     if (h.date >= start && h.date <= end) { customerTotalInRange += paid; totalReturned += paid; customerProfitInRange += profitFromThisPayment; totalProfitInRange += profitFromThisPayment; histHits.push({ date: h.date, amt: paid, profit: profitFromThisPayment }); }
                 });
             }
+            
             if (customerTotalInRange > 0) {
                 let pData = { name: c.name, total: customerTotalInRange, profit: customerProfitInRange, count: histHits.length, type: c.type, installment: c.installment, rate: c.rate, hits: histHits };
                 if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
             }
+            
             if (!c.isArchived && c.currentBalance > 0) {
                 let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
                 const toLocalYMD = (d) => { let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); let day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
@@ -957,12 +963,33 @@
                 }
                 if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
             }
+
+            // NEW LOGIC FOR CLOSED CASES
+            if (c.isArchived) {
+                let closeDate = c.startDate;
+                if (c.history && c.history.length > 0) {
+                    let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
+                    closeDate = sortedHist[sortedHist.length - 1].date;
+                }
+                if (closeDate >= start && closeDate <= end) {
+                    closedCasesInRange.push({ 
+                        ...c, 
+                        closedDate: closeDate, 
+                        recoveredInRange: customerTotalInRange, 
+                        profitInRange: customerProfitInRange, 
+                        hitsCount: histHits.length 
+                    });
+                }
+            }
         });
-        lastGeneratedReportData = { start, end, type, totalGiven, totalReturned, newCasesDaily, newCasesMonthly, newCasesMeter, paymentsDaily, paymentsMonthly, paymentsMeter, pendingsInRange };
+        
+        lastGeneratedReportData = { start, end, type, totalGiven, totalReturned, newCasesDaily, newCasesMonthly, newCasesMeter, paymentsDaily, paymentsMonthly, paymentsMeter, pendingsInRange, closedCasesInRange };
         document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
         document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
+        
         if(isOwnerMode) { document.getElementById('rep-profit-container').style.display = 'block'; document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('btn-rep-pdf').style.display = 'block'; }
         else { document.getElementById('rep-profit-container').style.display = 'none'; document.getElementById('btn-rep-pdf').style.display = 'none'; }
+        
         let reportHtml = "";
         const renderCases = (list, title, color) => {
             if (list.length === 0) return "";
@@ -975,9 +1002,12 @@
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
         };
+        
         reportHtml += renderCases(newCasesDaily, t.repNewDaily, "var(--accent-orange)");
         reportHtml += renderCases(newCasesMonthly, t.repNewMonthly, "var(--owner-gold)");
         reportHtml += renderCases(newCasesMeter, t.repNewMeter, "#a855f7");
+        
+        // --- SMART CALCULATION FIX FOR DAILY KISHATS ---
         const renderPayments = (list, title, color, isMonthly) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -986,15 +1016,25 @@
                 sectionTotal += p.total;
                 let dates = p.hits.map(h => h.date).sort(); 
                 let dateSummary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); 
-                let detailStr = isMonthly ? `${t.intRec} (${p.hits.length} ${t.monthsText})` : `₹${(p.installment||0).toFixed(0)} × ${p.count} ${t.kishatsText}`; 
+                
+                let detailStr = '';
+                if (isMonthly) {
+                    detailStr = `${t.intRec} (${p.hits.length} ${t.monthsText})`;
+                } else {
+                    let eqDays = Math.round(p.total / (p.installment || 1));
+                    detailStr = `₹${(p.installment||0).toFixed(0)} × ${eqDays} ${t.kishatsText}`;
+                }
+
                 html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-break:break-word;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
         };
+        
         reportHtml += renderPayments(paymentsDaily, t.repRecDaily, "var(--success)", false);
         reportHtml += renderPayments(paymentsMonthly, t.repRecMonthly, "var(--owner-gold)", true);
         reportHtml += renderPayments(paymentsMeter, t.repRecMeter, "#a855f7", false);
+        
         const renderPendings = (list, title, color, bgColor) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1010,6 +1050,7 @@
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
         };
+        
         if (pendingsInRange.length > 0) {
             let pendingDaily = pendingsInRange.filter(p => p.type === 'daily');
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
@@ -1018,6 +1059,68 @@
             reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
             reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
         }
+
+        // --- NEW DETAILED ARCHIVE UI MATCHING DAILY KISHAT FORMAT ---
+        const renderClosed = (list, title, color, bgColor) => {
+            if (list.length === 0) return "";
+            let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
+            let sectionTotal = 0;
+            let sectionTotalRec = 0;
+            list.forEach(c => {
+                sectionTotal += c.principal;
+                sectionTotalRec += (c.recoveredInRange || 0);
+                let typeTranslated = c.type === 'daily' ? t.fDaily : (c.type === 'monthly' ? t.fMonthly : t.fMeter);
+                
+                let detailStr = '';
+                if (c.type === 'monthly') {
+                    detailStr = `${t.intRec} (${c.hitsCount} ${t.monthsText})`;
+                } else {
+                    let perUnit = c.installment || 0;
+                    if (c.recoveredInRange > 0 && perUnit > 0) {
+                        let eqDays = Math.round(c.recoveredInRange / perUnit);
+                        detailStr = `₹${perUnit.toFixed(0)} × ${eqDays} ${t.kishatsText}`;
+                    } else if (c.recoveredInRange > 0) {
+                        detailStr = `₹${c.recoveredInRange.toFixed(0)} × Lump Sum`;
+                    } else {
+                        detailStr = `No recovery in selected dates`;
+                    }
+                }
+
+                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;">
+                    <div style="display:flex; justify-content:space-between; align-items: flex-start;">
+                        <div style="flex:1; min-width:0;">
+                            <b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b>
+                            <span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()}</span><br>
+                            <span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px;">Closed On: <b style="color:var(--text-main);">${formatDateDisplay(c.closedDate)}</b></span>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
+                            <b style="color:${color}; font-size:14px;">₹${c.principal.toLocaleString()}</b><br>
+                            <span style="font-size:9px; color:var(--text-muted);">Principal</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items:center;">
+                        <div style="display:flex; flex-direction:column; gap:3px;">
+                            <span style="font-size: 10px; color: var(--text-muted);">Recovered (In Range):</span>
+                            <span style="font-size: 11px; color: white;">${detailStr}</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                            <span style="font-size: 14px; font-weight: bold; color: var(--success);">+ ₹${(c.recoveredInRange || 0).toLocaleString()}</span>
+                            ${isOwnerMode ? `<span style="font-size:10px; color:var(--owner-gold);">PROFIT: ₹${(c.profitInRange || 0).toFixed(0)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            });
+            html += `<div style="text-align:right; color:${color}; font-size:13px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                TOTAL RECOVERED: <span style="color:var(--success);">₹${sectionTotalRec.toLocaleString()}</span><br>
+                TOTAL PRINCIPAL: ₹${sectionTotal.toLocaleString()}
+            </div>`;
+            return html;
+        };
+
+        if (closedCasesInRange.length > 0) {
+            reportHtml += renderClosed(closedCasesInRange, "📦 ARCHIVED (CLOSED) CASES SETTLED", "#8A8D98", "rgba(255, 255, 255, 0.05)");
+        }
+        
         if(reportHtml === "") { reportHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12px; border:1px dashed rgba(255,255,255,0.1); border-radius:12px; margin-top:15px;">No activity found in selected date range.</div>`; }
         document.getElementById('rep-list').innerHTML = reportHtml; document.getElementById('rep-results').style.display = 'block'; document.getElementById('rep-list').scrollTop = 0;
     }
@@ -1066,6 +1169,34 @@
                 renderPendings(data.pendingsInRange.filter(p => p.type === 'daily'), "PENDING COLLECTIONS (DAILY)", [255, 59, 107]);
                 renderPendings(data.pendingsInRange.filter(p => p.type === 'monthly'), "PENDING COLLECTIONS (MONTHLY)", [61, 169, 252]);
                 renderPendings(data.pendingsInRange.filter(p => p.type === 'meter'), "PENDING COLLECTIONS (METER)", [192, 132, 252]);
+            }
+
+            const renderClosedPdf = (list, title, color) => {
+                if (list.length === 0) return;
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
+                let totalVal = 0;
+                let totalRec = 0;
+                let body = list.map((c, i) => { 
+                    totalVal += Number(c.principal || 0); 
+                    totalRec += Number(c.recoveredInRange || 0);
+                    
+                    let detailStr = '';
+                    if (c.type === 'monthly') {
+                        detailStr = `${c.hitsCount} Months`;
+                    } else {
+                        let eqDays = Math.round((c.recoveredInRange || 0) / (c.installment || 1));
+                        detailStr = `${eqDays} Kishats`;
+                    }
+                    
+                    return [i + 1, c.name, c.type.toUpperCase(), formatDateDisplay(c.closedDate), `RS. ${Number(c.recoveredInRange || 0).toLocaleString()} (${detailStr})`, `RS. ${Number(c.principal).toLocaleString()}`]; 
+                });
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Case Type', 'Closed On', 'Received (In Range)', 'Principal Settled']], body: body, foot: [['', '', '', 'TOTAL:', `RS. ${totalRec.toLocaleString()}`, `RS. ${totalVal.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] } });
+                currentY = doc.lastAutoTable.finalY + 12;
+            };
+
+            if (data.closedCasesInRange && data.closedCasesInRange.length > 0) {
+                renderClosedPdf(data.closedCasesInRange, "ARCHIVED (CLOSED) CASES SETTLED", [138, 141, 152]);
             }
 
             if (currentY > 270) { doc.addPage(); currentY = 20; } doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic'); doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); showToast("Professional PDF Downloaded!");
