@@ -83,6 +83,146 @@
         return conf;
     }
 
+    // --- VIP TRASH BIN (RECYCLE LOGIC) ---
+    function getTrash() {
+        let tr = db.find(x => x.type === 'trash');
+        if (!tr) {
+            tr = { id: 'trash_bin', type: 'trash', cases: [], histories: [] };
+            db.push(tr);
+        }
+        return tr;
+    }
+
+    let currentTrashTab = 'cases';
+    let isTrashMulti = false;
+
+    function openTrashModal() {
+        closeModal('settings-modal');
+        isTrashMulti = false;
+        document.getElementById('trash-modal').style.display = 'flex';
+        switchTrashTab('cases');
+    }
+
+    function switchTrashTab(tab) {
+        currentTrashTab = tab;
+        document.getElementById('tab-trash-cases').style.background = tab === 'cases' ? 'var(--accent-orange)' : 'rgba(255,255,255,0.05)';
+        document.getElementById('tab-trash-cases').style.color = tab === 'cases' ? 'white' : 'var(--text-muted)';
+        document.getElementById('tab-trash-entries').style.background = tab === 'entries' ? 'var(--accent-orange)' : 'rgba(255,255,255,0.05)';
+        document.getElementById('tab-trash-entries').style.color = tab === 'entries' ? 'white' : 'var(--text-muted)';
+        isTrashMulti = false;
+        document.getElementById('btn-trash-multi').innerText = 'MULTI-SELECT';
+        document.getElementById('trash-actions').style.display = 'none';
+        renderTrash();
+    }
+
+    function toggleTrashMulti() {
+        isTrashMulti = !isTrashMulti;
+        document.getElementById('btn-trash-multi').innerText = isTrashMulti ? 'CANCEL' : 'MULTI-SELECT';
+        document.getElementById('trash-actions').style.display = isTrashMulti ? 'flex' : 'none';
+        renderTrash();
+    }
+
+    function renderTrash() {
+        let tr = getTrash();
+        let html = '';
+        // Firebase auto-removes empty arrays, safeguard added:
+        let list = currentTrashTab === 'cases' ? (tr.cases || []) : (tr.histories || []);
+
+        if (!list || list.length === 0) {
+            html = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px; border:1px dashed rgba(255,255,255,0.1); border-radius:15px;">No deleted ${currentTrashTab} found.<br><br><b>All clear! 🚀</b></div>`;
+        } else {
+            list.forEach((item, i) => {
+                let chkHtml = isTrashMulti ? `<input type="checkbox" class="trash-chk" value="${i}" style="width:18px;height:18px;accent-color:var(--accent-orange); flex-shrink:0;">` : '';
+                let title = currentTrashTab === 'cases' ? `Case: ${item.name} (₹${item.principal})` : `Entry: ₹${item.paid} from ${item.caseName}`;
+                let dateInfo = currentTrashTab === 'cases' ? `Case Given: ${formatDateDisplay(item.startDate)}` : `Paid Date: ${formatDateDisplay(item.date)}`;
+                
+                html += `
+                <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; margin-bottom:8px; border-left: 3px solid var(--danger);">
+                    ${chkHtml}
+                    <div style="flex:1; min-width:0;">
+                        <b style="color:white; font-size:13px; display:block;">${title}</b>
+                        <span style="color:var(--text-muted); font-size:11px; display:block; margin-top:2px;">${dateInfo}</span>
+                        <div style="background:rgba(255, 106, 0, 0.1); padding:4px 8px; border-radius:6px; display:inline-block; margin-top:6px;">
+                            <span style="color:var(--accent-orange); font-size:10px; font-weight:700;">🗑️ Deleted by: ${item.deletedBy} on ${item.deletedAt}</span>
+                        </div>
+                    </div>
+                    ${!isTrashMulti ? `
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button onclick="restoreTrashItem(${i})" style="background:var(--success); border:none; border-radius:8px; padding:8px; font-size:14px; cursor:pointer;" title="Restore">🔄</button>
+                        <button onclick="deleteTrashItem(${i})" style="background:var(--danger); border:none; border-radius:8px; padding:8px; font-size:14px; cursor:pointer;" title="Permanent Delete">✖</button>
+                    </div>
+                    ` : ''}
+                </div>`;
+            });
+        }
+        document.getElementById('trash-list-container').innerHTML = html;
+    }
+
+    function restoreTrashItem(idx) {
+        askConfirm("Restore this item back to your Active Records?", () => {
+            processTrashAction('restore', [idx]);
+        });
+    }
+
+    function deleteTrashItem(idx) {
+        askConfirm("Permanently Clear this item from log? Cannot be undone.", () => {
+            processTrashAction('delete', [idx]);
+        });
+    }
+
+    function executeTrashAction(action) {
+        let checks = document.querySelectorAll('.trash-chk:checked');
+        if(checks.length === 0) return showToast("Select items first!");
+        let msg = action === 'restore' ? `Restore ${checks.length} items?` : `Permanently Delete ${checks.length} items?`;
+        askConfirm(msg, () => {
+            let indices = Array.from(checks).map(c => parseInt(c.value));
+            processTrashAction(action, indices);
+        });
+    }
+
+    function processTrashAction(action, indices) {
+        let tr = getTrash();
+        indices.sort((a,b) => b-a); 
+        
+        indices.forEach(idx => {
+            if (currentTrashTab === 'cases') {
+                if(!tr.cases) return;
+                let item = tr.cases[idx];
+                if (action === 'restore') {
+                    delete item.deletedAt;
+                    delete item.deletedBy;
+                    db.push(item);
+                }
+                tr.cases.splice(idx, 1);
+            } else {
+                if(!tr.histories) return;
+                let item = tr.histories[idx];
+                if (action === 'restore') {
+                    let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash');
+                    if (targetCase) {
+                        delete item.deletedAt;
+                        delete item.deletedBy;
+                        delete item.caseId;
+                        delete item.caseName;
+                        if(!targetCase.history) targetCase.history = [];
+                        targetCase.history.push(item);
+                        recalculateCase(targetCase);
+                    } else {
+                        showToast(`Skipped! Customer Case "${item.caseName}" not found. Restore case first.`);
+                    }
+                }
+                tr.histories.splice(idx, 1);
+            }
+        });
+
+        isTrashMulti = false;
+        document.getElementById('btn-trash-multi').innerText = 'MULTI-SELECT';
+        document.getElementById('trash-actions').style.display = 'none';
+        saveAndRender();
+        renderTrash();
+        showToast(action === 'restore' ? "Restored Successfully! ✅" : "Space Cleared! 🗑️");
+    }
+
     const i18n = {
         'en': { 
             appSub: "Welcome Back 👋", sumPrin: "Total Principal", sumCases: "Total Cases", sumOut: "Outstanding", 
@@ -173,7 +313,7 @@
         if(document.getElementById('lang-select')) document.getElementById('lang-select').value = currentLang;
         if(document.getElementById('auto-backup-select')) document.getElementById('auto-backup-select').value = autoBackupFreq;
         
-        let todayDate = getISTDate(); // IST FIX
+        let todayDate = getISTDate(); 
         if(document.getElementById('date')) document.getElementById('date').value = todayDate;
         if(document.getElementById('rep-start')) document.getElementById('rep-start').value = todayDate;
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
@@ -191,6 +331,42 @@
                 setupFirebaseListener();
             }
         });
+
+        if (!document.getElementById('trash-modal')) {
+            const trashHtml = `
+            <div id="trash-modal" class="modal">
+                <div class="modal-cont" style="max-width: 500px;">
+                    <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--text-main);">🗑️ Recycle Bin & Log</h3>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <button class="main-btn" id="tab-trash-cases" style="margin:0; padding:10px; font-size:12px; background:var(--accent-orange);" onclick="switchTrashTab('cases')">Deleted Cases</button>
+                        <button class="main-btn" id="tab-trash-entries" style="margin:0; padding:10px; font-size:12px; background:rgba(255,255,255,0.05); color:white;" onclick="switchTrashTab('entries')">Deleted Entries</button>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button onclick="toggleTrashMulti()" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:600;" id="btn-trash-multi">MULTI-SELECT</button>
+                        
+                        <div id="trash-actions" style="display:none; gap:5px;">
+                            <button onclick="executeTrashAction('restore')" style="background:var(--success); border:none; color:black; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">RESTORE</button>
+                            <button onclick="executeTrashAction('delete')" style="background:var(--danger); border:none; color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">CLEAR PERMANENTLY</button>
+                        </div>
+                    </div>
+
+                    <div id="trash-list-container" style="max-height: 350px; overflow-y: auto; padding-right: 5px;"></div>
+
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('trash-modal')">Close Window</button>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', trashHtml);
+        }
+        
+        if (!document.getElementById('btn-trash')) {
+            const btnHtml = `<button class="main-btn" id="btn-trash" style="background:rgba(138, 141, 152, 0.1); color:#8A8D98; box-shadow:none; display:none; margin-top:10px;" onclick="openTrashModal()">🗑️ Recycle Bin & Activity Log</button>`;
+            let target = document.getElementById('btn-manage-staff');
+            if(target) target.insertAdjacentHTML('afterend', btnHtml);
+        }
     };
 
     function changeLang() { currentLang = document.getElementById('lang-select').value; localStorage.setItem('paymitra_lang', currentLang); applyLang(); render(); showToast("Language Updated!"); }
@@ -602,6 +778,7 @@
             document.getElementById('owner-analytics').style.display = 'block';
             document.getElementById('wrap-staff-ref').style.display = 'flex'; 
             document.getElementById('rep-search-wrap').style.display = 'flex'; 
+            if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'block';
             document.getElementById('t-appSub').innerText = "Owner Dashboard 👑";
         } else {
             document.getElementById('owner-badge').style.display = 'none';
@@ -613,6 +790,7 @@
             document.getElementById('is-personal').checked = false;
             document.getElementById('wrap-staff-ref').style.display = 'none'; 
             document.getElementById('rep-search-wrap').style.display = 'none'; 
+            if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'none';
             document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
         }
         render(); checkAutoBackup();
@@ -623,7 +801,7 @@
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-                newDb.forEach(item => { if(item.type !== 'config' && !item.history) item.history = []; });
+                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
                 if (document.getElementById('main-app').style.display === 'none') {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
@@ -634,6 +812,12 @@
                         db = newDb;
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
                         render();
+                        
+                        // NEW: Auto update trash UI if it's open
+                        if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                            renderTrash();
+                        }
+                        
                         showToast("Data Auto-Updated!");
                     }
                 }
@@ -859,10 +1043,60 @@
         showToast("Account Updated ✅"); 
     }
     
+    // --- UPDATED DELETE ACTIONS TO USE RECYCLE BIN ---
+    function deleteCustUI(id) { 
+        askConfirm("Move this entire account to Recycle Bin?", () => { 
+            let cIndex = db.findIndex(x => x.id === id);
+            if(cIndex > -1) {
+                let c = db[cIndex];
+                let tr = getTrash();
+                if (!tr.cases) tr.cases = []; // FIREBASE EMPTY ARRAY FIX
+                let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
+                tr.cases.push({ ...c, deletedAt: nowStr, deletedBy: deviceStaffName });
+                db.splice(cIndex, 1);
+                saveAndRender(); 
+                showToast("Account Moved to Recycle Bin! 🗑️"); 
+            }
+        }); 
+    }
+
+    function deleteHistoryUI(custId, originalIndex) { 
+        askConfirm("Move this entry to Recycle Bin?", () => { 
+            let c = db.find(x => x.id === custId); 
+            let tr = getTrash();
+            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
+            let deletedEntry = c.history[originalIndex];
+            tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
+            c.history.splice(originalIndex, 1); 
+            recalculateCase(c); 
+            saveAndRender(); 
+            showToast("Entry Moved to Recycle Bin! 🗑️"); 
+        }); 
+    }
+
+    function deleteSelectedHistoryUI(id) { 
+        let checks = document.querySelectorAll(`.del-chk-${id}:checked`); 
+        if(checks.length === 0) return toggleMultiDel(id); 
+        askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
+            let c = db.find(x => x.id === id); 
+            let tr = getTrash();
+            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
+            let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); 
+            indices.forEach(idx => { 
+                let deletedEntry = c.history[idx];
+                tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
+                c.history.splice(idx, 1); 
+            }); 
+            multiDelMode[id] = false; 
+            recalculateCase(c); 
+            saveAndRender(); 
+            showToast("Selected Moved to Recycle Bin! 🗑️"); 
+        }); 
+    }
+
     function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
-    function deleteCustUI(id) { askConfirm("Are you sure you want to delete this entire account?", () => { db = db.filter(x => x.id !== id); saveAndRender(); showToast("Account Deleted!"); }); }
-    function deleteHistoryUI(custId, originalIndex) { askConfirm("Delete this entry?", () => { let c = db.find(x => x.id === custId); c.history.splice(originalIndex, 1); recalculateCase(c); saveAndRender(); showToast("Entry Deleted!"); }); }
-    function deleteSelectedHistoryUI(id) { let checks = document.querySelectorAll(`.del-chk-${id}:checked`); if(checks.length === 0) return toggleMultiDel(id); askConfirm(`Delete ${checks.length} entries?`, () => { let c = db.find(x => x.id === id); let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); indices.forEach(idx => { c.history.splice(idx, 1); }); multiDelMode[id] = false; recalculateCase(c); saveAndRender(); showToast("Selected Deleted!"); }); }
 
     function generateCustomerPDF(id) {
         const { jsPDF } = window.jspdf;
@@ -913,7 +1147,7 @@
         let closedCasesInRange = [];
         const rangeEndStr = end;
         
-        db.filter(x => x.type !== 'config').forEach(c => {
+        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
@@ -1425,7 +1659,7 @@
         let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
         let today = getISTDate(); // IST FIX
-        let pureDB = db.filter(x => x.type !== 'config');
+        let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
@@ -1495,7 +1729,7 @@
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
-        db.filter(x => x.type !== 'config').forEach(c => {
+        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
             if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
