@@ -50,6 +50,18 @@
         return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
     }
 
+    // Helper for End Date Calculation
+    function calculateEndDate(startDateStr, days) {
+        if (!startDateStr || !days) return "-";
+        let parts = startDateStr.split('-');
+        let d = new Date(parts[0], parts[1] - 1, parts[2]);
+        d.setDate(d.getDate() + parseInt(days));
+        let ny = d.getFullYear();
+        let nm = String(d.getMonth() + 1).padStart(2, '0');
+        let nd = String(d.getDate()).padStart(2, '0');
+        return `${nd}/${nm}/${String(ny).slice(-2)}`;
+    }
+
     function openPhotoZoom(src) {
         if(!src) return;
         const modal = document.getElementById('photo-zoom-modal');
@@ -964,17 +976,20 @@
                 if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
             }
 
-            // NEW LOGIC FOR CLOSED CASES
             if (c.isArchived) {
                 let closeDate = c.startDate;
+                let closingAmt = 0;
                 if (c.history && c.history.length > 0) {
                     let sortedHist = [...c.history].sort((a, b) => (a.date > b.date ? 1 : -1));
-                    closeDate = sortedHist[sortedHist.length - 1].date;
+                    let lastRec = sortedHist[sortedHist.length - 1];
+                    closeDate = lastRec.date;
+                    closingAmt = parseFloat(lastRec.paid);
                 }
                 if (closeDate >= start && closeDate <= end) {
                     closedCasesInRange.push({ 
                         ...c, 
                         closedDate: closeDate, 
+                        closingAmount: closingAmt,
                         recoveredInRange: customerTotalInRange, 
                         profitInRange: customerProfitInRange, 
                         hitsCount: histHits.length 
@@ -987,8 +1002,31 @@
         document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
         document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
         
-        if(isOwnerMode) { document.getElementById('rep-profit-container').style.display = 'block'; document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('btn-rep-pdf').style.display = 'block'; }
-        else { document.getElementById('rep-profit-container').style.display = 'none'; document.getElementById('btn-rep-pdf').style.display = 'none'; }
+        // --- BUTTON INJECTION FIX ---
+        if(isOwnerMode) { 
+            document.getElementById('rep-profit-container').style.display = 'block'; 
+            document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); 
+            document.getElementById('btn-rep-pdf').style.display = 'block'; 
+            
+            if(!document.getElementById('btn-staff-pdf')) {
+                let btn = document.createElement('button');
+                btn.id = 'btn-staff-pdf';
+                btn.className = 'main-btn';
+                btn.style.marginTop = '10px';
+                btn.style.marginBottom = '20px';
+                btn.style.background = '#2563eb'; // Deep Blue theme match
+                btn.style.boxShadow = '0 5px 15px rgba(37, 99, 235, 0.4)';
+                btn.style.color = 'white';
+                btn.innerText = 'Download Staff Report PDF 📊';
+                btn.onclick = downloadStaffPDF;
+                document.getElementById('btn-rep-pdf').parentNode.insertBefore(btn, document.getElementById('btn-rep-pdf').nextSibling);
+            }
+            document.getElementById('btn-staff-pdf').style.display = 'block';
+        } else { 
+            document.getElementById('rep-profit-container').style.display = 'none'; 
+            document.getElementById('btn-rep-pdf').style.display = 'none'; 
+            if(document.getElementById('btn-staff-pdf')) document.getElementById('btn-staff-pdf').style.display = 'none';
+        }
         
         let reportHtml = "";
         const renderCases = (list, title, color) => {
@@ -1007,7 +1045,6 @@
         reportHtml += renderCases(newCasesMonthly, t.repNewMonthly, "var(--owner-gold)");
         reportHtml += renderCases(newCasesMeter, t.repNewMeter, "#a855f7");
         
-        // --- SMART CALCULATION FIX FOR DAILY KISHATS ---
         const renderPayments = (list, title, color, isMonthly) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1016,15 +1053,7 @@
                 sectionTotal += p.total;
                 let dates = p.hits.map(h => h.date).sort(); 
                 let dateSummary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); 
-                
-                let detailStr = '';
-                if (isMonthly) {
-                    detailStr = `${t.intRec} (${p.hits.length} ${t.monthsText})`;
-                } else {
-                    let eqDays = Math.round(p.total / (p.installment || 1));
-                    detailStr = `₹${(p.installment||0).toFixed(0)} × ${eqDays} ${t.kishatsText}`;
-                }
-
+                let detailStr = isMonthly ? `${t.intRec} (${p.hits.length} ${t.monthsText})` : `₹${(p.installment||0).toFixed(0)} × ${Math.round(p.total / (p.installment || 1))} ${t.kishatsText}`; 
                 html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-break:break-word;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
@@ -1060,7 +1089,6 @@
             reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
         }
 
-        // --- NEW DETAILED ARCHIVE UI MATCHING DAILY KISHAT FORMAT ---
         const renderClosed = (list, title, color, bgColor) => {
             if (list.length === 0) return "";
             let html = `<div style="color:${color}; font-size:11px; margin:18px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
@@ -1076,11 +1104,24 @@
                     detailStr = `${t.intRec} (${c.hitsCount} ${t.monthsText})`;
                 } else {
                     let perUnit = c.installment || 0;
-                    if (c.recoveredInRange > 0 && perUnit > 0) {
-                        let eqDays = Math.round(c.recoveredInRange / perUnit);
-                        detailStr = `₹${perUnit.toFixed(0)} × ${eqDays} ${t.kishatsText}`;
+                    let regularRec = c.recoveredInRange || 0;
+                    let parts = [];
+                    
+                    if (c.closingAmount && c.closingAmount !== perUnit && c.closingAmount > 0) {
+                        regularRec -= c.closingAmount;
+                        parts.push(`₹${c.closingAmount.toFixed(0)} (Advance/Final)`);
+                    }
+                    if (regularRec > 0 && perUnit > 0) {
+                        let eqDays = Math.round(regularRec / perUnit);
+                        parts.push(`₹${perUnit.toFixed(0)} × ${eqDays} ${t.kishatsText}`);
+                    } else if (regularRec > 0) {
+                        parts.push(`₹${regularRec.toFixed(0)}`);
+                    }
+                    
+                    if (parts.length > 0) {
+                        detailStr = parts.join(" & ");
                     } else if (c.recoveredInRange > 0) {
-                        detailStr = `₹${c.recoveredInRange.toFixed(0)} × Lump Sum`;
+                        detailStr = `₹${(c.recoveredInRange).toFixed(0)} Lump Sum`;
                     } else {
                         detailStr = `No recovery in selected dates`;
                     }
@@ -1185,8 +1226,20 @@
                     if (c.type === 'monthly') {
                         detailStr = `${c.hitsCount} Months`;
                     } else {
-                        let eqDays = Math.round((c.recoveredInRange || 0) / (c.installment || 1));
-                        detailStr = `${eqDays} Kishats`;
+                        let perUnit = c.installment || 0;
+                        let regularRec = c.recoveredInRange || 0;
+                        let parts = [];
+                        
+                        if (c.closingAmount && c.closingAmount !== perUnit && c.closingAmount > 0) {
+                            regularRec -= c.closingAmount;
+                            parts.push(`RS. ${c.closingAmount.toFixed(0)} (Final)`);
+                        }
+                        if (regularRec > 0 && perUnit > 0) {
+                            let eqDays = Math.round(regularRec / perUnit);
+                            parts.push(`${eqDays} Kishats`);
+                        }
+                        
+                        detailStr = parts.length > 0 ? parts.join(" + ") : `Lump Sum`;
                     }
                     
                     return [i + 1, c.name, c.type.toUpperCase(), formatDateDisplay(c.closedDate), `RS. ${Number(c.recoveredInRange || 0).toLocaleString()} (${detailStr})`, `RS. ${Number(c.principal).toLocaleString()}`]; 
@@ -1202,6 +1255,120 @@
             if (currentY > 270) { doc.addPage(); currentY = 20; } doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic'); doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); showToast("Professional PDF Downloaded!");
         } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
     }
+
+    // --- NEW: STAFF SPECIFIC BLUE PDF REPORT ---
+    window.downloadStaffPDF = function() {
+        if(!lastGeneratedReportData) return showToast("Generate report first!");
+        try {
+            const { jsPDF } = window.jspdf;
+            const docPdf = new jsPDF('p', 'mm', 'a4');
+            const data = lastGeneratedReportData;
+            const marginX = 14;
+            let currentY = 20;
+
+            let searchVal = document.getElementById('rep-search').value.trim();
+            let staffName = searchVal ? searchVal.toUpperCase() : "ALL STAFF";
+
+            // Title
+            docPdf.setFontSize(22);
+            docPdf.setTextColor(21, 101, 192); // Deep Blue
+            docPdf.setFont(undefined, 'bold');
+            docPdf.text(`${staffName} - BUSINESS REPORT`, marginX, currentY);
+
+            docPdf.setFontSize(10);
+            docPdf.setTextColor(100);
+            docPdf.text(`Period: ${formatDateDisplay(data.start)} to ${formatDateDisplay(data.end)}`, 130, currentY);
+            currentY += 10;
+
+            // Helper for New/Old
+            const getStatus = (cust) => {
+                let isOld = db.some(x => x.name.toLowerCase().trim() === cust.name.toLowerCase().trim() && x.id < cust.id);
+                return isOld ? 'Old' : 'New';
+            };
+
+            // 1. DAILY CASES
+            if(data.newCasesDaily.length > 0) {
+                docPdf.setFontSize(14);
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFillColor(21, 101, 192);
+                docPdf.rect(marginX, currentY, 182, 8, 'F');
+                docPdf.text(`DAILY BASIS CASES`, marginX + 5, currentY + 6);
+                currentY += 12;
+
+                let tPrin = 0; let tInt = 0;
+                let dailyBody = data.newCasesDaily.map((c, i) => {
+                    tPrin += c.principal;
+                    let days = c.installment ? Math.round((c.totalPayable || c.principal) / c.installment) : 0;
+                    let interest = (c.totalPayable || c.principal) - c.principal;
+                    tInt += interest;
+
+                    let ed = calculateEndDate(c.startDate, days);
+
+                    return [
+                        i+1, c.name, formatDateDisplay(c.startDate), ed, days, 'Daily',
+                        getStatus(c), `RS.${c.principal.toLocaleString()}`, `RS.${interest.toLocaleString()}`
+                    ];
+                });
+
+                docPdf.autoTable({
+                    startY: currentY,
+                    head: [['S.No', 'Customer Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Amount', 'Interest']],
+                    body: dailyBody,
+                    foot: [['', '', '', '', '', '', 'TOTAL:', `RS.${tPrin.toLocaleString()}`, `RS.${tInt.toLocaleString()}`]],
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 136, 229] },
+                    footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    didParseCell: function(data) {
+                        if (data.section === 'body' && data.column.index === 6) {
+                            if (data.cell.raw === 'New') data.cell.styles.textColor = [46, 125, 50]; // Green
+                            if (data.cell.raw === 'Old') data.cell.styles.textColor = [198, 40, 40]; // Red
+                        }
+                    }
+                });
+                currentY = docPdf.lastAutoTable.finalY + 15;
+            }
+
+            // 2. MONTHLY CASES
+            if(data.newCasesMonthly.length > 0) {
+                if (currentY > 250) { docPdf.addPage(); currentY = 20; }
+                docPdf.setFontSize(14);
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFillColor(21, 101, 192);
+                docPdf.rect(marginX, currentY, 182, 8, 'F');
+                docPdf.text(`MONTHLY CASES HISAAB`, marginX + 5, currentY + 6);
+                currentY += 12;
+
+                let tPrinM = 0; let tIntM = 0;
+                let monthlyBody = data.newCasesMonthly.map((c, i) => {
+                    tPrinM += c.principal;
+                    let interest = c.principal * ((c.rate||0)/100);
+                    tIntM += interest;
+                    return [
+                        i+1, c.name, `RS.${c.principal.toLocaleString()}`, formatDateDisplay(c.startDate), `RS.${interest.toLocaleString()}`
+                    ];
+                });
+
+                docPdf.autoTable({
+                    startY: currentY,
+                    head: [['S.No', 'Customer Name', 'Amount', 'Date', 'Interest (Monthly)']],
+                    body: monthlyBody,
+                    foot: [['', 'TOTAL:', `RS.${tPrinM.toLocaleString()}`, '', `RS.${tIntM.toLocaleString()}`]],
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 136, 229] },
+                    footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 3 }
+                });
+                currentY = docPdf.lastAutoTable.finalY + 15;
+            }
+
+            docPdf.save(`Staff_Report_${staffName.replace(/ /g, '_')}_${data.start}_to_${data.end}.pdf`);
+            showToast("Staff Report Downloaded!");
+        } catch (err) {
+            console.error(err);
+            showToast("Error generating Staff PDF");
+        }
+    };
 
     function render() {
         if(currentTab === 'stats') { renderStats(); return; }
