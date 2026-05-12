@@ -149,7 +149,7 @@
             optDaily: "ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", optMonthly: "ਮਹੀਨੇ ਦਾ ਵਿਆਜ", optMeter: "ਮੀਟਰ (ਰੋਜ਼ਾਨਾ)", markPersonal: "👑 ਪਰਸਨਲ ਖਾਤਾ",
             sortNew: "ਨਵਾਂ ਪਹਿਲਾਂ ▼", sortOld: "ਪੁਰਾਣਾ ਪਹਿਲਾਂ ▲",
             delCaseMsg: "ਕੀ ਤੁਸੀਂ ਇਹ ਪੂਰਾ ਖਾਤਾ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?", delCaseSuccess: "ਖਾਤਾ ਮਿਟਾ ਦਿੱਤਾ ਗਿਆ!", editBtn: "ਐਡਿਟ", recBtn: "ਪ੍ਰਾਪਤ ਕਰੋ", bulkBtn: "⚡ ਬਲਕ",
-            bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸਤੰਬਰ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰੱਦ ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (ਏ)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (ਏ)",
+            bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸਤੰਬਰ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰद्द ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (ਏ)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (ਏ)",
             autoBackupLabel: "ਆਟੋ ਬੈਕਅੱਪ ਫਾਈਲ", abNever: "ਕਦੇ ਨਹੀਂ", abDaily: "ਰੋਜ਼ਾਨਾ (ਐਪ ਖੁੱਲਣ 'ਤੇ)", abMonthly: "ਮਹੀਨੇ ਵਿੱਚ ਇੱਕ ਵਾਰ",
             repTitle: "📅 ਤਾਰੀਖ ਦੇ ਅਨੁਸਾਰ ਰਿਪੋਰਟ", repBtn: "ਰਿਪੋਰਟ ਦੇਖੋ", repGiven: "ਕੁੱਲ ਦਿੱਤਾ", repRet: "ਕੁੱਲ ਰਿਕਵਰੀ", repProfit: "ਕਮਾਇਆ ਮੁਨਾਫਾ", repNoData: "ਇਸ ਤਾਰੀਖ ਵਿੱਚ ਕੋਦਈ ਡਾਟਾ ਨਹੀਂ ਹੈ।", repNewCases: "🆕 ਨਵੇਂ ਖਾਤੇ (GIVEN)", repPayments: "✅ ਪ੍ਰਾਪਤ ਰਿਕਵਰੀ (RECEIVED)", advProfit: "ਐਡਵਾਂਸ ਮੁਨਾਫਾ (ਕਟੌਤੀ)",
             archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ Login ID ਦਰਜ ਕਰੋ",
@@ -1002,7 +1002,6 @@
         document.getElementById('rep-given').innerText = '₹' + totalGiven.toLocaleString();
         document.getElementById('rep-ret').innerText = '₹' + totalReturned.toLocaleString();
         
-        // --- BUTTON INJECTION FIX ---
         if(isOwnerMode) { 
             document.getElementById('rep-profit-container').style.display = 'block'; 
             document.getElementById('rep-profit').innerText = '₹' + totalProfitInRange.toLocaleString(undefined, {maximumFractionDigits:0}); 
@@ -1014,7 +1013,7 @@
                 btn.className = 'main-btn';
                 btn.style.marginTop = '10px';
                 btn.style.marginBottom = '20px';
-                btn.style.background = '#2563eb'; // Deep Blue theme match
+                btn.style.background = '#2563eb'; 
                 btn.style.boxShadow = '0 5px 15px rgba(37, 99, 235, 0.4)';
                 btn.style.color = 'white';
                 btn.innerText = 'Download Staff Report PDF 📊';
@@ -1256,17 +1255,18 @@
         } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
     }
 
-    // --- NEW: STAFF SPECIFIC BLUE PDF REPORT ---
+    // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT ---
     window.downloadStaffPDF = function() {
         if(!lastGeneratedReportData) return showToast("Generate report first!");
         try {
             const { jsPDF } = window.jspdf;
-            const docPdf = new jsPDF('p', 'mm', 'a4');
+            const docPdf = new jsPDF();
             const data = lastGeneratedReportData;
             const marginX = 14;
             let currentY = 20;
 
-            let searchVal = document.getElementById('rep-search').value.trim();
+            let searchEl = document.getElementById('rep-search');
+            let searchVal = searchEl ? searchEl.value.trim() : "";
             let staffName = searchVal ? searchVal.toUpperCase() : "ALL STAFF";
 
             // Title
@@ -1280,14 +1280,15 @@
             docPdf.text(`Period: ${formatDateDisplay(data.start)} to ${formatDateDisplay(data.end)}`, 130, currentY);
             currentY += 10;
 
-            // Helper for New/Old
+            // Safe Helper for New/Old
             const getStatus = (cust) => {
-                let isOld = db.some(x => x.name.toLowerCase().trim() === cust.name.toLowerCase().trim() && x.id < cust.id);
+                if (!cust || !cust.name) return 'New';
+                let isOld = db.some(x => (x.name || "").toLowerCase().trim() === cust.name.toLowerCase().trim() && x.id < cust.id);
                 return isOld ? 'Old' : 'New';
             };
 
             // 1. DAILY CASES
-            if(data.newCasesDaily.length > 0) {
+            if(data.newCasesDaily && data.newCasesDaily.length > 0) {
                 docPdf.setFontSize(14);
                 docPdf.setTextColor(255, 255, 255);
                 docPdf.setFillColor(21, 101, 192);
@@ -1297,16 +1298,18 @@
 
                 let tPrin = 0; let tInt = 0;
                 let dailyBody = data.newCasesDaily.map((c, i) => {
-                    tPrin += c.principal;
-                    let days = c.installment ? Math.round((c.totalPayable || c.principal) / c.installment) : 0;
-                    let interest = (c.totalPayable || c.principal) - c.principal;
+                    let pAmt = Number(c.principal || 0);
+                    tPrin += pAmt;
+                    let totPay = Number(c.totalPayable || c.principal || 0);
+                    let days = c.installment ? Math.round(totPay / c.installment) : 0;
+                    let interest = totPay - pAmt;
                     tInt += interest;
 
                     let ed = calculateEndDate(c.startDate, days);
 
                     return [
-                        i+1, c.name, formatDateDisplay(c.startDate), ed, days, 'Daily',
-                        getStatus(c), `RS.${c.principal.toLocaleString()}`, `RS.${interest.toLocaleString()}`
+                        i+1, c.name || "-", formatDateDisplay(c.startDate), ed, days, 'Daily',
+                        getStatus(c), `RS.${pAmt.toLocaleString()}`, `RS.${interest.toLocaleString()}`
                     ];
                 });
 
@@ -1319,10 +1322,10 @@
                     headStyles: { fillColor: [30, 136, 229] },
                     footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
                     styles: { fontSize: 8, cellPadding: 2 },
-                    didParseCell: function(data) {
-                        if (data.section === 'body' && data.column.index === 6) {
-                            if (data.cell.raw === 'New') data.cell.styles.textColor = [46, 125, 50]; // Green
-                            if (data.cell.raw === 'Old') data.cell.styles.textColor = [198, 40, 40]; // Red
+                    didParseCell: function(hookData) {
+                        if (hookData.section === 'body' && hookData.column.index === 6) {
+                            if (hookData.cell.raw === 'New') hookData.cell.styles.textColor = [46, 125, 50]; 
+                            if (hookData.cell.raw === 'Old') hookData.cell.styles.textColor = [198, 40, 40]; 
                         }
                     }
                 });
@@ -1330,7 +1333,7 @@
             }
 
             // 2. MONTHLY CASES
-            if(data.newCasesMonthly.length > 0) {
+            if(data.newCasesMonthly && data.newCasesMonthly.length > 0) {
                 if (currentY > 250) { docPdf.addPage(); currentY = 20; }
                 docPdf.setFontSize(14);
                 docPdf.setTextColor(255, 255, 255);
@@ -1341,11 +1344,12 @@
 
                 let tPrinM = 0; let tIntM = 0;
                 let monthlyBody = data.newCasesMonthly.map((c, i) => {
-                    tPrinM += c.principal;
-                    let interest = c.principal * ((c.rate||0)/100);
+                    let pAmt = Number(c.principal || 0);
+                    tPrinM += pAmt;
+                    let interest = pAmt * (Number(c.rate)||0)/100;
                     tIntM += interest;
                     return [
-                        i+1, c.name, `RS.${c.principal.toLocaleString()}`, formatDateDisplay(c.startDate), `RS.${interest.toLocaleString()}`
+                        i+1, c.name || "-", `RS.${pAmt.toLocaleString()}`, formatDateDisplay(c.startDate), `RS.${interest.toLocaleString()}`
                     ];
                 });
 
