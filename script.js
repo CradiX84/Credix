@@ -149,7 +149,7 @@
             optDaily: "ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", optMonthly: "ਮਹੀਨੇ ਦਾ ਵਿਆਜ", optMeter: "ਮੀਟਰ (ਰੋਜ਼ਾਨਾ)", markPersonal: "👑 ਪਰਸਨਲ ਖਾਤਾ",
             sortNew: "ਨਵਾਂ ਪਹਿਲਾਂ ▼", sortOld: "ਪੁਰਾਣਾ ਪਹਿਲਾਂ ▲",
             delCaseMsg: "ਕੀ ਤੁਸੀਂ ਇਹ ਪੂਰਾ ਖਾਤਾ ਮਿਟਾਉਣਾ ਚਾਹੁੰਦੇ ਹੋ?", delCaseSuccess: "ਖਾਤਾ ਮਿਟਾ ਦਿੱਤਾ ਗਿਆ!", editBtn: "ਐਡਿਟ", recBtn: "ਪ੍ਰਾਪਤ ਕਰੋ", bulkBtn: "⚡ ਬਲਕ",
-            bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸਤੰਬਰ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰद्द ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (ਏ)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (ਏ)",
+            bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸਤੰਬਰ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰੱਦ ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (ਏ)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (ਏ)",
             autoBackupLabel: "ਆਟੋ ਬੈਕਅੱਪ ਫਾਈਲ", abNever: "ਕਦੇ ਨਹੀਂ", abDaily: "ਰੋਜ਼ਾਨਾ (ਐਪ ਖੁੱਲਣ 'ਤੇ)", abMonthly: "ਮਹੀਨੇ ਵਿੱਚ ਇੱਕ ਵਾਰ",
             repTitle: "📅 ਤਾਰੀਖ ਦੇ ਅਨੁਸਾਰ ਰਿਪੋਰਟ", repBtn: "ਰਿਪੋਰਟ ਦੇਖੋ", repGiven: "ਕੁੱਲ ਦਿੱਤਾ", repRet: "ਕੁੱਲ ਰਿਕਵਰੀ", repProfit: "ਕਮਾਇਆ ਮੁਨਾਫਾ", repNoData: "ਇਸ ਤਾਰੀਖ ਵਿੱਚ ਕੋਦਈ ਡਾਟਾ ਨਹੀਂ ਹੈ।", repNewCases: "🆕 ਨਵੇਂ ਖਾਤੇ (GIVEN)", repPayments: "✅ ਪ੍ਰਾਪਤ ਰਿਕਵਰੀ (RECEIVED)", advProfit: "ਐਡਵਾਂਸ ਮੁਨਾਫਾ (ਕਟੌਤੀ)",
             archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ Login ID ਦਰਜ ਕਰੋ",
@@ -1255,7 +1255,7 @@
         } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
     }
 
-    // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT ---
+    // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT (UPDATED: NO PROFIT, ADDED METER) ---
     window.downloadStaffPDF = function() {
         if(!lastGeneratedReportData) return showToast("Generate report first!");
         try {
@@ -1287,7 +1287,7 @@
                 return isOld ? 'Old' : 'New';
             };
 
-            // 1. DAILY CASES
+            // 1. DAILY CASES (NO INTEREST)
             if(data.newCasesDaily && data.newCasesDaily.length > 0) {
                 docPdf.setFontSize(14);
                 docPdf.setTextColor(255, 255, 255);
@@ -1296,28 +1296,26 @@
                 docPdf.text(`DAILY BASIS CASES`, marginX + 5, currentY + 6);
                 currentY += 12;
 
-                let tPrin = 0; let tInt = 0;
+                let tPrin = 0;
                 let dailyBody = data.newCasesDaily.map((c, i) => {
                     let pAmt = Number(c.principal || 0);
                     tPrin += pAmt;
                     let totPay = Number(c.totalPayable || c.principal || 0);
                     let days = c.installment ? Math.round(totPay / c.installment) : 0;
-                    let interest = totPay - pAmt;
-                    tInt += interest;
-
+                    
                     let ed = calculateEndDate(c.startDate, days);
 
                     return [
                         i+1, c.name || "-", formatDateDisplay(c.startDate), ed, days, 'Daily',
-                        getStatus(c), `RS.${pAmt.toLocaleString()}`, `RS.${interest.toLocaleString()}`
+                        getStatus(c), `RS.${pAmt.toLocaleString()}`
                     ];
                 });
 
                 docPdf.autoTable({
                     startY: currentY,
-                    head: [['S.No', 'Customer Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Amount', 'Interest']],
+                    head: [['S.No', 'Customer Name', 'Start Date', 'End Date', 'Days', 'Type', 'Status', 'Amount']],
                     body: dailyBody,
-                    foot: [['', '', '', '', '', '', 'TOTAL:', `RS.${tPrin.toLocaleString()}`, `RS.${tInt.toLocaleString()}`]],
+                    foot: [['', '', '', '', '', '', 'TOTAL:', `RS.${tPrin.toLocaleString()}`]],
                     theme: 'grid',
                     headStyles: { fillColor: [30, 136, 229] },
                     footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
@@ -1332,7 +1330,7 @@
                 currentY = docPdf.lastAutoTable.finalY + 15;
             }
 
-            // 2. MONTHLY CASES
+            // 2. MONTHLY CASES (NO INTEREST)
             if(data.newCasesMonthly && data.newCasesMonthly.length > 0) {
                 if (currentY > 250) { docPdf.addPage(); currentY = 20; }
                 docPdf.setFontSize(14);
@@ -1342,26 +1340,68 @@
                 docPdf.text(`MONTHLY CASES HISAAB`, marginX + 5, currentY + 6);
                 currentY += 12;
 
-                let tPrinM = 0; let tIntM = 0;
+                let tPrinM = 0;
                 let monthlyBody = data.newCasesMonthly.map((c, i) => {
                     let pAmt = Number(c.principal || 0);
                     tPrinM += pAmt;
-                    let interest = pAmt * (Number(c.rate)||0)/100;
-                    tIntM += interest;
                     return [
-                        i+1, c.name || "-", `RS.${pAmt.toLocaleString()}`, formatDateDisplay(c.startDate), `RS.${interest.toLocaleString()}`
+                        i+1, c.name || "-", formatDateDisplay(c.startDate), 'Monthly', getStatus(c), `RS.${pAmt.toLocaleString()}`
                     ];
                 });
 
                 docPdf.autoTable({
                     startY: currentY,
-                    head: [['S.No', 'Customer Name', 'Amount', 'Date', 'Interest (Monthly)']],
+                    head: [['S.No', 'Customer Name', 'Start Date', 'Type', 'Status', 'Amount']],
                     body: monthlyBody,
-                    foot: [['', 'TOTAL:', `RS.${tPrinM.toLocaleString()}`, '', `RS.${tIntM.toLocaleString()}`]],
+                    foot: [['', '', '', '', 'TOTAL:', `RS.${tPrinM.toLocaleString()}`]],
                     theme: 'grid',
                     headStyles: { fillColor: [30, 136, 229] },
                     footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
-                    styles: { fontSize: 9, cellPadding: 3 }
+                    styles: { fontSize: 9, cellPadding: 3 },
+                    didParseCell: function(hookData) {
+                        if (hookData.section === 'body' && hookData.column.index === 4) {
+                            if (hookData.cell.raw === 'New') hookData.cell.styles.textColor = [46, 125, 50]; 
+                            if (hookData.cell.raw === 'Old') hookData.cell.styles.textColor = [198, 40, 40]; 
+                        }
+                    }
+                });
+                currentY = docPdf.lastAutoTable.finalY + 15;
+            }
+            
+            // 3. METER CASES (NEW ADDITION)
+            if(data.newCasesMeter && data.newCasesMeter.length > 0) {
+                if (currentY > 250) { docPdf.addPage(); currentY = 20; }
+                docPdf.setFontSize(14);
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFillColor(21, 101, 192);
+                docPdf.rect(marginX, currentY, 182, 8, 'F');
+                docPdf.text(`METER BASIS CASES`, marginX + 5, currentY + 6);
+                currentY += 12;
+
+                let tPrinMeter = 0;
+                let meterBody = data.newCasesMeter.map((c, i) => {
+                    let pAmt = Number(c.principal || 0);
+                    tPrinMeter += pAmt;
+                    return [
+                        i+1, c.name || "-", formatDateDisplay(c.startDate), 'Meter', getStatus(c), `RS.${pAmt.toLocaleString()}`
+                    ];
+                });
+
+                docPdf.autoTable({
+                    startY: currentY,
+                    head: [['S.No', 'Customer Name', 'Start Date', 'Type', 'Status', 'Amount']],
+                    body: meterBody,
+                    foot: [['', '', '', '', 'TOTAL:', `RS.${tPrinMeter.toLocaleString()}`]],
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 136, 229] },
+                    footStyles: { fillColor: [227, 242, 253], textColor: [0,0,0], fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 3 },
+                    didParseCell: function(hookData) {
+                        if (hookData.section === 'body' && hookData.column.index === 4) {
+                            if (hookData.cell.raw === 'New') hookData.cell.styles.textColor = [46, 125, 50]; 
+                            if (hookData.cell.raw === 'Old') hookData.cell.styles.textColor = [198, 40, 40]; 
+                        }
+                    }
                 });
                 currentY = docPdf.lastAutoTable.finalY + 15;
             }
