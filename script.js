@@ -300,7 +300,7 @@
             repNewDaily: "🆕 ਨਵੇਂ ਰੋਜ਼ਾਨਾ ਖਾਤੇ", repNewMonthly: "🆕 ਨਵੇਂ ਮਹੀਨੇ ਦੇ ਖਾਤੇ", repNewMeter: "🆕 ਨਵੇਂ ਮੀਟਰ ਖਾਤੇ",
             repRecDaily: "✅ ਰੋਜ਼ਾਨਾ ਰਿਕਵਰੀ", repRecMonthly: "✅ ਮਹੀਨੇ ਦੀ ਰਿਕਵਰੀ", repRecMeter: "✅ ਮੀਟਰ ਰਿਕਵਰੀ",
             repPendDaily: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਰੋਜ਼ਾਨਾ)", repPendMonthly: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮਹੀਨਾਵਾਰ)", repPendMeter: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮੀਟਰ)",
-            givenOn: "ਤਾਰੀਖ:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ", repTotal: "ਕੁੱਲ ਜੋੜ:"
+            givenOn: "ਤारीख:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ", repTotal: "ਕੁੱਲ ਜੋੜ:"
         }
     };
     
@@ -813,7 +813,6 @@
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
                         render();
                         
-                        // NEW: Auto update trash UI if it's open
                         if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
                             renderTrash();
                         }
@@ -1180,30 +1179,45 @@
                 if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
             }
             
+            // VIP FIX: pending calculation update
             if (!c.isArchived && c.currentBalance > 0) {
                 let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
                 const toLocalYMD = (d) => { let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); let day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
+                
+                // VIP FIX: Sirf unhi entries ko check karo jo report ki end date se pehle ki hain
+                let historyUpToEnd = c.history ? c.history.filter(h => h.date <= rangeEndStr) : [];
+
                 if (c.type === 'daily' || c.type === 'meter') {
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     let iterDate = new Date(sy, sm - 1, sd); iterDate.setDate(iterDate.getDate() + 1); 
                     while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
-                        if (!c.history || !c.history.some(h => h.date === currentCheckStr)) { accumulatedTotal += amountPerUnit; missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); }
+                        if (!historyUpToEnd.some(h => h.date === currentCheckStr)) { 
+                            accumulatedTotal += amountPerUnit; 
+                            missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); 
+                        }
                         iterDate.setDate(iterDate.getDate() + 1);
                     }
                 } else if (c.type === 'monthly') {
                     amountPerUnit = c.principal * (c.rate || 0) / 100;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    
+                    // VIP FIX: Total paid amount ke hisaab se check karo ki kitne mahine cover ho gaye
+                    let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
+                    let monthsPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
+                    
                     let cycle = 1;
                     while (true) {
                         let nextDue = new Date(sy, (sm - 1) + cycle, sd);
                         if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
                         let nextDueStr = toLocalYMD(nextDue);
                         if (nextDueStr > rangeEndStr) break; 
-                        let targetY = nextDue.getFullYear(); let targetM = nextDue.getMonth(); 
-                        let paidThisCycle = c.history && c.history.some(h => { let [hy, hm, hd] = h.date.split('-').map(Number); return hy === targetY && (hm - 1) === targetM; });
-                        if (!paidThisCycle) { accumulatedTotal += amountPerUnit; missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); }
+                        
+                        if (cycle > monthsPaid) {
+                            accumulatedTotal += amountPerUnit; 
+                            missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); 
+                        }
                         cycle++;
                     }
                 }
