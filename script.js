@@ -804,12 +804,16 @@
                 if (document.getElementById('main-app').style.display === 'none') {
                     db = newDb;
                     localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                    // SMART CHILD FIX: App khulte hi memory save kar li
+                    window.lastSyncedDbStr = JSON.stringify(db); 
                     document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
                 } else {
                     if (!isSaving && JSON.stringify(newDb) !== JSON.stringify(db)) {
                         if(!validateSession(newDb)) return;
                         db = newDb;
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                        // SMART CHILD FIX: Sync track update
+                        window.lastSyncedDbStr = JSON.stringify(db); 
                         render();
                         
                         if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
@@ -848,8 +852,10 @@
         render();
         document.getElementById('sync-status').innerText = "Saving to Cloud...";
         document.getElementById('cloud-indicator').className = "status-dot";
+        
         let oldDb = [];
         try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
+        
         const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
             document.getElementById('sync-status').innerText = "Cloud Synced";
@@ -861,18 +867,44 @@
             document.getElementById('cloud-indicator').className = "status-dot offline";
             isSaving = false;
         };
-        if (oldDb.length !== db.length || oldDb.length === 0) {
+
+        if (oldDb.length === 0) {
+            // First time ya hard refresh par
             database.ref('credix_db').set(db).then(successCb).catch(errCb);
         } else {
             let updates = {};
             let hasChanges = false;
-            for (let i = 0; i < db.length; i++) {
-                if (JSON.stringify(db[i]) !== JSON.stringify(oldDb[i])) {
-                    updates[i] = db[i]; 
+            let maxLen = Math.max(oldDb.length, db.length);
+            
+            for (let i = 0; i < maxLen; i++) {
+                let oldItem = oldDb[i];
+                let newItem = db[i];
+                
+                if (!oldItem && newItem) {
+                    updates[i] = newItem; // Naya customer add hua
                     hasChanges = true;
+                } else if (oldItem && !newItem) {
+                    updates[i] = null; // Customer / Data delete hua
+                    hasChanges = true;
+                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+                    // SMART CHILD FIX: Sirf wahi entry (kishat/interest) cloud par bhejo jo change hui hai!
+                    for (let key in newItem) {
+                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
+                            updates[i + '/' + key] = newItem[key]; // Eg: '5/history' sirf ye jayega
+                            hasChanges = true;
+                        }
+                    }
+                    for (let key in oldItem) {
+                        if (!(key in newItem)) {
+                            updates[i + '/' + key] = null;
+                            hasChanges = true;
+                        }
+                    }
                 }
             }
+            
             if (hasChanges) {
+                // Ab Firebase par "Pura App" nahi, sirf update hui entry jayegi (Saves 10GB Data)
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
             } else {
                 successCb();
