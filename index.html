@@ -400,16 +400,16 @@
             
             <button class="main-btn" onclick="generateReport()" id="t-repBtn" style="padding:14px; margin-top:0; font-size:15px;">Generate Report</button>
             <div id="rep-results" style="display:none; margin-top:20px; padding-top:15px; border-top:1px dashed rgba(255,255,255,0.1);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                    <div style="flex:1; min-width:30%;">
                         <span id="t-repGiven" style="font-size:12px; color:var(--text-muted);">Total Given</span><br>
                         <b style="font-size:20px; color:var(--accent-orange);" id="rep-given">₹0</b>
                     </div>
-                    <div style="flex:1; text-align:center;">
+                    <div style="flex:1; min-width:30%; text-align:center;">
                         <span id="t-repRet" style="font-size:12px; color:var(--text-muted);">Total Recovered</span><br>
                         <b style="font-size:20px; color:var(--success);" id="rep-ret">₹0</b>
                     </div>
-                    <div style="flex:1; text-align:right; display:none;" id="rep-profit-container">
+                    <div style="flex:1; min-width:30%; text-align:right; display:none;" id="rep-profit-container">
                         <span id="t-repProfit" style="font-size:12px; color:var(--text-muted);">Profit Earned</span><br>
                         <b style="font-size:20px; color:var(--owner-gold);" id="rep-profit">₹0</b>
                     </div>

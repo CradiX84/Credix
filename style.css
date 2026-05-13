@@ -361,19 +361,26 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     display: none !important; 
 }
 
-/* --- REVIEW SECTION FIXES (ADD TO END) --- */
-/* FIX: Sirf pehle wale div (jisme text/labels hain) ko wrap karein, progress bar ko chod dein */
-#section-stats .sum-card-full > div:nth-of-type(1)[style*="display:flex"] {
-    flex-wrap: wrap !important;
-    gap: 8px;
-    justify-content: space-between !important;
+/* --- MOBILE PERFORMANCE OPTIMIZATION (GPU ACCELERATION) --- */
+.cust-card, .sum-card, .search-stat-card, .glass-card, .calc-btn {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform, opacity;
 }
 
-/* FIX: Ensure the progress bar solid line is completely unaffected */
-#section-stats .sum-card-full > div:nth-of-type(2)[style*="display:flex"] {
-    flex-wrap: nowrap !important;
-    gap: 0 !important;
-    justify-content: flex-start !important;
+.bottom-nav {
+    transform: translateX(-50%) translateZ(0) !important;
+    -webkit-transform: translateX(-50%) translateZ(0) !important;
+    will-change: transform, backdrop-filter;
+}
+
+/* --- REVIEW SECTION MOBILE FIX (TOP 3 COLUMNS) --- */
+#section-stats .sum-card-full > div:nth-of-type(1)[style*="display:flex"] {
+    flex-wrap: wrap !important;
+    gap: 10px;
+    justify-content: space-between !important;
 }
 
 #section-stats .sum-card-full span[id^="txt-"] {
@@ -384,19 +391,12 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 #txt-recovered { text-align: left; flex: 1; min-width: fit-content; }
 #txt-remaining { text-align: right; flex: 1; min-width: fit-content; }
 
-/* --- MOBILE PERFORMANCE OPTIMIZATION (GPU ACCELERATION) --- */
-/* FIX: Bottom Nav ko list se hataya taaki side mein na bhage */
-.cust-card, .sum-card, .search-stat-card, .glass-card, .calc-btn {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    will-change: transform, opacity;
+/* TOTAL GIVEN, RECOVERED, PROFIT WRAP FIX */
+#rep-results > div:first-child {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
 }
-
-/* FIX: Center align aur GPU fast dono ek saath lagaye */
-.bottom-nav {
-    transform: translateX(-50%) translateZ(0) !important;
-    -webkit-transform: translateX(-50%) translateZ(0) !important;
-    will-change: transform, backdrop-filter;
+#rep-results > div:first-child > div {
+    flex: 1;
+    min-width: 30% !important;
 }
