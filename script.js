@@ -125,7 +125,6 @@
     function renderTrash() {
         let tr = getTrash();
         let html = '';
-        // Firebase auto-removes empty arrays, safeguard added:
         let list = currentTrashTab === 'cases' ? (tr.cases || []) : (tr.histories || []);
 
         if (!list || list.length === 0) {
@@ -1132,6 +1131,7 @@
         showToast("PDF Downloaded!");
     }
 
+    // VIP FIX: GENERATE REPORT WITH CASH OUT LOGIC (APP UI MEIN 15000, OWNER PDF MEIN 13500)
     function generateReport() {
         const start = document.getElementById('rep-start').value;
         const end = document.getElementById('rep-end').value;
@@ -1152,12 +1152,27 @@
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
             if (type !== 'all' && c.type !== type) return;
             
+            // VIP FIX: Cash Out deduction for Monthly ONLY FOR OWNER PDF
             if (c.startDate >= start && c.startDate <= end) {
-                totalGiven += c.principal;
                 let cCopy = {...c};
-                if (c.type === 'daily') newCasesDaily.push(cCopy);
-                else if (c.type === 'monthly') { if(isOwnerMode) { let upfrontProfit = c.principal * ((c.rate || 0) / 100); totalProfitInRange += upfrontProfit; cCopy.tempUpfrontProfit = upfrontProfit; } newCasesMonthly.push(cCopy); }
-                else if (c.type === 'meter') newCasesMeter.push(cCopy);
+                let actualCashGiven = c.principal;
+
+                if (c.type === 'monthly') {
+                    let upfrontProfit = c.principal * ((c.rate || 0) / 100);
+                    actualCashGiven = c.principal - upfrontProfit; // Deduct Interest for PDF ONLY
+                    if(isOwnerMode) {
+                        totalProfitInRange += upfrontProfit;
+                        cCopy.tempUpfrontProfit = upfrontProfit;
+                    }
+                    newCasesMonthly.push(cCopy);
+                } else if (c.type === 'daily') {
+                    newCasesDaily.push(cCopy);
+                } else if (c.type === 'meter') {
+                    newCasesMeter.push(cCopy);
+                }
+
+                cCopy.actualCashGiven = actualCashGiven; // Save value for later PDF use
+                totalGiven += actualCashGiven; // Adjust Top Report Counter (Actual cash outflow)
             }
             
             let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
@@ -1179,12 +1194,10 @@
                 if (c.type === 'daily') paymentsDaily.push(pData); else if (c.type === 'monthly') paymentsMonthly.push(pData); else if (c.type === 'meter') paymentsMeter.push(pData);
             }
             
-            // VIP FIX: pending calculation update
             if (!c.isArchived && c.currentBalance > 0) {
                 let missedDates = [], accumulatedTotal = 0, amountPerUnit = 0;
                 const toLocalYMD = (d) => { let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); let day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
                 
-                // VIP FIX: Sirf unhi entries ko check karo jo report ki end date se pehle ki hain
                 let historyUpToEnd = c.history ? c.history.filter(h => h.date <= rangeEndStr) : [];
 
                 if (c.type === 'daily' || c.type === 'meter') {
@@ -1203,7 +1216,6 @@
                     amountPerUnit = c.principal * (c.rate || 0) / 100;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
                     
-                    // VIP FIX: Total paid amount ke hisaab se check karo ki kitne mahine cover ho gaye
                     let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
                     let monthsPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
                     
@@ -1281,8 +1293,9 @@
             let html = `<div style="color:${color}; font-size:11px; margin:15px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
             let sectionTotal = 0;
             list.forEach(c => { 
-                sectionTotal += c.principal;
-                html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${c.principal.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
+                let amtToDisplay = c.principal; // VIP FIX: APP UI MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
+                sectionTotal += amtToDisplay;
+                html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-break:break-all; overflow-wrap:anywhere; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${amtToDisplay.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
@@ -1430,7 +1443,11 @@
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
                 let totalValue = 0;
-                let body = list.map((c, i) => { totalValue += Number(c.principal || 0); return [i + 1, c.name, formatDateDisplay(c.startDate), typeLabel, `RS. ${Number(c.principal).toLocaleString()}`]; });
+                let body = list.map((c, i) => { 
+                    let amtToDisplay = Number(c.actualCashGiven || c.principal || 0); // VIP FIX: OWNER PDF MEIN 13500 AAYEGA
+                    totalValue += amtToDisplay; 
+                    return [i + 1, c.name, formatDateDisplay(c.startDate), typeLabel, `RS. ${amtToDisplay.toLocaleString()}`]; 
+                });
                 doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: body, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] } });
                 currentY = doc.lastAutoTable.finalY + 12;
             };
@@ -1503,7 +1520,7 @@
         } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
     }
 
-    // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT (UPDATED: NO PROFIT, ADDED METER) ---
+    // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT ---
     window.downloadStaffPDF = function() {
         if(!lastGeneratedReportData) return showToast("Generate report first!");
         try {
@@ -1546,7 +1563,7 @@
 
                 let tPrin = 0;
                 let dailyBody = data.newCasesDaily.map((c, i) => {
-                    let pAmt = Number(c.principal || 0);
+                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
                     tPrin += pAmt;
                     let totPay = Number(c.totalPayable || c.principal || 0);
                     let days = c.installment ? Math.round(totPay / c.installment) : 0;
@@ -1590,7 +1607,7 @@
 
                 let tPrinM = 0;
                 let monthlyBody = data.newCasesMonthly.map((c, i) => {
-                    let pAmt = Number(c.principal || 0);
+                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
                     tPrinM += pAmt;
                     return [
                         i+1, c.name || "-", formatDateDisplay(c.startDate), 'Monthly', getStatus(c), `RS.${pAmt.toLocaleString()}`
@@ -1616,7 +1633,7 @@
                 currentY = docPdf.lastAutoTable.finalY + 15;
             }
             
-            // 3. METER CASES (NEW ADDITION)
+            // 3. METER CASES
             if(data.newCasesMeter && data.newCasesMeter.length > 0) {
                 if (currentY > 250) { docPdf.addPage(); currentY = 20; }
                 docPdf.setFontSize(14);
@@ -1628,7 +1645,7 @@
 
                 let tPrinMeter = 0;
                 let meterBody = data.newCasesMeter.map((c, i) => {
-                    let pAmt = Number(c.principal || 0);
+                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL
                     tPrinMeter += pAmt;
                     return [
                         i+1, c.name || "-", formatDateDisplay(c.startDate), 'Meter', getStatus(c), `RS.${pAmt.toLocaleString()}`
