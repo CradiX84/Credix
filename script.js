@@ -75,7 +75,7 @@
     }
 
     function getConfig() {
-        let conf = db.find(x => x && x.type === 'config');
+        let conf = db.find(x => x.type === 'config');
         if (!conf) {
             conf = { id: 'config_staff', type: 'config', staffList: [] };
             db.push(conf);
@@ -85,70 +85,13 @@
 
     // --- VIP TRASH BIN (RECYCLE LOGIC) ---
     function getTrash() {
-        let tr = db.find(x => x && x.type === 'trash');
+        let tr = db.find(x => x.type === 'trash');
         if (!tr) {
             tr = { id: 'trash_bin', type: 'trash', cases: [], histories: [] };
             db.push(tr);
         }
         return tr;
     }
-
-    // --- NAYA AUDIT LOG ENGINE ---
-    function getAuditLogs() {
-        let lg = db.find(x => x && x.type === 'audit');
-        if (!lg) {
-            lg = { id: 'audit_log', type: 'audit', logs: [] };
-            db.push(lg);
-        }
-        return lg;
-    }
-
-    function logActivity(actionMsg, color) {
-        let lg = getAuditLogs();
-        if(!lg.logs) lg.logs = [];
-        let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
-        let user = isOwnerMode ? "👑 Owner" : (deviceStaffName || "Unknown Staff");
-        lg.logs.unshift({ time: nowStr, user: user, action: actionMsg, color: color || "white" });
-        if(lg.logs.length > 500) lg.logs.length = 500; 
-    }
-
-    function openAuditLogModal() {
-        closeModal('settings-modal');
-        document.getElementById('audit-log-modal').style.display = 'flex';
-        renderAuditLogs();
-    }
-
-    function renderAuditLogs() {
-        let lg = getAuditLogs();
-        let html = '';
-        if (!lg.logs || lg.logs.length === 0) {
-            html = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px; border:1px dashed rgba(255,255,255,0.1); border-radius:15px;">No activity logged yet.</div>`;
-        } else {
-            lg.logs.forEach(log => {
-                let userColor = log.user.includes("Owner") ? "var(--owner-gold)" : "var(--accent-orange)";
-                html += `
-                <div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; margin-bottom:8px; border-left: 3px solid ${log.color};">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                        <span style="font-size:11px; font-weight:700; color:${userColor};">${log.user}</span>
-                        <span style="font-size:9px; color:var(--text-muted);">${log.time}</span>
-                    </div>
-                    <div style="font-size:13px; color:white; word-break:break-word;">${log.action}</div>
-                </div>`;
-            });
-        }
-        document.getElementById('audit-log-container').innerHTML = html;
-    }
-
-    function clearAuditLogs() {
-        askConfirm("Permanently clear all activity logs?", () => {
-            let lg = getAuditLogs();
-            lg.logs = [];
-            saveAndRender();
-            renderAuditLogs();
-            showToast("Logs Cleared! 🗑️");
-        });
-    }
-    // ----------------------------
 
     let currentTrashTab = 'cases';
     let isTrashMulti = false;
@@ -254,7 +197,7 @@
                 if(!tr.histories) return;
                 let item = tr.histories[idx];
                 if (action === 'restore') {
-                    let targetCase = db.find(x => x && x.id === item.caseId && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
+                    let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash');
                     if (targetCase) {
                         delete item.deletedAt;
                         delete item.deletedBy;
@@ -270,8 +213,6 @@
                 tr.histories.splice(idx, 1);
             }
         });
-
-        logActivity(action === 'restore' ? `Restored ${indices.length} item(s) from Recycle Bin` : `Permanently deleted ${indices.length} item(s) from Recycle Bin`, action === 'restore' ? "var(--success)" : "var(--danger)");
 
         isTrashMulti = false;
         document.getElementById('btn-trash-multi').innerText = 'MULTI-SELECT';
@@ -627,12 +568,16 @@
         }
     }
 
+    // VIP FIX: Logout par cache clear aur Firebase disconnect
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
         document.getElementById('lock-screen').style.display = 'flex'; 
         
-        try { database.ref('credix_db').off(); } catch(e) { console.log(e); }
+        // Disconnect from Firebase to stop background downloads
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) { console.log(e); }
 
         resetPin(); 
         isOwnerMode = false; 
@@ -650,7 +595,7 @@
         switchTab('dash'); 
     }
     
-    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x && x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
+    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
     
     function openStaffModal() { closeModal('settings-modal'); renderStaffList(); document.getElementById('staff-modal').style.display = 'flex'; }
     
@@ -776,7 +721,6 @@
             activeStaffPhoto = "";
             activeLoginPin = pin; 
             showToast("Owner Mode Unlocked 👑"); unlockApp(); 
-            logActivity("Logged in to the system", "var(--success)"); saveAndRender();
         } else { 
             let staffMatch = conf.staffList.find(s => s.pin === pin); 
             if (staffMatch) { 
@@ -785,14 +729,12 @@
                 activeStaffPhoto = staffMatch.photo || "";
                 activeLoginPin = pin; 
                 showToast(`Welcome ${deviceStaffName} 👋`); unlockApp(); 
-                logActivity("Logged in to the system", "var(--success)"); saveAndRender();
             } else if (pin === currentPin && conf.staffList.length === 0) { 
                 isOwnerMode = false; 
                 deviceStaffName = "Default Staff"; 
                 activeStaffPhoto = "";
                 activeLoginPin = pin; 
                 showToast("Staff Mode Active"); unlockApp(); 
-                logActivity("Logged in to the system", "var(--success)"); saveAndRender();
             } else { 
                 triggerShakeLock();
                 showToast("Invalid ID / PIN"); resetPin(); 
@@ -839,7 +781,6 @@
             document.getElementById('personal-wrap').style.display = 'flex';
             document.getElementById('btn-owner-pin').style.display = 'block';
             document.getElementById('btn-manage-staff').style.display = 'block';
-            document.getElementById('btn-audit-log').style.display = 'block';
             document.getElementById('owner-analytics').style.display = 'block';
             document.getElementById('wrap-staff-ref').style.display = 'flex'; 
             document.getElementById('rep-search-wrap').style.display = 'flex'; 
@@ -851,7 +792,6 @@
             document.getElementById('personal-wrap').style.display = 'none';
             document.getElementById('btn-owner-pin').style.display = 'none';
             document.getElementById('btn-manage-staff').style.display = 'none';
-            document.getElementById('btn-audit-log').style.display = 'none';
             document.getElementById('owner-analytics').style.display = 'none';
             document.getElementById('is-personal').checked = false;
             document.getElementById('wrap-staff-ref').style.display = 'none'; 
@@ -860,13 +800,17 @@
             document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
         }
         
-        try { database.ref('credix_db').off(); } catch(e) {}
+        // VIP FIX: App unlock hone par hi database connect hoga
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) {}
         setupFirebaseListener();
         
         render(); checkAutoBackup();
     }
 
     function setupFirebaseListener() {
+        // App khulte hi phone ki memory wala data check karo
         let cachedDb = [];
         try {
             cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
@@ -879,20 +823,11 @@
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
-                let rawDb = snapshot.val();
-                let newDb = [];
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
                 
-                // VIP FIX: Firebase se aane wale "null" (khandhar) data ko saaf karna
-                if (Array.isArray(rawDb)) {
-                    newDb = rawDb.filter(item => item !== null && item !== undefined);
-                } else {
-                    newDb = Object.values(rawDb).filter(item => item !== null && item !== undefined);
-                }
-
-                newDb.forEach(item => { 
-                    if(item && item.type !== 'config' && item.type !== 'trash' && item.type !== 'audit' && !item.history) item.history = []; 
-                });
-                
+                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
                     if (document.getElementById('main-app').style.display === 'none') {
                         db = newDb;
@@ -1052,9 +987,7 @@
             if(isNaN(dVals) || dVals <= 0) { triggerShake('days'); return showToast(tLang.missingDays || "Missing Total Days!"); }
             cust.totalPayable = tRet; cust.currentBalance = cust.totalPayable; cust.installment = cust.totalPayable / dVals; 
         }
-        db.push(cust); 
-        logActivity("Created new record for: " + name + " (₹" + amt + ")", "var(--success)");
-        saveAndRender(); 
+        db.push(cust); saveAndRender(); 
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
         lastCroppedBase64 = ''; 
@@ -1089,7 +1022,7 @@
         document.getElementById('pay-modal').style.display = 'flex'; 
     }
 
-    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); logActivity("Collected ₹" + amt + " from " + c.name, "var(--success)"); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
+    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
     
     function openBulkModal(id) { 
         let c = db.find(x => x.id === id); 
@@ -1105,7 +1038,7 @@
         document.getElementById('bulk-modal').style.display = 'flex'; 
     }
 
-    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); logActivity("Processed Bulk Entry for " + c.name, "var(--accent-orange)"); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
+    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
     
     function removeEditPhoto() {
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
@@ -1138,20 +1071,11 @@
     async function saveEdit() { 
         let id = parseInt(document.getElementById('edit-id').value); 
         let c = db.find(x => x.id === id); 
-        
         let oldRate = c.rate; 
         let oldInstallment = c.installment; 
         let oldTotalPayable = c.totalPayable; 
-        let oldName = c.name;
-        let oldPrincipal = c.principal;
-        let oldDate = c.startDate;
-        let oldPhoto = c.photo;
-        let oldStaffRef = c.staffRef;
-        let oldIsPersonal = c.isPersonal;
-
         let nameVal = document.getElementById('edit-name').value; 
         if (nameVal) c.name = nameVal; 
-        
         if (lastCroppedBase64) { 
             c.photo = lastCroppedBase64; 
         } 
@@ -1164,60 +1088,8 @@
                 c.photo = await toSquareBase64(fileInput.files[0]); 
             } 
         }
-        
-        if(isOwnerMode) { 
-            c.staffRef = document.getElementById('edit-staff-ref').value.trim(); 
-            c.isPersonal = document.getElementById('edit-is-personal').checked; 
-        } 
-        
-        let dateVal = document.getElementById('edit-date').value; 
-        if (dateVal) c.startDate = dateVal; 
-        
-        let amtVal = parseFloat(document.getElementById('edit-amt').value); 
-        if (!isNaN(amtVal)) c.principal = amtVal; 
-        
-        let extra = parseFloat(document.getElementById('edit-extra').value); 
-        if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; 
-        else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; 
-        else { 
-            c.installment = !isNaN(extra) ? extra : oldInstallment; 
-            let retInput = document.getElementById('edit-ret'); 
-            if (retInput && retInput.value) { 
-                let parsedRet = parseFloat(retInput.value); 
-                c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); 
-            } else c.totalPayable = oldTotalPayable || c.principal; 
-        } 
-        
+        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } 
         recalculateCase(c); 
-
-        let changes = [];
-        if(oldName !== c.name) changes.push(`Name to ${c.name}`);
-        if(oldPrincipal !== c.principal) changes.push(`Principal to ₹${c.principal}`);
-        if(oldDate !== c.startDate) changes.push(`Date to ${formatDateDisplay(c.startDate)}`);
-        if(oldPhoto !== c.photo) {
-            if(c.photo === "") changes.push(`Removed Photo`);
-            else changes.push(`Updated Photo`);
-        }
-        if(c.type === 'monthly' && oldRate !== c.rate) changes.push(`Rate to ${c.rate}%`);
-        if(c.type === 'meter' && oldRate !== c.rate) changes.push(`Rozana Vyaj to ₹${(c.principal * c.rate / 100).toFixed(0)}`);
-        if(c.type === 'daily') {
-            if(oldInstallment !== c.installment) changes.push(`Kishat to ₹${c.installment}`);
-            if(oldTotalPayable !== c.totalPayable) changes.push(`Total Return to ₹${c.totalPayable}`);
-        }
-        if(isOwnerMode) {
-            if(oldStaffRef !== c.staffRef) changes.push(`Staff Ref to ${c.staffRef || 'None'}`);
-            if(oldIsPersonal !== c.isPersonal) changes.push(c.isPersonal ? `Marked as Personal` : `Removed Personal Mark`);
-        }
-
-        let logMsg = `Edited account of ${oldName}`;
-        if(changes.length > 0) {
-            logMsg += `<br><span style="color:#ff6a00; font-size:11px;">Changes: ${changes.join(" | ")}</span>`;
-        } else {
-            logMsg += `<br><span style="color:var(--text-muted); font-size:11px;">(Opened and saved without making changes)</span>`;
-        }
-        
-        logActivity(logMsg, "var(--owner-gold)");
-
         closeModal('edit-modal'); 
         saveAndRender(); 
         lastCroppedBase64 = ''; 
@@ -1231,11 +1103,10 @@
             if(cIndex > -1) {
                 let c = db[cIndex];
                 let tr = getTrash();
-                if (!tr.cases) tr.cases = []; 
+                if (!tr.cases) tr.cases = []; // FIREBASE EMPTY ARRAY FIX
                 let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
                 tr.cases.push({ ...c, deletedAt: nowStr, deletedBy: deviceStaffName });
                 db.splice(cIndex, 1);
-                logActivity("Moved account " + c.name + " to Recycle Bin", "var(--danger)");
                 saveAndRender(); 
                 showToast("Account Moved to Recycle Bin! 🗑️"); 
             }
@@ -1246,13 +1117,12 @@
         askConfirm("Move this entry to Recycle Bin?", () => { 
             let c = db.find(x => x.id === custId); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; 
+            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let deletedEntry = c.history[originalIndex];
             tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
             c.history.splice(originalIndex, 1); 
             recalculateCase(c); 
-            logActivity("Moved an entry from " + c.name + " to Recycle Bin", "var(--danger)");
             saveAndRender(); 
             showToast("Entry Moved to Recycle Bin! 🗑️"); 
         }); 
@@ -1264,7 +1134,7 @@
         askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
             let c = db.find(x => x.id === id); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; 
+            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); 
             indices.forEach(idx => { 
@@ -1274,13 +1144,12 @@
             }); 
             multiDelMode[id] = false; 
             recalculateCase(c); 
-            logActivity("Moved " + checks.length + " entries from " + c.name + " to Recycle Bin", "var(--danger)");
             saveAndRender(); 
             showToast("Selected Moved to Recycle Bin! 🗑️"); 
         }); 
     }
 
-    function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; logActivity((isArchiving ? "Archived" : "Restored") + " account: " + c.name, "var(--text-muted)"); saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
+    function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
 
     function generateCustomerPDF(id) {
         const { jsPDF } = window.jspdf;
@@ -1331,7 +1200,7 @@
         let closedCasesInRange = [];
         const rangeEndStr = end;
         
-        db.filter(x => x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
+        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
@@ -1874,7 +1743,7 @@
         let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
         let today = getISTDate(); // IST FIX
-        let pureDB = db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
+        let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
@@ -1944,7 +1813,7 @@
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
-        db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
+        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
             if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
