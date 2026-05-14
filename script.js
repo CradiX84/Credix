@@ -283,7 +283,7 @@
             searchPh: "ਨਾਮ ਖੋਜੋ...", cleanDashTitle: "ਕਲੀਨ ਡੈਸ਼ਬੋਰਡ", cleanDashSub: "ਖਾਤਾ ਦੇਖਣ ਲਈ ਉੱਪਰ ਨਾਮ ਖੋਜੋ।<br>ਪੂਰੀ ਸੂਚੀ ਲਈ <b>ਖਾਤੇ</b> टैਬ 'ਤੇ ਜਾਓ।", 
             bizPort: "ਕਾਰੋਬਾਰ ਪੋਰਟਫੋਲੀਓ", recStatus: "ਰਿਕਵਰੀ ਸਥਿਤੀ", monthly: "ਮਹੀਨਾਵਾਰ", daily: "ਰੋਜ਼ਾਨਾ", meter: "ਮੀਟਰ", recovered: "ਵਸੂਲੀ ਹੋਈ", remaining: "ਬਕਾਇਆ", 
             ownerGrowth: "👑 ਮੁਨਾਫਾ ਅਤੇ ਵਿਕਾਸ", totInvested: "ਕੁੱਲ ਨਿਵੇਸ਼", netProfit: "ਪ੍ਰਾਪਤ ਮੁਨਾਫਾ", ownerNote: "ਇਹ ਡਾਟਾ ਸਿਰਫ਼ ਮਾਲਕ ਲਈ ਹੈ, ਸਟਾਫ਼ ਤੋਂ ਲੁਕਿਆ ਹੋਇਆ ਹੈ।",
-            refresh: "ਰਿਫ੍ਰਐਸ਼", totRetPh: "ਕੁੱਲ ਵਾਪਸੀ ਰਕਮ", totDaysPh: "ਕੁੱਲ ਦਿਨ", 
+            refresh: "ਰिफ੍ਰਐਸ਼", totRetPh: "ਕੁੱਲ ਵਾਪਸੀ ਰਕਮ", totDaysPh: "ਕੁੱਲ ਦਿਨ", 
             allTypes: "ਸਾਰੀਆਂ ਕਿਸਮਾਂ", fDaily: "ਰੋਜ਼ਾਨਾ", fMonthly: "ਮਹੀਨਾਵਾਰ", fMeter: "ਮੀਟਰ", fArchived: "ਬੰਦ ਖਾਤੇ (Archived)",
             optDaily: "ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", optMonthly: "ਮਹੀਨੇ ਦਾ ਵਿਆਜ", optMeter: "ਮੀਟਰ (ਰੋਜ਼ਾਨਾ)", markPersonal: "👑 ਪਰਸਨਲ ਖਾਤਾ",
             sortNew: "ਨਵਾਂ ਪਹਿਲਾਂ ▼", sortOld: "ਪੁਰਾਣਾ ਪਹਿਲਾਂ ▲",
@@ -568,10 +568,17 @@
         }
     }
 
+    // VIP FIX: Logout par cache clear aur Firebase disconnect
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
         document.getElementById('lock-screen').style.display = 'flex'; 
+        
+        // Disconnect from Firebase to stop background downloads
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) { console.log(e); }
+
         resetPin(); 
         isOwnerMode = false; 
         deviceStaffName = ''; 
@@ -792,35 +799,54 @@
             if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'none';
             document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
         }
+        
+        // VIP FIX: App unlock hone par hi database connect hoga
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) {}
+        setupFirebaseListener();
+        
         render(); checkAutoBackup();
     }
 
     function setupFirebaseListener() {
+        // App khulte hi phone ki memory wala data check karo
+        let cachedDb = [];
+        try {
+            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+        } catch(e) {}
+        
+        if (cachedDb.length > 0) {
+            db = cachedDb;
+            window.lastSyncedDbStr = JSON.stringify(db);
+        }
+
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
-                if (document.getElementById('main-app').style.display === 'none') {
-                    db = newDb;
-                    localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                    // SMART CHILD FIX: App khulte hi memory save kar li
-                    window.lastSyncedDbStr = JSON.stringify(db); 
-                    document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-                } else {
-                    if (!isSaving && JSON.stringify(newDb) !== JSON.stringify(db)) {
-                        if(!validateSession(newDb)) return;
+                
+                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
+                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                    if (document.getElementById('main-app').style.display === 'none') {
                         db = newDb;
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                        // SMART CHILD FIX: Sync track update
                         window.lastSyncedDbStr = JSON.stringify(db); 
-                        render();
-                        
-                        if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                            renderTrash();
+                        document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                    } else {
+                        if (!isSaving) {
+                            if(!validateSession(newDb)) return;
+                            db = newDb;
+                            localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                            window.lastSyncedDbStr = JSON.stringify(db); 
+                            render();
+                            
+                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                renderTrash();
+                            }
+                            showToast("Data Auto-Updated!");
                         }
-                        
-                        showToast("Data Auto-Updated!");
                     }
                 }
             } else {
@@ -869,7 +895,6 @@
         };
 
         if (oldDb.length === 0) {
-            // First time ya hard refresh par
             database.ref('credix_db').set(db).then(successCb).catch(errCb);
         } else {
             let updates = {};
@@ -881,16 +906,15 @@
                 let newItem = db[i];
                 
                 if (!oldItem && newItem) {
-                    updates[i] = newItem; // Naya customer add hua
+                    updates[i] = newItem; 
                     hasChanges = true;
                 } else if (oldItem && !newItem) {
-                    updates[i] = null; // Customer / Data delete hua
+                    updates[i] = null; 
                     hasChanges = true;
                 } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                    // SMART CHILD FIX: Sirf wahi entry (kishat/interest) cloud par bhejo jo change hui hai!
                     for (let key in newItem) {
                         if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
-                            updates[i + '/' + key] = newItem[key]; // Eg: '5/history' sirf ye jayega
+                            updates[i + '/' + key] = newItem[key]; 
                             hasChanges = true;
                         }
                     }
@@ -904,7 +928,6 @@
             }
             
             if (hasChanges) {
-                // Ab Firebase par "Pura App" nahi, sirf update hui entry jayegi (Saves 10GB Data)
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
             } else {
                 successCb();
@@ -1892,3 +1915,5 @@
             window.currentRecognition = null; 
         };
     }
+}
+Bhai  wo total or advance vala pdf ke owner update main to bilkul sahi aa raha hai but jab us pdf ko open kiya to app ne jo kal kishat total amount se minuse wala feature  update kiya tha na us main dikkat ho gi hai coz advance or total wala sirf owner main update karna tha staff ki or custom report main theek tha or kal jo apnw feature update kiya tha kishat wala ki principal - amount  = remaining wo staff ki pdf main or owner ki pdf or app main jo aana tha wo to sahi aa raha hai but owner ki report main jo last main column hota hai wo app ne 15000 set kardiya jb ki waha principal orignal theek aa rha tha us column me check karo 22 page wali custom report main  baki wo fix jo aaj diya hai vo update sirf un 2 option par dena tha main screenshot bhej raha hoon theek the usko vaise he update  rakho baki yeh theek kardo. Or sath main yeh 1st page par 3 no wala case uski pdf check karo ki app ne 2 bar 15000 add kar diya hai check karo dhyan se. Baki jo aaj ki app ne 2 fixes theek kare hai us se ui ka issue to ab 100% resolve ho gya hai ..or ab apko sirf kishat or is advance  pdf wale ko check karna hai usko dhyan se theek karo  or haan aaj ki chats main app ne file update karke jo 10gb data ka limit theek karke send kiya tha ab is fix hone ke baad vahi dena or css or html ki to file sahi hai usko ab fix nhi karna aap ab sirf yeh 2 issue theek kar do main us code ko replace kar loonga.. Bhai sabse achi baat ke aap ne jo ek kishat wala feature theek kiya na main waisa hi bhot  dino se chahta tha or aap ne mere dimang ke baat samjh ke mere kaho per woh kiya mujhe sabse accha laga us ke liye thankyou bhai
