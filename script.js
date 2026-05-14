@@ -75,7 +75,7 @@
     }
 
     function getConfig() {
-        let conf = db.find(x => x.type === 'config');
+        let conf = db.find(x => x && x.type === 'config');
         if (!conf) {
             conf = { id: 'config_staff', type: 'config', staffList: [] };
             db.push(conf);
@@ -85,7 +85,7 @@
 
     // --- VIP TRASH BIN (RECYCLE LOGIC) ---
     function getTrash() {
-        let tr = db.find(x => x.type === 'trash');
+        let tr = db.find(x => x && x.type === 'trash');
         if (!tr) {
             tr = { id: 'trash_bin', type: 'trash', cases: [], histories: [] };
             db.push(tr);
@@ -95,7 +95,7 @@
 
     // --- NAYA AUDIT LOG ENGINE ---
     function getAuditLogs() {
-        let lg = db.find(x => x.type === 'audit');
+        let lg = db.find(x => x && x.type === 'audit');
         if (!lg) {
             lg = { id: 'audit_log', type: 'audit', logs: [] };
             db.push(lg);
@@ -109,7 +109,7 @@
         let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
         let user = isOwnerMode ? "👑 Owner" : (deviceStaffName || "Unknown Staff");
         lg.logs.unshift({ time: nowStr, user: user, action: actionMsg, color: color || "white" });
-        if(lg.logs.length > 500) lg.logs.length = 500; // Limit memory
+        if(lg.logs.length > 500) lg.logs.length = 500; 
     }
 
     function openAuditLogModal() {
@@ -254,7 +254,7 @@
                 if(!tr.histories) return;
                 let item = tr.histories[idx];
                 if (action === 'restore') {
-                    let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
+                    let targetCase = db.find(x => x && x.id === item.caseId && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
                     if (targetCase) {
                         delete item.deletedAt;
                         delete item.deletedBy;
@@ -650,7 +650,7 @@
         switchTab('dash'); 
     }
     
-    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
+    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x && x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
     
     function openStaffModal() { closeModal('settings-modal'); renderStaffList(); document.getElementById('staff-modal').style.display = 'flex'; }
     
@@ -879,9 +879,19 @@
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
-                let newDb = snapshot.val();
-                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && item.type !== 'audit' && !item.history) item.history = []; });
+                let rawDb = snapshot.val();
+                let newDb = [];
+                
+                // VIP FIX: Firebase se aane wale "null" (khandhar) data ko saaf karna
+                if (Array.isArray(rawDb)) {
+                    newDb = rawDb.filter(item => item !== null && item !== undefined);
+                } else {
+                    newDb = Object.values(rawDb).filter(item => item !== null && item !== undefined);
+                }
+
+                newDb.forEach(item => { 
+                    if(item && item.type !== 'config' && item.type !== 'trash' && item.type !== 'audit' && !item.history) item.history = []; 
+                });
                 
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
                     if (document.getElementById('main-app').style.display === 'none') {
@@ -1864,7 +1874,7 @@
         let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
         let today = getISTDate(); // IST FIX
-        let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
+        let pureDB = db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
@@ -1934,7 +1944,7 @@
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
-        db.filter(x => x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
+        db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
             if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
