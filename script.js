@@ -25,8 +25,19 @@
             day: '2-digit'
         }).format(new Date());
     }
+
+    // --- MASTER FILTER (CRASH PREVENTER) ---
+    function normalizeDB(data) {
+        if (!data) return [];
+        if (Array.isArray(data)) return data.filter(x => x !== null && x !== undefined);
+        if (typeof data === 'object') return Object.values(data).filter(x => x !== null && x !== undefined);
+        return [];
+    }
     
-    let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+    let rawLocal = null;
+    try { rawLocal = JSON.parse(localStorage.getItem('paymitra_v11')); } catch(e){}
+    let db = normalizeDB(rawLocal);
+
     let pin = ""; 
     let activeLoginPin = ""; 
     let currentPin = localStorage.getItem('paymitra_pin') || "2525"; 
@@ -50,7 +61,6 @@
         return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
     }
 
-    // Helper for End Date Calculation
     function calculateEndDate(startDateStr, days) {
         if (!startDateStr || !days) return "-";
         let parts = startDateStr.split('-');
@@ -75,7 +85,7 @@
     }
 
     function getConfig() {
-        let conf = db.find(x => x.type === 'config');
+        let conf = db.find(x => x && x.type === 'config');
         if (!conf) {
             conf = { id: 'config_staff', type: 'config', staffList: [] };
             db.push(conf);
@@ -83,14 +93,68 @@
         return conf;
     }
 
-    // --- VIP TRASH BIN (RECYCLE LOGIC) ---
     function getTrash() {
-        let tr = db.find(x => x.type === 'trash');
+        let tr = db.find(x => x && x.type === 'trash');
         if (!tr) {
             tr = { id: 'trash_bin', type: 'trash', cases: [], histories: [] };
             db.push(tr);
         }
         return tr;
+    }
+
+    function getAuditLogs() {
+        let lg = db.find(x => x && x.type === 'audit');
+        if (!lg) {
+            lg = { id: 'audit_log', type: 'audit', logs: [] };
+            db.push(lg);
+        }
+        return lg;
+    }
+
+    function logActivity(actionMsg, color) {
+        let lg = getAuditLogs();
+        if(!lg.logs) lg.logs = [];
+        let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
+        let user = isOwnerMode ? "👑 Owner" : (deviceStaffName || "Unknown Staff");
+        lg.logs.unshift({ time: nowStr, user: user, action: actionMsg, color: color || "white" });
+        if(lg.logs.length > 500) lg.logs.length = 500; 
+    }
+
+    function openAuditLogModal() {
+        closeModal('settings-modal');
+        document.getElementById('audit-log-modal').style.display = 'flex';
+        renderAuditLogs();
+    }
+
+    function renderAuditLogs() {
+        let lg = getAuditLogs();
+        let html = '';
+        if (!lg.logs || lg.logs.length === 0) {
+            html = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px; border:1px dashed rgba(255,255,255,0.1); border-radius:15px;">No activity logged yet.</div>`;
+        } else {
+            lg.logs.forEach(log => {
+                let userColor = log.user.includes("Owner") ? "var(--owner-gold)" : "var(--accent-orange)";
+                html += `
+                <div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:12px; margin-bottom:8px; border-left: 3px solid ${log.color};">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                        <span style="font-size:11px; font-weight:700; color:${userColor};">${log.user}</span>
+                        <span style="font-size:9px; color:var(--text-muted);">${log.time}</span>
+                    </div>
+                    <div style="font-size:13px; color:white; word-break:break-word;">${log.action}</div>
+                </div>`;
+            });
+        }
+        document.getElementById('audit-log-container').innerHTML = html;
+    }
+
+    function clearAuditLogs() {
+        askConfirm("Permanently clear all activity logs?", () => {
+            let lg = getAuditLogs();
+            lg.logs = [];
+            saveAndRender();
+            renderAuditLogs();
+            showToast("Logs Cleared! 🗑️");
+        });
     }
 
     let currentTrashTab = 'cases';
@@ -197,7 +261,7 @@
                 if(!tr.histories) return;
                 let item = tr.histories[idx];
                 if (action === 'restore') {
-                    let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash');
+                    let targetCase = db.find(x => x && x.id === item.caseId && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
                     if (targetCase) {
                         delete item.deletedAt;
                         delete item.deletedBy;
@@ -213,6 +277,8 @@
                 tr.histories.splice(idx, 1);
             }
         });
+
+        logActivity(action === 'restore' ? `Restored ${indices.length} item(s) from Recycle Bin` : `Permanently deleted ${indices.length} item(s) from Recycle Bin`, action === 'restore' ? "var(--success)" : "var(--danger)");
 
         isTrashMulti = false;
         document.getElementById('btn-trash-multi').innerText = 'MULTI-SELECT';
@@ -373,67 +439,67 @@
 
     function applyLang() {
         const t = i18n[currentLang];
-        document.getElementById('t-appSub').innerText = t.appSub;
-        document.getElementById('t-sumPrin').innerText = t.sumPrin;
-        document.getElementById('t-sumCases').innerText = t.sumCases;
-        document.getElementById('t-sumOut').innerText = t.sumOut;
-        document.getElementById('t-refresh').innerText = t.refresh;
-        document.getElementById('t-addTitle').innerText = t.addTitle;
-        document.getElementById('t-addBtn').innerText = t.addBtn;
-        document.getElementById('t-opt-daily').innerText = t.optDaily;
-        document.getElementById('t-opt-monthly').innerText = t.optMonthly;
-        document.getElementById('t-opt-meter').innerText = t.optMeter;
-        document.getElementById('t-markPersonal').innerText = t.markPersonal;
+        if(document.getElementById('t-appSub')) document.getElementById('t-appSub').innerText = t.appSub;
+        if(document.getElementById('t-sumPrin')) document.getElementById('t-sumPrin').innerText = t.sumPrin;
+        if(document.getElementById('t-sumCases')) document.getElementById('t-sumCases').innerText = t.sumCases;
+        if(document.getElementById('t-sumOut')) document.getElementById('t-sumOut').innerText = t.sumOut;
+        if(document.getElementById('t-refresh')) document.getElementById('t-refresh').innerText = t.refresh;
+        if(document.getElementById('t-addTitle')) document.getElementById('t-addTitle').innerText = t.addTitle;
+        if(document.getElementById('t-addBtn')) document.getElementById('t-addBtn').innerText = t.addBtn;
+        if(document.getElementById('t-opt-daily')) document.getElementById('t-opt-daily').innerText = t.optDaily;
+        if(document.getElementById('t-opt-monthly')) document.getElementById('t-opt-monthly').innerText = t.optMonthly;
+        if(document.getElementById('t-opt-meter')) document.getElementById('t-opt-meter').innerText = t.optMeter;
+        if(document.getElementById('t-markPersonal')) document.getElementById('t-markPersonal').innerText = t.markPersonal;
         if(document.getElementById('t-editMarkPersonal')) document.getElementById('t-editMarkPersonal').innerText = t.markPersonal;
-        document.getElementById('t-navDash').innerText = t.navDash;
-        document.getElementById('t-navCust').innerText = t.navCust;
-        document.getElementById('t-navBulk').innerText = t.navBulk;
-        document.getElementById('t-navStats').innerText = t.navStats;
-        document.getElementById('t-setMainTitle').innerText = t.setMainTitle;
-        document.getElementById('t-setBackup').innerText = t.setBackup;
-        document.getElementById('t-setRestore').innerText = t.setRestore;
-        document.getElementById('btn-owner-pin').innerText = t.setPinOwner;
-        document.getElementById('t-setLogout').innerText = t.setLogout;
-        document.getElementById('t-setClose').innerText = t.setClose;
-        document.getElementById('t-autoBackupLabel').innerText = t.autoBackupLabel;
-        document.getElementById('t-abNever').innerText = t.abNever;
-        document.getElementById('t-abDaily').innerText = t.abDaily;
-        document.getElementById('t-abMonthly').innerText = t.abMonthly;
-        document.getElementById('t-bizPort').innerText = t.bizPort;
-        document.getElementById('t-recStatus').innerText = t.recStatus;
-        document.getElementById('t-ownerGrowth').innerText = t.ownerGrowth;
-        document.getElementById('t-totInvested').innerText = t.totInvested;
-        document.getElementById('t-netProfit').innerText = t.netProfit;
-        document.getElementById('t-ownerNote').innerText = t.ownerNote;
-        document.getElementById('f-opt-all').innerText = t.allTypes;
-        document.getElementById('f-opt-daily').innerText = t.fDaily;
-        document.getElementById('f-opt-monthly').innerText = t.fMonthly;
-        document.getElementById('f-opt-meter').innerText = t.fMeter;
+        if(document.getElementById('t-navDash')) document.getElementById('t-navDash').innerText = t.navDash;
+        if(document.getElementById('t-navCust')) document.getElementById('t-navCust').innerText = t.navCust;
+        if(document.getElementById('t-navBulk')) document.getElementById('t-navBulk').innerText = t.navBulk;
+        if(document.getElementById('t-navStats')) document.getElementById('t-navStats').innerText = t.navStats;
+        if(document.getElementById('t-setMainTitle')) document.getElementById('t-setMainTitle').innerText = t.setMainTitle;
+        if(document.getElementById('t-setBackup')) document.getElementById('t-setBackup').innerText = t.setBackup;
+        if(document.getElementById('t-setRestore')) document.getElementById('t-setRestore').innerText = t.setRestore;
+        if(document.getElementById('btn-owner-pin')) document.getElementById('btn-owner-pin').innerText = t.setPinOwner;
+        if(document.getElementById('t-setLogout')) document.getElementById('t-setLogout').innerText = t.setLogout;
+        if(document.getElementById('t-setClose')) document.getElementById('t-setClose').innerText = t.setClose;
+        if(document.getElementById('t-autoBackupLabel')) document.getElementById('t-autoBackupLabel').innerText = t.autoBackupLabel;
+        if(document.getElementById('t-abNever')) document.getElementById('t-abNever').innerText = t.abNever;
+        if(document.getElementById('t-abDaily')) document.getElementById('t-abDaily').innerText = t.abDaily;
+        if(document.getElementById('t-abMonthly')) document.getElementById('t-abMonthly').innerText = t.abMonthly;
+        if(document.getElementById('t-bizPort')) document.getElementById('t-bizPort').innerText = t.bizPort;
+        if(document.getElementById('t-recStatus')) document.getElementById('t-recStatus').innerText = t.recStatus;
+        if(document.getElementById('t-ownerGrowth')) document.getElementById('t-ownerGrowth').innerText = t.ownerGrowth;
+        if(document.getElementById('t-totInvested')) document.getElementById('t-totInvested').innerText = t.totInvested;
+        if(document.getElementById('t-netProfit')) document.getElementById('t-netProfit').innerText = t.netProfit;
+        if(document.getElementById('t-ownerNote')) document.getElementById('t-ownerNote').innerText = t.ownerNote;
+        if(document.getElementById('f-opt-all')) document.getElementById('f-opt-all').innerText = t.allTypes;
+        if(document.getElementById('f-opt-daily')) document.getElementById('f-opt-daily').innerText = t.fDaily;
+        if(document.getElementById('f-opt-monthly')) document.getElementById('f-opt-monthly').innerText = t.fMonthly;
+        if(document.getElementById('f-opt-meter')) document.getElementById('f-opt-meter').innerText = t.fMeter;
         if(document.getElementById('f-opt-archived')) document.getElementById('f-opt-archived').innerText = t.fArchived;
-        document.getElementById('s-opt-new').innerText = t.sortNew;
-        document.getElementById('s-opt-old').innerText = t.sortOld;
-        document.getElementById('t-bulkTitle').innerText = t.bulkTitle;
-        document.getElementById('t-bulkStart').innerText = t.bulkStart;
-        document.getElementById('t-bulkEnd').innerText = t.bulkEnd;
-        document.getElementById('t-bulkSubmit').innerText = t.bulkSubmit;
-        document.getElementById('t-bulkCancel').innerText = t.bulkCancel;
-        document.getElementById('name').placeholder = t.namePh;
-        document.getElementById('amt').placeholder = t.amtPh;
-        document.getElementById('search-box').placeholder = t.searchPh;
-        document.getElementById('total_ret').placeholder = t.totRetPh;
-        document.getElementById('days').placeholder = t.totDaysPh;
-        document.getElementById('t-repTitle').innerText = t.repTitle;
-        document.getElementById('t-repBtn').innerText = t.repBtn;
-        document.getElementById('t-repGiven').innerText = t.repGiven;
-        document.getElementById('t-repRet').innerText = t.repRet;
-        document.getElementById('t-repProfit').innerText = t.repProfit;
-        document.getElementById('t-repAll').innerText = t.allTypes;
-        document.getElementById('t-repDaily').innerText = t.fDaily;
-        document.getElementById('t-repMonthly').innerText = t.fMonthly;
-        document.getElementById('t-repMeter').innerText = t.fMeter;
-        document.getElementById('staff-ref').placeholder = t.staffRefPh;
-        document.getElementById('t-editStaffRefLabel').innerText = t.staffRefPh;
-        document.getElementById('t-lockSub').innerText = t.lockSub;
+        if(document.getElementById('s-opt-new')) document.getElementById('s-opt-new').innerText = t.sortNew;
+        if(document.getElementById('s-opt-old')) document.getElementById('s-opt-old').innerText = t.sortOld;
+        if(document.getElementById('t-bulkTitle')) document.getElementById('t-bulkTitle').innerText = t.bulkTitle;
+        if(document.getElementById('t-bulkStart')) document.getElementById('t-bulkStart').innerText = t.bulkStart;
+        if(document.getElementById('t-bulkEnd')) document.getElementById('t-bulkEnd').innerText = t.bulkEnd;
+        if(document.getElementById('t-bulkSubmit')) document.getElementById('t-bulkSubmit').innerText = t.bulkSubmit;
+        if(document.getElementById('t-bulkCancel')) document.getElementById('t-bulkCancel').innerText = t.bulkCancel;
+        if(document.getElementById('name')) document.getElementById('name').placeholder = t.namePh;
+        if(document.getElementById('amt')) document.getElementById('amt').placeholder = t.amtPh;
+        if(document.getElementById('search-box')) document.getElementById('search-box').placeholder = t.searchPh;
+        if(document.getElementById('total_ret')) document.getElementById('total_ret').placeholder = t.totRetPh;
+        if(document.getElementById('days')) document.getElementById('days').placeholder = t.totDaysPh;
+        if(document.getElementById('t-repTitle')) document.getElementById('t-repTitle').innerText = t.repTitle;
+        if(document.getElementById('t-repBtn')) document.getElementById('t-repBtn').innerText = t.repBtn;
+        if(document.getElementById('t-repGiven')) document.getElementById('t-repGiven').innerText = t.repGiven;
+        if(document.getElementById('t-repRet')) document.getElementById('t-repRet').innerText = t.repRet;
+        if(document.getElementById('t-repProfit')) document.getElementById('t-repProfit').innerText = t.repProfit;
+        if(document.getElementById('t-repAll')) document.getElementById('t-repAll').innerText = t.allTypes;
+        if(document.getElementById('t-repDaily')) document.getElementById('t-repDaily').innerText = t.fDaily;
+        if(document.getElementById('t-repMonthly')) document.getElementById('t-repMonthly').innerText = t.fMonthly;
+        if(document.getElementById('t-repMeter')) document.getElementById('t-repMeter').innerText = t.fMeter;
+        if(document.getElementById('staff-ref')) document.getElementById('staff-ref').placeholder = t.staffRefPh;
+        if(document.getElementById('t-editStaffRefLabel')) document.getElementById('t-editStaffRefLabel').innerText = t.staffRefPh;
+        if(document.getElementById('t-lockSub')) document.getElementById('t-lockSub').innerText = t.lockSub;
     }
 
     function showToast(msg) { let t = document.getElementById('toast-box'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
@@ -568,16 +634,12 @@
         }
     }
 
-    // VIP FIX: Logout par cache clear aur Firebase disconnect
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
         document.getElementById('lock-screen').style.display = 'flex'; 
         
-        // Disconnect from Firebase to stop background downloads
-        try {
-            database.ref('credix_db').off(); 
-        } catch(e) { console.log(e); }
+        try { database.ref('credix_db').off(); } catch(e) { console.log(e); }
 
         resetPin(); 
         isOwnerMode = false; 
@@ -595,7 +657,7 @@
         switchTab('dash'); 
     }
     
-    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
+    function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x && x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
     
     function openStaffModal() { closeModal('settings-modal'); renderStaffList(); document.getElementById('staff-modal').style.display = 'flex'; }
     
@@ -705,7 +767,7 @@
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
     function exportData() { let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); let fileName = "CredixBackup_" + dateStr + ".json"; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); a.download = fileName; a.click(); }
-    function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
+    function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = normalizeDB(JSON.parse(r.result)); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
     
     // --- GLASS UI LOCK SCREEN LOGIC WITH VIBRATION ---
     function triggerShakeLock() { const dotsContainer = document.getElementById('dots-container'); if(dotsContainer) { dotsContainer.classList.remove('shake'); void dotsContainer.offsetWidth; dotsContainer.classList.add('shake'); } }
@@ -721,6 +783,7 @@
             activeStaffPhoto = "";
             activeLoginPin = pin; 
             showToast("Owner Mode Unlocked 👑"); unlockApp(); 
+            logActivity("Logged in to the system", "var(--success)"); saveAndRender();
         } else { 
             let staffMatch = conf.staffList.find(s => s.pin === pin); 
             if (staffMatch) { 
@@ -729,12 +792,14 @@
                 activeStaffPhoto = staffMatch.photo || "";
                 activeLoginPin = pin; 
                 showToast(`Welcome ${deviceStaffName} 👋`); unlockApp(); 
+                logActivity("Logged in to the system", "var(--success)"); saveAndRender();
             } else if (pin === currentPin && conf.staffList.length === 0) { 
                 isOwnerMode = false; 
                 deviceStaffName = "Default Staff"; 
                 activeStaffPhoto = "";
                 activeLoginPin = pin; 
                 showToast("Staff Mode Active"); unlockApp(); 
+                logActivity("Logged in to the system", "var(--success)"); saveAndRender();
             } else { 
                 triggerShakeLock();
                 showToast("Invalid ID / PIN"); resetPin(); 
@@ -744,7 +809,7 @@
 
     function checkAutoBackup() { 
         if(autoBackupFreq === 'never' || db.length === 0) return; 
-        let todayStr = getISTDate(); // IST FIX
+        let todayStr = getISTDate();
         let lastBackup = localStorage.getItem('paymitra_lastbackup') || ''; 
         if (autoBackupFreq === 'daily') { 
             if (lastBackup !== todayStr) { 
@@ -781,40 +846,37 @@
             document.getElementById('personal-wrap').style.display = 'flex';
             document.getElementById('btn-owner-pin').style.display = 'block';
             document.getElementById('btn-manage-staff').style.display = 'block';
+            document.getElementById('btn-audit-log').style.display = 'block';
             document.getElementById('owner-analytics').style.display = 'block';
             document.getElementById('wrap-staff-ref').style.display = 'flex'; 
             document.getElementById('rep-search-wrap').style.display = 'flex'; 
             if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'block';
-            document.getElementById('t-appSub').innerText = "Owner Dashboard 👑";
+            if(document.getElementById('t-appSub')) document.getElementById('t-appSub').innerText = "Owner Dashboard 👑";
         } else {
             document.getElementById('owner-badge').style.display = 'none';
             document.getElementById('owner-title-badge').style.display = 'none';
             document.getElementById('personal-wrap').style.display = 'none';
             document.getElementById('btn-owner-pin').style.display = 'none';
             document.getElementById('btn-manage-staff').style.display = 'none';
+            document.getElementById('btn-audit-log').style.display = 'none';
             document.getElementById('owner-analytics').style.display = 'none';
             document.getElementById('is-personal').checked = false;
             document.getElementById('wrap-staff-ref').style.display = 'none'; 
             document.getElementById('rep-search-wrap').style.display = 'none'; 
             if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'none';
-            document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
+            if(document.getElementById('t-appSub')) document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
         }
         
-        // VIP FIX: App unlock hone par hi database connect hoga
-        try {
-            database.ref('credix_db').off(); 
-        } catch(e) {}
+        try { database.ref('credix_db').off(); } catch(e) {}
         setupFirebaseListener();
         
         render(); checkAutoBackup();
     }
 
     function setupFirebaseListener() {
-        // App khulte hi phone ki memory wala data check karo
-        let cachedDb = [];
-        try {
-            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
-        } catch(e) {}
+        let rawCached = null;
+        try { rawCached = JSON.parse(localStorage.getItem('paymitra_v11')); } catch(e){}
+        let cachedDb = normalizeDB(rawCached);
         
         if (cachedDb.length > 0) {
             db = cachedDb;
@@ -823,17 +885,19 @@
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
-                let newDb = snapshot.val();
-                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+                let rawDb = snapshot.val();
+                let newDb = normalizeDB(rawDb);
+
+                newDb.forEach(item => { 
+                    if(item && item.type !== 'config' && item.type !== 'trash' && item.type !== 'audit' && !item.history) item.history = []; 
+                });
                 
-                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
                     if (document.getElementById('main-app').style.display === 'none') {
                         db = newDb;
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
                         window.lastSyncedDbStr = JSON.stringify(db); 
-                        document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                        if(document.getElementById('t-lockSub')) document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
                     } else {
                         if (!isSaving) {
                             if(!validateSession(newDb)) return;
@@ -848,26 +912,28 @@
                             showToast("Data Auto-Updated!");
                         }
                     }
+                } else {
+                    if(document.getElementById('t-lockSub')) document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
                 }
             } else {
-                document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                if(document.getElementById('t-lockSub')) document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
         }, (error) => {
-            document.getElementById('sync-status').innerText = "Offline Mode";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
-            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Offline Mode";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot offline";
+            if(document.getElementById('t-lockSub')) document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         });
     }
 
     function hardRefresh() { 
-        document.getElementById('sync-status').innerText = "Syncing...";
+        if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Syncing...";
         database.ref('credix_db').once('value').then(() => {
-            document.getElementById('sync-status').innerText = "Cloud Synced";
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
             showToast("Sync Successful!");
         }).catch(() => {
-            document.getElementById('sync-status').innerText = "Offline Mode";
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Offline Mode";
         });
     }
 
@@ -876,21 +942,21 @@
         let currentDbStr = JSON.stringify(db);
         localStorage.setItem('paymitra_v11', currentDbStr);
         render();
-        document.getElementById('sync-status').innerText = "Saving to Cloud...";
-        document.getElementById('cloud-indicator').className = "status-dot";
+        if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Saving to Cloud...";
+        if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
         
         let oldDb = [];
         try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
         
         const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
         };
         const errCb = (e) => {
-            document.getElementById('sync-status').innerText = "Saved Offline";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Saved Offline";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot offline";
             isSaving = false;
         };
 
@@ -987,7 +1053,9 @@
             if(isNaN(dVals) || dVals <= 0) { triggerShake('days'); return showToast(tLang.missingDays || "Missing Total Days!"); }
             cust.totalPayable = tRet; cust.currentBalance = cust.totalPayable; cust.installment = cust.totalPayable / dVals; 
         }
-        db.push(cust); saveAndRender(); 
+        db.push(cust); 
+        logActivity("Created new record for: " + name + " (₹" + amt + ")", "var(--success)");
+        saveAndRender(); 
         document.getElementById('name').value = ''; document.getElementById('amt').value = ''; document.getElementById('staff-ref').value = '';
         document.getElementById('cust-photo').value = '';
         lastCroppedBase64 = ''; 
@@ -1014,7 +1082,7 @@
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
     function openPayModal(id) { 
-        let c = db.find(x => x.id === id); 
+        let c = db.find(x => x && x.id === id); 
         document.getElementById('pay-id').value = id; 
         document.getElementById('pay-date').value = getISTDate(); // IST FIX
         let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
@@ -1022,10 +1090,10 @@
         document.getElementById('pay-modal').style.display = 'flex'; 
     }
 
-    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
+    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x && x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); logActivity("Collected ₹" + amt + " from " + c.name, "var(--success)"); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
     
     function openBulkModal(id) { 
-        let c = db.find(x => x.id === id); 
+        let c = db.find(x => x && x.id === id); 
         document.getElementById('bulk-id').value = id; 
         let todayStr = getISTDate(); // IST FIX
         document.getElementById('bulk-start-date').value = todayStr; 
@@ -1038,7 +1106,7 @@
         document.getElementById('bulk-modal').style.display = 'flex'; 
     }
 
-    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
+    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x && x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); logActivity("Processed Bulk Entry for " + c.name, "var(--accent-orange)"); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
     
     function removeEditPhoto() {
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
@@ -1049,7 +1117,7 @@
     function openEditModal(id) { 
         window._pendingPhotoRemoval = false;
         lastCroppedBase64 = ''; 
-        let c = db.find(x => x.id === id); 
+        let c = db.find(x => x && x.id === id); 
         document.getElementById('edit-id').value = id; 
         document.getElementById('edit-name').value = c.name; 
         document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
@@ -1070,12 +1138,21 @@
     
     async function saveEdit() { 
         let id = parseInt(document.getElementById('edit-id').value); 
-        let c = db.find(x => x.id === id); 
+        let c = db.find(x => x && x.id === id); 
+        
         let oldRate = c.rate; 
         let oldInstallment = c.installment; 
         let oldTotalPayable = c.totalPayable; 
+        let oldName = c.name;
+        let oldPrincipal = c.principal;
+        let oldDate = c.startDate;
+        let oldPhoto = c.photo;
+        let oldStaffRef = c.staffRef;
+        let oldIsPersonal = c.isPersonal;
+
         let nameVal = document.getElementById('edit-name').value; 
         if (nameVal) c.name = nameVal; 
+        
         if (lastCroppedBase64) { 
             c.photo = lastCroppedBase64; 
         } 
@@ -1088,8 +1165,60 @@
                 c.photo = await toSquareBase64(fileInput.files[0]); 
             } 
         }
-        if(isOwnerMode) { c.staffRef = document.getElementById('edit-staff-ref').value.trim(); c.isPersonal = document.getElementById('edit-is-personal').checked; } let dateVal = document.getElementById('edit-date').value; if (dateVal) c.startDate = dateVal; let amtVal = parseFloat(document.getElementById('edit-amt').value); if (!isNaN(amtVal)) c.principal = amtVal; let extra = parseFloat(document.getElementById('edit-extra').value); if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; else { c.installment = !isNaN(extra) ? extra : oldInstallment; let retInput = document.getElementById('edit-ret'); if (retInput && retInput.value) { let parsedRet = parseFloat(retInput.value); c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); } else c.totalPayable = oldTotalPayable || c.principal; } 
+        
+        if(isOwnerMode) { 
+            c.staffRef = document.getElementById('edit-staff-ref').value.trim(); 
+            c.isPersonal = document.getElementById('edit-is-personal').checked; 
+        } 
+        
+        let dateVal = document.getElementById('edit-date').value; 
+        if (dateVal) c.startDate = dateVal; 
+        
+        let amtVal = parseFloat(document.getElementById('edit-amt').value); 
+        if (!isNaN(amtVal)) c.principal = amtVal; 
+        
+        let extra = parseFloat(document.getElementById('edit-extra').value); 
+        if(c.type === 'monthly') c.rate = !isNaN(extra) ? extra : oldRate; 
+        else if(c.type === 'meter') c.rate = !isNaN(extra) && c.principal ? (extra / c.principal) * 100 : oldRate; 
+        else { 
+            c.installment = !isNaN(extra) ? extra : oldInstallment; 
+            let retInput = document.getElementById('edit-ret'); 
+            if (retInput && retInput.value) { 
+                let parsedRet = parseFloat(retInput.value); 
+                c.totalPayable = !isNaN(parsedRet) ? parsedRet : (oldTotalPayable || c.principal); 
+            } else c.totalPayable = oldTotalPayable || c.principal; 
+        } 
+        
         recalculateCase(c); 
+
+        let changes = [];
+        if(oldName !== c.name) changes.push(`Name to ${c.name}`);
+        if(oldPrincipal !== c.principal) changes.push(`Principal to ₹${c.principal}`);
+        if(oldDate !== c.startDate) changes.push(`Date to ${formatDateDisplay(c.startDate)}`);
+        if(oldPhoto !== c.photo) {
+            if(c.photo === "") changes.push(`Removed Photo`);
+            else changes.push(`Updated Photo`);
+        }
+        if(c.type === 'monthly' && oldRate !== c.rate) changes.push(`Rate to ${c.rate}%`);
+        if(c.type === 'meter' && oldRate !== c.rate) changes.push(`Rozana Vyaj to ₹${(c.principal * c.rate / 100).toFixed(0)}`);
+        if(c.type === 'daily') {
+            if(oldInstallment !== c.installment) changes.push(`Kishat to ₹${c.installment}`);
+            if(oldTotalPayable !== c.totalPayable) changes.push(`Total Return to ₹${c.totalPayable}`);
+        }
+        if(isOwnerMode) {
+            if(oldStaffRef !== c.staffRef) changes.push(`Staff Ref to ${c.staffRef || 'None'}`);
+            if(oldIsPersonal !== c.isPersonal) changes.push(c.isPersonal ? `Marked as Personal` : `Removed Personal Mark`);
+        }
+
+        let logMsg = `Edited account of ${oldName}`;
+        if(changes.length > 0) {
+            logMsg += `<br><span style="color:#ff6a00; font-size:11px;">Changes: ${changes.join(" | ")}</span>`;
+        } else {
+            logMsg += `<br><span style="color:var(--text-muted); font-size:11px;">(Opened and saved without making changes)</span>`;
+        }
+        
+        logActivity(logMsg, "var(--owner-gold)");
+
         closeModal('edit-modal'); 
         saveAndRender(); 
         lastCroppedBase64 = ''; 
@@ -1099,14 +1228,15 @@
     // --- UPDATED DELETE ACTIONS TO USE RECYCLE BIN ---
     function deleteCustUI(id) { 
         askConfirm("Move this entire account to Recycle Bin?", () => { 
-            let cIndex = db.findIndex(x => x.id === id);
+            let cIndex = db.findIndex(x => x && x.id === id);
             if(cIndex > -1) {
                 let c = db[cIndex];
                 let tr = getTrash();
-                if (!tr.cases) tr.cases = []; // FIREBASE EMPTY ARRAY FIX
+                if (!tr.cases) tr.cases = []; 
                 let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
                 tr.cases.push({ ...c, deletedAt: nowStr, deletedBy: deviceStaffName });
                 db.splice(cIndex, 1);
+                logActivity("Moved account " + c.name + " to Recycle Bin", "var(--danger)");
                 saveAndRender(); 
                 showToast("Account Moved to Recycle Bin! 🗑️"); 
             }
@@ -1115,14 +1245,15 @@
 
     function deleteHistoryUI(custId, originalIndex) { 
         askConfirm("Move this entry to Recycle Bin?", () => { 
-            let c = db.find(x => x.id === custId); 
+            let c = db.find(x => x && x.id === custId); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            if (!tr.histories) tr.histories = []; 
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let deletedEntry = c.history[originalIndex];
             tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
             c.history.splice(originalIndex, 1); 
             recalculateCase(c); 
+            logActivity("Moved an entry from " + c.name + " to Recycle Bin", "var(--danger)");
             saveAndRender(); 
             showToast("Entry Moved to Recycle Bin! 🗑️"); 
         }); 
@@ -1132,9 +1263,9 @@
         let checks = document.querySelectorAll(`.del-chk-${id}:checked`); 
         if(checks.length === 0) return toggleMultiDel(id); 
         askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
-            let c = db.find(x => x.id === id); 
+            let c = db.find(x => x && x.id === id); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            if (!tr.histories) tr.histories = []; 
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); 
             indices.forEach(idx => { 
@@ -1144,16 +1275,17 @@
             }); 
             multiDelMode[id] = false; 
             recalculateCase(c); 
+            logActivity("Moved " + checks.length + " entries from " + c.name + " to Recycle Bin", "var(--danger)");
             saveAndRender(); 
             showToast("Selected Moved to Recycle Bin! 🗑️"); 
         }); 
     }
 
-    function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
+    function toggleArchiveUI(id) { let c = db.find(x => x && x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; logActivity((isArchiving ? "Archived" : "Restored") + " account: " + c.name, "var(--text-muted)"); saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
 
     function generateCustomerPDF(id) {
         const { jsPDF } = window.jspdf;
-        const c = db.find(x => x.id === id);
+        const c = db.find(x => x && x.id === id);
         if(!c) return;
         const doc = new jsPDF();
         doc.setFontSize(22); doc.setTextColor(255, 107, 53); doc.text("Credix.", 14, 20);
@@ -1200,7 +1332,7 @@
         let closedCasesInRange = [];
         const rangeEndStr = end;
         
-        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
+        db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
             if (!isOwnerMode && c.isPersonal) return;
             if (!isOwnerMode && (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase()) return;
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
@@ -1601,7 +1733,7 @@
             // Safe Helper for New/Old
             const getStatus = (cust) => {
                 if (!cust || !cust.name) return 'New';
-                let isOld = db.some(x => (x.name || "").toLowerCase().trim() === cust.name.toLowerCase().trim() && x.id < cust.id);
+                let isOld = db.some(x => x && (x.name || "").toLowerCase().trim() === cust.name.toLowerCase().trim() && x.id < cust.id);
                 return isOld ? 'Old' : 'New';
             };
 
@@ -1743,7 +1875,7 @@
         let searchTotalKishat = 0, searchTotalProfit = 0;
         let showSearchStat = false;
         let today = getISTDate(); // IST FIX
-        let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash');
+        let pureDB = db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
@@ -1813,7 +1945,7 @@
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
-        db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
+        db.filter(x => x && x.type !== 'config' && x.type !== 'trash' && x.type !== 'audit').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
             if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
@@ -1873,43 +2005,4 @@
         recognition.maxAlternatives = 1;
         
         try {
-            recognition.start();
-            showToast("Listening... 🎤 Speak now");
-        } catch(e) {
-            console.log("Mic already started");
-        }
-
-        recognition.onresult = function(event) {
-            let speechResult = event.results[0][0].transcript;
-            speechResult = speechResult.replace(/[.,]/g, "").trim(); 
-            const targetInput = document.getElementById(targetId);
-            if(targetInput) {
-                targetInput.value = speechResult; 
-                if (targetId === 'search-box') {
-                    render();
-                    showToast("Searching for: " + speechResult);
-                } else if (targetId === 'rep-search') {
-                    showToast("Added: " + speechResult);
-                }
-            }
-        };
-
-        recognition.onspeechend = function() {
-            recognition.stop();
-        }
-
-        recognition.onerror = function(event) {
-            console.error("Microphone error:", event.error);
-            if (event.error === 'not-allowed') {
-                showToast("Mic blocked! Please click the lock icon in address bar to allow.");
-            } else if (event.error === 'no-speech') {
-                showToast("No speech detected.");
-            } else {
-                showToast("Mic error: " + event.error);
-            }
-        };
-
-        recognition.onend = function() {
-            window.currentRecognition = null; 
-        };
-    }
+            recognition.

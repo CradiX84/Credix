@@ -201,6 +201,7 @@
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="importData()" id="t-setRestore">Restore Data</button>
             <button class="main-btn" id="btn-manage-staff" style="background:rgba(255, 107, 53, 0.1); color:var(--accent-orange); box-shadow:none; display:none;" onclick="openStaffModal()">👥 Manage Staff Accounts (IDs)</button>
             <button class="main-btn" id="btn-owner-pin" style="background:rgba(255, 215, 0, 0.1); color:var(--owner-gold); box-shadow:none; display:none;" onclick="openSecretPinModal()">Change Owner PIN 👑</button>
+            <button class="main-btn" id="btn-audit-log" style="background:rgba(88, 166, 255, 0.1); color:#58a6ff; box-shadow:none; display:none;" onclick="openAuditLogModal()">👁️ View Activity Logs</button>
             <button class="main-btn" style="background:rgba(255, 59, 107, 0.1); color:var(--danger); box-shadow:none;" onclick="logout()" id="t-setLogout">Logout</button>
             <button class="main-btn" style="background:transparent; color:var(--text-muted); box-shadow:none; margin-top:5px;" onclick="closeModal('settings-modal')" id="t-setClose">Close</button>
         </div>
@@ -217,6 +218,19 @@
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="main-btn" style="margin:0; background:var(--owner-gold); color:black;" onclick="saveSecretPin()">Update 👑</button>
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('secret-pin-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="audit-log-modal" class="modal">
+    <div class="modal-cont" style="max-width: 500px;">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:#58a6ff;">👁️ Live Activity Logs</h3>
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:15px;">Strictly private owner audit trail.</div>
+        <div id="audit-log-container" style="max-height: 400px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;">
+            </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+            <button onclick="clearAuditLogs()" style="background:transparent; border:1px solid var(--danger); color:var(--danger); font-size:10px; padding:6px 12px; border-radius:10px; font-weight:600; cursor:pointer;">CLEAR LOGS</button>
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0; width:auto; padding:8px 20px;" onclick="closeModal('audit-log-modal')">Close</button>
         </div>
     </div>
 </div>

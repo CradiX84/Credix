@@ -27,7 +27,6 @@ body {
     position: relative;
 }
 
-/* NAYA CODE: Scroll ko makhan (smooth) banane ke liye background alag se fix kiya hai */
 body::before {
     content: "";
     position: fixed;
@@ -399,4 +398,13 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 #rep-results > div:first-child > div {
     flex: 1;
     min-width: 30% !important;
+}
+
+/* --- AUDIT LOG SCROLL FIX --- */
+#audit-log-container::-webkit-scrollbar {
+    width: 4px;
+}
+#audit-log-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
 }
