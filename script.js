@@ -568,10 +568,17 @@
         }
     }
 
+    // VIP FIX: Logout par cache clear aur Firebase disconnect
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
         document.getElementById('lock-screen').style.display = 'flex'; 
+        
+        // Disconnect from Firebase to stop background downloads
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) { console.log(e); }
+
         resetPin(); 
         isOwnerMode = false; 
         deviceStaffName = ''; 
@@ -792,35 +799,54 @@
             if(document.getElementById('btn-trash')) document.getElementById('btn-trash').style.display = 'none';
             document.getElementById('t-appSub').innerText = `Welcome ${deviceStaffName} 👋`;
         }
+        
+        // VIP FIX: App unlock hone par hi database connect hoga
+        try {
+            database.ref('credix_db').off(); 
+        } catch(e) {}
+        setupFirebaseListener();
+        
         render(); checkAutoBackup();
     }
 
     function setupFirebaseListener() {
+        // App khulte hi phone ki memory wala data check karo
+        let cachedDb = [];
+        try {
+            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+        } catch(e) {}
+        
+        if (cachedDb.length > 0) {
+            db = cachedDb;
+            window.lastSyncedDbStr = JSON.stringify(db);
+        }
+
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
                 newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
-                if (document.getElementById('main-app').style.display === 'none') {
-                    db = newDb;
-                    localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                    // SMART CHILD FIX: App khulte hi memory save kar li
-                    window.lastSyncedDbStr = JSON.stringify(db); 
-                    document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-                } else {
-                    if (!isSaving && JSON.stringify(newDb) !== JSON.stringify(db)) {
-                        if(!validateSession(newDb)) return;
+                
+                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
+                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                    if (document.getElementById('main-app').style.display === 'none') {
                         db = newDb;
                         localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                        // SMART CHILD FIX: Sync track update
                         window.lastSyncedDbStr = JSON.stringify(db); 
-                        render();
-                        
-                        if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                            renderTrash();
+                        document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                    } else {
+                        if (!isSaving) {
+                            if(!validateSession(newDb)) return;
+                            db = newDb;
+                            localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                            window.lastSyncedDbStr = JSON.stringify(db); 
+                            render();
+                            
+                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                renderTrash();
+                            }
+                            showToast("Data Auto-Updated!");
                         }
-                        
-                        showToast("Data Auto-Updated!");
                     }
                 }
             } else {
@@ -869,7 +895,6 @@
         };
 
         if (oldDb.length === 0) {
-            // First time ya hard refresh par
             database.ref('credix_db').set(db).then(successCb).catch(errCb);
         } else {
             let updates = {};
@@ -881,16 +906,15 @@
                 let newItem = db[i];
                 
                 if (!oldItem && newItem) {
-                    updates[i] = newItem; // Naya customer add hua
+                    updates[i] = newItem; 
                     hasChanges = true;
                 } else if (oldItem && !newItem) {
-                    updates[i] = null; // Customer / Data delete hua
+                    updates[i] = null; 
                     hasChanges = true;
                 } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                    // SMART CHILD FIX: Sirf wahi entry (kishat/interest) cloud par bhejo jo change hui hai!
                     for (let key in newItem) {
                         if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
-                            updates[i + '/' + key] = newItem[key]; // Eg: '5/history' sirf ye jayega
+                            updates[i + '/' + key] = newItem[key]; 
                             hasChanges = true;
                         }
                     }
@@ -904,7 +928,6 @@
             }
             
             if (hasChanges) {
-                // Ab Firebase par "Pura App" nahi, sirf update hui entry jayegi (Saves 10GB Data)
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
             } else {
                 successCb();
@@ -1163,7 +1186,6 @@
         showToast("PDF Downloaded!");
     }
 
-    // VIP FIX: GENERATE REPORT WITH CASH OUT LOGIC (APP UI MEIN 15000, OWNER PDF MEIN 13500)
     function generateReport() {
         const start = document.getElementById('rep-start').value;
         const end = document.getElementById('rep-end').value;
@@ -1184,14 +1206,13 @@
             if (searchQ !== '') { let cName = (c.name || '').toLowerCase(); let sRef = (c.staffRef || '').toLowerCase(); if (!cName.includes(searchQ) && !sRef.includes(searchQ)) return; }
             if (type !== 'all' && c.type !== type) return;
             
-            // VIP FIX: Cash Out deduction for Monthly ONLY FOR OWNER PDF
             if (c.startDate >= start && c.startDate <= end) {
                 let cCopy = {...c};
                 let actualCashGiven = c.principal;
 
                 if (c.type === 'monthly') {
                     let upfrontProfit = c.principal * ((c.rate || 0) / 100);
-                    actualCashGiven = c.principal - upfrontProfit; // Deduct Interest for PDF ONLY
+                    actualCashGiven = c.principal - upfrontProfit; 
                     if(isOwnerMode) {
                         totalProfitInRange += upfrontProfit;
                         cCopy.tempUpfrontProfit = upfrontProfit;
@@ -1203,8 +1224,8 @@
                     newCasesMeter.push(cCopy);
                 }
 
-                cCopy.actualCashGiven = actualCashGiven; // Save value for later PDF use
-                totalGiven += actualCashGiven; // Adjust Top Report Counter (Actual cash outflow)
+                cCopy.actualCashGiven = actualCashGiven; 
+                totalGiven += actualCashGiven; 
             }
             
             let customerTotalInRange = 0, customerProfitInRange = 0, histHits = [];
@@ -1325,7 +1346,7 @@
             let html = `<div style="color:${color}; font-size:11px; margin:15px 0 5px; font-weight:700; text-transform:uppercase;">${title}</div>`;
             let sectionTotal = 0;
             list.forEach(c => { 
-                let amtToDisplay = c.principal; // VIP FIX: APP UI MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
+                let amtToDisplay = c.principal; 
                 sectionTotal += amtToDisplay;
                 html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${amtToDisplay.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
             });
@@ -1476,7 +1497,7 @@
                 doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
                 let totalValue = 0;
                 let body = list.map((c, i) => { 
-                    let amtToDisplay = Number(c.actualCashGiven || c.principal || 0); // VIP FIX: OWNER PDF MEIN 13500 AAYEGA
+                    let amtToDisplay = Number(c.actualCashGiven || c.principal || 0); 
                     totalValue += amtToDisplay; 
                     return [i + 1, c.name, formatDateDisplay(c.startDate), typeLabel, `RS. ${amtToDisplay.toLocaleString()}`]; 
                 });
@@ -1595,7 +1616,7 @@
 
                 let tPrin = 0;
                 let dailyBody = data.newCasesDaily.map((c, i) => {
-                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
+                    let pAmt = Number(c.principal || 0); 
                     tPrin += pAmt;
                     let totPay = Number(c.totalPayable || c.principal || 0);
                     let days = c.installment ? Math.round(totPay / c.installment) : 0;
@@ -1639,7 +1660,7 @@
 
                 let tPrinM = 0;
                 let monthlyBody = data.newCasesMonthly.map((c, i) => {
-                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL (15000) AAYEGA
+                    let pAmt = Number(c.principal || 0); 
                     tPrinM += pAmt;
                     return [
                         i+1, c.name || "-", formatDateDisplay(c.startDate), 'Monthly', getStatus(c), `RS.${pAmt.toLocaleString()}`
@@ -1677,7 +1698,7 @@
 
                 let tPrinMeter = 0;
                 let meterBody = data.newCasesMeter.map((c, i) => {
-                    let pAmt = Number(c.principal || 0); // VIP FIX: STAFF PDF MEIN WAPAS SE PRINCIPAL
+                    let pAmt = Number(c.principal || 0); 
                     tPrinMeter += pAmt;
                     return [
                         i+1, c.name || "-", formatDateDisplay(c.startDate), 'Meter', getStatus(c), `RS.${pAmt.toLocaleString()}`
