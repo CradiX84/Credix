@@ -3,8 +3,8 @@
   "short_name": "Credix",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b0c10",
-  "theme_color": "#0b0c10",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "description": "Credix Finance Management App",
   "icons": [
     {
