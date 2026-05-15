@@ -318,8 +318,6 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-        document.getElementById('t-lockSub').innerText = "Starting App... ⏳";
-
         // Bypass Auth and force direct database connection
         if (typeof firebase !== 'undefined' && firebase.database) {
             firebase.database().goOnline();
