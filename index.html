@@ -20,6 +20,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+      window.addEventListener('load', function() {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+          console.log("Firebase connection forcing...");
+          firebase.database().goOnline();
+        }
+      });
+    </script>
     
     <link rel="stylesheet" href="style.css">
 </head>
