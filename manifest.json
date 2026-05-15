@@ -4,7 +4,7 @@
   "start_url": "./index.html",
   "display": "fullscreen",
   "background_color": "#000000",
-  "theme_color": "#000000",
+  "theme_color": "#ff6a00",
   "description": "Credix Finance Management App",
   "icons": [
     {
@@ -15,7 +15,7 @@
     },
     {
       "src": "logo.png",
-      "sizes": "1024x1024",
+      "sizes": "1024x1536",
       "type": "image/png",
       "purpose": "any maskable"
     }
