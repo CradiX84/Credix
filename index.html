@@ -31,6 +31,20 @@
     </script>
     
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        html, body {
+            background-color: #ff6a00 !important; /* Yeh system bottom bar ko Orange karega */
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000000;
+            background: radial-gradient(circle, #100a00 0%, #000000 70%);
+            z-index: -1; /* Yeh andar ka design wapas Black kar dega */
+        }
+    </style>
 </head>
 <body>
 
