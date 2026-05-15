@@ -318,18 +318,13 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-        document.getElementById('t-lockSub').innerText = "Securing Connection... ⏳";
-        
-        auth.signInAnonymously().catch(function(error) {
-            console.error("Security Auth Failed:", error);
-            document.getElementById('t-lockSub').innerText = "Security Auth Failed. Please Refresh.";
-        });
+        document.getElementById('t-lockSub').innerText = "Starting App... ⏳";
 
-        auth.onAuthStateChanged(function(user) {
-            if (user) {
-                setupFirebaseListener();
-            }
-        });
+        // Bypass Auth and force direct database connection
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().goOnline();
+        }
+        setupFirebaseListener();
 
         if (!document.getElementById('trash-modal')) {
             const trashHtml = `
