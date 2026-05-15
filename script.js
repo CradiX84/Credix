@@ -697,7 +697,20 @@
 
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
-    function exportData() { let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); let fileName = "CredixBackup_" + dateStr + ".json"; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/json"})); a.download = fileName; a.click(); }
+    
+    function exportData() { 
+        let d = new Date(); 
+        let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0') + "_" + String(d.getHours()).padStart(2,'0') + "-" + String(d.getMinutes()).padStart(2,'0'); 
+        let fileName = "CredixBackup_" + dateStr + ".json"; 
+        let a = document.createElement("a"); 
+        // Apple iOS Fix: Force direct download instead of opening preview
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], {type: "application/octet-stream"})); 
+        a.download = fileName; 
+        document.body.appendChild(a);
+        a.click(); 
+        document.body.removeChild(a);
+    }
+    
     function importData() { let i = document.createElement('input'); i.type = 'file'; i.onchange = e => { let r = new FileReader(); r.onload = () => { try { db = JSON.parse(r.result); saveAndRender(); closeModal('settings-modal'); showToast("Data Restored!"); } catch(err) { showToast("Invalid Backup File"); } }; r.readAsText(e.target.files[0]); }; i.click(); }
     
     // --- GLASS UI LOCK SCREEN LOGIC WITH VIBRATION ---
