@@ -826,3 +826,74 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     flex-wrap: wrap !important;
     gap: 5px;
 }
+/* ================================================== */
+/* VIP FIX: NEON ORANGE OUTLINE (ACCOUNTS, FAST ADD, SETTINGS) */
+/* ================================================== */
+
+/* 1. Accounts Tab & Action Buttons (Edit, PDF, Archive, Trash) */
+.s-btn {
+    border: 1px solid rgba(255, 106, 0, 0.5) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+
+/* 2. Fast Add, Modals aur Filter Dropdown ke Input Boxes */
+.input-group, 
+.filter-dropdown {
+    border: 1px solid rgba(255, 106, 0, 0.5) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+/* 4. Manage Staff List, Trash List aur Multi-Select Button */
+#staff-list-container > div,
+#btn-trash-multi,
+#trash-list-container > div {
+    border: 1px solid rgba(255, 106, 0, 0.5) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+
+/* Trash bin item ke left side ka laal (danger) nishaan bachane ke liye */
+#trash-list-container > div {
+    border-left: 3px solid var(--danger) !important;
+}
+/* Input Box Focus Effect (Jab type karne ke liye click karein) */
+.input-group:focus-within, 
+.filter-dropdown:focus {
+    border-color: #ff6a00 !important;
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.6), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+
+/* 3. Settings Box & Other Modal Buttons */
+#settings-modal .main-btn,
+#trash-modal .main-btn,
+.modal .main-btn[style*="background:rgba(255,255,255,0.05)"],
+.modal .main-btn[style*="background: rgba(255, 255, 255, 0.05)"],
+.modal .main-btn[style*="background:transparent"] {
+    border: 1px solid rgba(255, 106, 0, 0.5) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+/* 5. Lock Screen PIN Digits (Keypad) Neon Outline & Glow */
+.calc-btn:not(.calc-btn-orange) {
+    border: 1px solid rgba(255, 106, 0, 0.4) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+}
+
+/* Jab digit dabayenge tab glow aur tez hoga (Tap Effect) */
+.calc-btn:not(.calc-btn-orange):active {
+    border-color: #ff6a00 !important;
+    box-shadow: 0 0 25px rgba(255, 106, 0, 0.7), inset 0 0 5px rgba(0,0,0,0.5) !important;
+    background: rgba(255, 106, 0, 0.15) !important;
+    transform: scale(0.92);
+}
+/* 6. PIN Indicator Dots Neon Outline & Glow */
+.dot {
+    border: 1px solid rgba(255, 106, 0, 0.5) !important;
+    box-shadow: 0 0 8px rgba(255, 106, 0, 0.2), inset 0 0 5px rgba(0,0,0,0.5) !important;
+    background-color: transparent !important;
+}
+
+/* Jab pin enter hoga toh dot kaise chamkega */
+.dot.active {
+    background-color: #ff6a00 !important;
+    border-color: #ff6a00 !important;
+    box-shadow: 0 0 18px rgba(255, 106, 0, 0.8), inset 0 0 5px rgba(255, 255, 255, 0.3) !important;
+    transform: scale(1.2) !important;
+}
