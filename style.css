@@ -138,6 +138,8 @@ body::before {
     border-radius: 16px;
     box-shadow: 0 0 15px rgba(255, 106, 0, 0.15), inset 0 0 8px rgba(255, 106, 0, 0.05);
     transition: transform 0.05s ease; 
+    content-visibility: auto !important;
+    contain-intrinsic-size: 130px !important;
 }
 .cust-card:active { transform: scale(0.98); }
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 10px; width: 100%;}
