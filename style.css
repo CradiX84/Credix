@@ -808,3 +808,21 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
     flex: 1;
     min-width: 30% !important;
 }
+/* --- REVIEW SECTION TEXT WRAP & OVERLAP FIX --- */
+.cust-card div, 
+.cust-card span, 
+.cust-card b,
+.sum-card span, 
+.sum-card b {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    line-height: 1.4;
+}
+
+/* Green + icon overlap fix */
+.cust-card div[style*="display: flex"], 
+.cust-card div[style*="display:flex"] {
+    flex-wrap: wrap !important;
+    gap: 5px;
+}
