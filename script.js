@@ -945,21 +945,79 @@
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
 
-    function recalculateCase(c) { 
+           function recalculateCase(c) { 
         if(!c.history) c.history = []; 
         c.history.sort((a, b) => (a.date > b.date ? 1 : -1)); 
+        
         let tempBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); 
-        c.history.forEach(h => { 
-            if(c.type === 'monthly' || c.type === 'meter') { 
-            } else { 
-                tempBal -= h.paid; 
-            } 
-            h.balance = tempBal; 
-            h.bal = tempBal.toFixed(0); 
-        }); 
-        c.currentBalance = tempBal; 
-    }
+        let currentPrincipal = tempBal;
+        
+        let lastInterestPaidDate = new Date(c.startDate);
 
+        c.history.forEach(h => { 
+            let hDate = new Date(h.date);
+            let paidAmt = parseFloat(h.paid);
+            
+            // Expected Interest (Monthly ke liye 1 Month ka, Meter ke liye 1 Day ka)
+            let expectedInterest = (currentPrincipal * (c.rate || 0)) / 100;
+
+            if (c.type === 'monthly') { 
+                let daysSinceLastInt = Math.round((hDate.getTime() - lastInterestPaidDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                // Rule 1: Full Settlement (Agar Naginder poora 5000 wapis de kar case close kare)
+                if (paidAmt >= currentPrincipal && currentPrincipal > 0) {
+                    currentPrincipal = 0;
+                    lastInterestPaidDate = hDate;
+                }
+                // Rule 2: Exact Interest Payment (Sirf vyaj aaya - jaise Sumit ka exact 1000₹ aaya)
+                else if (Math.abs(paidAmt - expectedInterest) < 5) {
+                    lastInterestPaidDate = hDate; 
+                }
+                // Rule 3: Multiple of Interest (Jaise 2 mahine ka ikattha interest aaya)
+                else if (expectedInterest > 0 && paidAmt > expectedInterest && Math.abs(paidAmt % expectedInterest) < 5) {
+                    lastInterestPaidDate = hDate;
+                }
+                // Rule 4: Advance Principal (Interest + Advance Principal ya direct Advance)
+                else if (paidAmt > expectedInterest) {
+                    // Check ki kya interest pichle 20 din mein ALREADY de chuka hai?
+                    if (daysSinceLastInt < 20) {
+                        currentPrincipal -= paidAmt; // Interest pehle aa chuka tha, toh poora paisa Principal hai
+                    } else {
+                        currentPrincipal -= (paidAmt - expectedInterest); // Pehle 1 mahine ka vyaj kaato, baaki principal se minus
+                        lastInterestPaidDate = hDate; 
+                    }
+                }
+                // Rule 5: Partial Payment (Interest se kam paise diye)
+                else {
+                    currentPrincipal -= paidAmt;
+                }
+            } else if (c.type === 'meter') { 
+                // METER KA PURANA WAIS-A-HI PERFECT CODE
+                if (paidAmt >= currentPrincipal && currentPrincipal > 0) {
+                    currentPrincipal = 0;
+                } else {
+                    let date1 = new Date(lastInterestPaidDate.getFullYear(), lastInterestPaidDate.getMonth(), lastInterestPaidDate.getDate());
+                    let date2 = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+                    let daysSinceLastInterest = Math.round((date2 - date1) / (1000 * 60 * 60 * 24));
+                    if (daysSinceLastInterest < 1) daysSinceLastInterest = 1; 
+                    
+                    let totalExpectedMeter = daysSinceLastInterest * expectedInterest;
+                    if (paidAmt > totalExpectedMeter) {
+                        currentPrincipal -= (paidAmt - totalExpectedMeter);
+                    }
+                }
+                lastInterestPaidDate = hDate;
+            } else { 
+                // DAILY KA PURANA CODE
+                currentPrincipal -= paidAmt; 
+            } 
+            
+            if(currentPrincipal < 0.5 && currentPrincipal > -0.5) currentPrincipal = 0;
+            h.balance = currentPrincipal; 
+            h.bal = currentPrincipal.toFixed(0); 
+        }); 
+        c.currentBalance = currentPrincipal; 
+    }
     async function addCustomer() {
         const tLang = i18n[currentLang];
         const type = document.getElementById('type').value, name = document.getElementById('name').value, amt = parseFloat(document.getElementById('amt').value), date = document.getElementById('date').value;
@@ -1800,8 +1858,7 @@
                         ${(isOwnerMode || c.type === 'daily') ? `
                         <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
                         ` : ''}
-                        <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:var(--danger)">₹${c.currentBalance.toFixed(0)}</b></div>
-                    </div>
+<div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:${c.currentBalance <= 0 ? 'var(--success)' : 'var(--danger)'}">${c.currentBalance <= 0 ? 'Case Closed ✅' : '₹' + c.currentBalance.toFixed(0)}</b></div></div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
                     <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
                 </div>
