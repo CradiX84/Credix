@@ -1814,7 +1814,7 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
         let today = getISTDate(); // IST FIX
         let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
-        let sortedDB = mappedDB.sort((a, b) => { let dateA = a.startDate; let dateB = b.startDate; if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
+        let sortedDB = mappedDB.sort((a, b) => { let getDate = (c) => (c.isArchived && c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; let dateA = getDate(a); let dateB = getDate(b); if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
         const accountsHtmlArray = [];
         const t = i18n[currentLang]; 
         sortedDB.forEach(c => {
