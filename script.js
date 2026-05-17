@@ -247,13 +247,13 @@
             repNewDaily: "🆕 New Daily Cases", repNewMonthly: "🆕 New Monthly Cases", repNewMeter: "🆕 New Meter Cases",
             repRecDaily: "✅ Daily Recoveries", repRecMonthly: "✅ Monthly Recoveries", repRecMeter: "✅ Pending Collections (Meter)",
             repPendDaily: "⚠️ Pending Collections (Daily)", repPendMonthly: "⚠️ Pending Collections (Monthly)", repPendMeter: "⚠️ Pending Collections (Meter)",
-            givenOn: "Given on", profitCut: "Profit Cut:", intRec: "Interest Received", monthsText: "Months", kishatsText: "Kishats", profitText: "Profit:", missedText: "Missed:", basisText: "BASIS", repTotal: "TOTAL:"
+            givenOn: "Given on", profitCut: "Profit Cut:", intRec: "Interest Received", monthsText: "Months", kishatsText: "Kishats", profitText: "Profit:", missedText: "Missed:", basisText: "BASIS", repTotal: "TOTAL:", caseClosedText: "Case Closed ✅"
         },
         'hi': { 
             appSub: "नमस्ते 👋", sumPrin: "कुल मूलधन", sumCases: "कुल खाते", sumOut: "बकाया", 
             addTitle: "नया खाता बनाएं", namePh: "ग्राहक का नाम", amtPh: "मूलधन (Principal)", addBtn: "खाता जोड़ें", 
             navDash: "होम", navCust: "खाते", navBulk: "फास्ट ऐड", navStats: "रिव्यू", 
-            setMainTitle: "ऐप सेटिंग्स", setBackup: "डेटा बैकअप", setRestore: "डेटा रिस्टor", setPinStaff: "स्टाफ PIN बदलें", setPinOwner: "मालिक PIN बदलें 👑", setLogout: "लॉगआउट", setClose: "बंद करें", 
+            setMainTitle: "ऐप सेटिंग्स", setBackup: "डेटा बैकअप", setRestore: "डेटा वापस लाएं", setPinStaff: "स्टाफ पिन बदलें", setPinOwner: "मालिक पिन बदलें 👑", setLogout: "लॉगआउट", setClose: "बंद करें", 
             searchPh: "नाम खोजें...", cleanDashTitle: "क्लीन डैशबोर्ड", cleanDashSub: "खाता देखने के लिए ऊपर नाम खोजें।<br>पूरी लिस्ट देखने के लिए <b>खाते</b> टैब पर जाएं।", 
             bizPort: "बिजनेस पोर्टफोलियो", recStatus: "रिकवरी स्टेटस", monthly: "महीना", daily: "रोज़ाना", meter: "मीटर", recovered: "रिकवर हुआ", remaining: "बाकी", 
             ownerGrowth: "👑 प्रॉफिट एनालिटिक्स", totInvested: "कुल निवेश", netProfit: "प्राप्त प्रॉफिट", ownerNote: "यह डेटा केवल मालिक के लिए है, स्टाफ को नहीं दिखेगा।",
@@ -265,7 +265,7 @@
             bulkTitle: "बल्क एंट्री", bulkStart: "शुरुआती तारीख", bulkEnd: "आखिरी तारीख", bulkSubmit: "बल्क प्रोसेस करें", bulkCancel: "रद्द करें", perMonthAmt: "हर महीने की रकम (₹)", perDayAmt: "हर दिन की रकम (₹)",
             autoBackupLabel: "ऑटो बैकअप फाइल", abNever: "कभी नहीं", abDaily: "रोज़ (ऐप खुलने पर)", abMonthly: "महीने में एक बार",
             repTitle: "📅 तारीख के अनुसार रिपोर्ट", repBtn: "रिपोर्ट देखें", repGiven: "कुल दिया", repRet: "कुल रिकवरी", repProfit: "कमाया प्रॉफिट", repNoData: "इस तारीख में कोई डेटा नहीं।", repNewCases: "🆕 नए खाते (GIVEN)", repPayments: "✅ प्राप्त रिकवरी (RECEIVED)", advProfit: "Advance Profit (Cut)",
-            archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की Login ID डालें",
+            archiveToast: "खाता आर्काइव हो गया!", unarchiveToast: "खाता वापस आ गया!", staffRefPh: "रेफरेंस / स्टाफ का नाम", lockSub: "4-अक्षरों की लॉगिन आईडी डालें",
             refStatTitle: "👑 रेफरेंस सारांश", refStatCases: "कुल खाते", refStatValue: "कुल वैल्यू", refStatRec: "प्राप्त", refStatOut: "बकाया",
             refStatCollection: "कुल रोज़ाना किश्त", refStatInterest: "कुल महीने का ब्याज", refStatProfit: "अनुमानित प्रॉफिट",
             repPendings: "⚠️ पेंडिंग कलेक्शन (PENDING)", caseDate: "केस तारीख",
@@ -273,13 +273,13 @@
             repNewDaily: "🆕 नए रोज़ाना खाते", repNewMonthly: "🆕 नए महीने के खाते", repNewMeter: "🆕 नए मीटर खाते",
             repRecDaily: "✅ रोज़ाना रिकवरी", repRecMonthly: "✅ महीने की रिकवरी", repRecMeter: "✅ मीटर रिकवरी",
             repPendDaily: "⚠️ पेंडिंग कलेक्शन (रोज़ाना)", repPendMonthly: "⚠️ पेंडिंग कलेक्शन (महीना)", repPendMeter: "⚠️ पेंडिंग कलेक्शन (मीटर)",
-            givenOn: "तारीख:", profitCut: "प्रॉफिट कट:", intRec: "ब्याज मिला", monthsText: "महीने", kishatsText: "किश्तें", profitText: "प्रॉफिट:", missedText: "छूटा:", basisText: "आधार", repTotal: "कुल जोड़:"
+            givenOn: "तारीख:", profitCut: "प्रॉफिट कट:", intRec: "ब्याज मिला", monthsText: "महीने", kishatsText: "किश्तें", profitText: "प्रॉफिट:", missedText: "छूटा:", basisText: "आधार", repTotal: "कुल जोड़:", caseClosedText: "खाता बंद ✅"
         },
         'pa': { 
             appSub: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ 👋", sumPrin: "ਕੁੱਲ ਰਕਮ", sumCases: "ਕੁੱਲ ਖਾਤੇ", sumOut: "ਬਕਾਇਆ", 
             addTitle: "ਨਵਾਂ ਖਾਤਾ ਬਣਾਓ", namePh: "ਗਾਹਕ ਦਾ ਨਾਮ", amtPh: "ਮੂਲ ਰਕਮ", addBtn: "ਖਾਤਾ ਜੋੜੋ", 
             navDash: "ਹੋਮ", navCust: "ਖਾਤੇ", navBulk: "ਫਾਸਟ ਐਡ", navStats: "ਰਿਵਿਊ", 
-            setMainTitle: "ਐਪ ਸੈਟਿੰਗਜ਼", setBackup: "ਡਾਟਾ ਬੈਕਅੱਪ", setRestore: "ਡਾਟਾ ਰੀੀਸਟੋਰ", setPinStaff: "ਸਟਾਫ PIN ਬਦਲੋ", setPinOwner: "ਮਾਲਕ PIN ਬਦਲੋ 👑", setLogout: "ਲਾਗਆਉਟ", setClose: "ਬੰਦ ਕਰੋ", 
+            setMainTitle: "ਐਪ ਸੈਟਿੰਗਜ਼", setBackup: "ਡਾਟਾ ਬੈਕਅੱਪ", setRestore: "ਡਾਟਾ ਵਾਪਸ ਲਿਆਓ", setPinStaff: "ਸਟਾਫ ਪਿੰਨ ਬਦਲੋ", setPinOwner: "ਮਾਲਕ ਪਿੰਨ ਬਦਲੋ 👑", setLogout: "ਲਾਗਆਉਟ", setClose: "ਬੰਦ ਕਰੋ", 
             searchPh: "ਨਾਮ ਖੋਜੋ...", cleanDashTitle: "ਕਲੀਨ ਡੈਸ਼ਬੋਰਡ", cleanDashSub: "ਖਾਤਾ ਦੇਖਣ ਲਈ ਉੱਪਰ ਨਾਮ ਖੋਜੋ।<br>ਪੂਰੀ ਸੂਚੀ ਲਈ <b>ਖਾਤੇ</b> टैਬ 'ਤੇ ਜਾਓ।", 
             bizPort: "ਕਾਰੋਬਾਰ ਪੋਰਟਫੋਲੀਓ", recStatus: "ਰਿਕਵਰੀ ਸਥਿਤੀ", monthly: "ਮਹੀਨਾਵਾਰ", daily: "ਰੋਜ਼ਾਨਾ", meter: "ਮੀਟਰ", recovered: "ਵਸੂਲੀ ਹੋਈ", remaining: "ਬਕਾਇਆ", 
             ownerGrowth: "👑 ਮੁਨਾਫਾ ਅਤੇ ਵਿਕਾਸ", totInvested: "ਕੁੱਲ ਨਿਵੇਸ਼", netProfit: "ਪ੍ਰਾਪਤ ਮੁਨਾਫਾ", ownerNote: "ਇਹ ਡਾਟਾ ਸਿਰਫ਼ ਮਾਲਕ ਲਈ ਹੈ, ਸਟਾਫ਼ ਤੋਂ ਲੁਕਿਆ ਹੋਇਆ ਹੈ।",
@@ -291,7 +291,7 @@
             bulkTitle: "ਬਲਕ ਐਂਟਰੀ", bulkStart: "ਸਤੰਬਰ ਮਿਤੀ", bulkEnd: "ਆਖਰੀ ਮਿਤੀ", bulkSubmit: "ਬਲਕ ਪ੍ਰੋਸੈਸ ਕਰੋ", bulkCancel: "ਰੱਦ ਕਰੋ", perMonthAmt: "ਹਰ ਮਹੀਨੇ ਦੀ ਰਕਮ (ਏ)", perDayAmt: "ਹਰ ਦਿਨ ਦੀ ਰਕਮ (ਏ)",
             autoBackupLabel: "ਆਟੋ ਬੈਕਅੱਪ ਫਾਈਲ", abNever: "ਕਦੇ ਨਹੀਂ", abDaily: "ਰੋਜ਼ਾਨਾ (ਐਪ ਖੁੱਲਣ 'ਤੇ)", abMonthly: "ਮਹੀਨੇ ਵਿੱਚ ਇੱਕ ਵਾਰ",
             repTitle: "📅 ਤਾਰੀਖ ਦੇ ਅਨੁਸਾਰ ਰਿਪੋਰਟ", repBtn: "ਰਿਪੋਰਟ ਦੇਖੋ", repGiven: "ਕੁੱਲ ਦਿੱਤਾ", repRet: "ਕੁੱਲ ਰਿਕਵਰੀ", repProfit: "ਕਮਾਇਆ ਮੁਨਾਫਾ", repNoData: "ਇਸ ਤਾਰੀਖ ਵਿੱਚ ਕੋਦਈ ਡਾਟਾ ਨਹੀਂ ਹੈ।", repNewCases: "🆕 ਨਵੇਂ ਖਾਤੇ (GIVEN)", repPayments: "✅ ਪ੍ਰਾਪਤ ਰਿਕਵਰੀ (RECEIVED)", advProfit: "ਐਡਵਾਂਸ ਮੁਨਾਫਾ (ਕਟੌਤੀ)",
-            archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ Login ID ਦਰਜ ਕਰੋ",
+            archiveToast: "ਖਾਤਾ ਆਰਕਾਈਵ ਹੋ ਗਿਆ!", unarchiveToast: "ਖਾਤਾ ਵਾਪਸ ਆ ਗਿਆ!", staffRefPh: "ਹਵਾਲਾ / ਸਟਾਫ ਦਾ ਨਾਮ", lockSub: "4- ਅੱਖਰਾਂ ਦੀ ਲੌਗਇਨ ਆਈਡੀ ਦਰਜ ਕਰੋ",
             refStatTitle: "👑 ਰੈਫਰੈਂਸ ਸਾਰਾਂਸ਼", refStatCases: "ਕੁੱਲ ਖਾਤੇ", refStatValue: "ਕੁੱਲ ਮੁੱਲ", refStatRec: "ਪ੍ਰਾਪਤ", refStatOut: "ਬਕਾਇਆ",
             refStatCollection: "ਕੁੱਲ ਰੋਜ਼ਾਨਾ ਕਿਸ਼ਤ", refStatInterest: "ਕੁੱਲ ਮਹੀਨਾਵਾਰ ਵਿਆਜ", refStatProfit: "ਅਨੁਮਾਨਿਤ ਮੁਨਾਫਾ",
             repPendings: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (PENDING)", caseDate: "ਕੇਸ ਮਿਤੀ",
@@ -299,7 +299,7 @@
             repNewDaily: "🆕 ਨਵੇਂ ਰੋਜ਼ਾਨਾ ਖਾਤੇ", repNewMonthly: "🆕 ਨਵੇਂ ਮਹੀਨੇ ਦੇ ਖਾਤੇ", repNewMeter: "🆕 ਨਵੇਂ ਮੀਟਰ ਖਾਤੇ",
             repRecDaily: "✅ ਰੋਜ਼ਾਨਾ ਰਿਕਵਰੀ", repRecMonthly: "✅ ਮਹੀਨੇ ਦੀ ਰਿਕਵਰੀ", repRecMeter: "✅ ਮੀਟਰ ਰਿਕਵਰੀ",
             repPendDaily: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਰੋਜ਼ਾਨਾ)", repPendMonthly: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮਹੀਨਾਵਾਰ)", repPendMeter: "⚠️ ਬਕਾਇਆ ਕਿਸ਼ਤਾਂ (ਮੀਟਰ)",
-            givenOn: "ਤारीख:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ", repTotal: "ਕੁੱਲ ਜੋੜ:"
+            givenOn: "ਤਾਰੀਖ:", profitCut: "ਮੁਨਾਫਾ ਕੱਟਿਆ:", intRec: "ਵਿਆਜ ਮਿਲਿਆ", monthsText: "ਮਹੀਨੇ", kishatsText: "ਕਿਸ਼ਤਾਂ", profitText: "ਮੁਨਾਫਾ:", missedText: "ਛੱਡਿਆ:", basisText: "ਆਧਾਰ", repTotal: "ਕੁੱਲ ਜੋੜ:", caseClosedText: "ਖਾਤਾ ਬੰਦ ✅"
         }
     };
     
@@ -999,6 +999,11 @@
                     let date1 = new Date(lastInterestPaidDate.getFullYear(), lastInterestPaidDate.getMonth(), lastInterestPaidDate.getDate());
                     let date2 = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
                     let daysSinceLastInterest = Math.round((date2 - date1) / (1000 * 60 * 60 * 24));
+                    // 🔒 METER VIP FIX: Pehli baar mein 1 din extra (Start date wala din jodo)
+                    if (date1.getTime() === new Date(c.startDate).getTime()) {
+                        daysSinceLastInterest += 1;
+                    }
+                    if (daysSinceLastInterest < 1) daysSinceLastInterest = 1;
                     if (daysSinceLastInterest < 1) daysSinceLastInterest = 1; 
                     
                     let totalExpectedMeter = daysSinceLastInterest * expectedInterest;
@@ -1320,7 +1325,7 @@
                 if (c.type === 'daily' || c.type === 'meter') {
                     amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
-                    let iterDate = new Date(sy, sm - 1, sd); iterDate.setDate(iterDate.getDate() + 1); 
+let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDate(iterDate.getDate() + 1); 
                     while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
                         if (!historyUpToEnd.some(h => h.date === currentCheckStr)) { 
@@ -1824,7 +1829,7 @@
             if (refMatch) { showSearchStat = true; searchCasesCount++; searchTotalValue += c.principal; searchTotalBal += c.currentBalance; let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; searchTotalRec += paid; if (c.type === 'daily') { searchTotalKishat += (c.installment || 0); let totalP = (c.totalPayable || c.principal) - c.principal; let ratio = totalP / (c.totalPayable || c.principal); searchTotalProfit += (c.installment * ratio); } else if (c.type === 'monthly' || c.type === 'meter') { let interest = (c.principal * (c.rate || 0) / 100); searchTotalKishat += interest; searchTotalProfit += interest; } }
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
-            if (c.type === 'monthly') { let monthlyInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let monthsPaid = monthlyInt > 0 ? Math.floor(totalPaidThisCase / monthlyInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); nextDueDate.setMonth(nextDueDate.getMonth() + monthsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); if (pendingDays === 0) isDueToday = true; } }
+                        if (c.type === 'monthly' || c.type === 'meter') { let isMeter = c.type === 'meter'; let unitInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let unitsPaid = unitInt > 0 ? Math.floor(totalPaidThisCase / unitInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); if (isMeter) { nextDueDate.setDate(nextDueDate.getDate() + unitsPaid); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; } } else { nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); } } }
             else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
             if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
             let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
@@ -1858,7 +1863,7 @@
                         ${(isOwnerMode || c.type === 'daily') ? `
                         <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
                         ` : ''}
-<div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:${c.currentBalance <= 0 ? 'var(--success)' : 'var(--danger)'}">${c.currentBalance <= 0 ? 'Case Closed ✅' : '₹' + c.currentBalance.toFixed(0)}</b></div></div>
+<div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:${c.currentBalance <= 0 ? 'var(--success)' : 'var(--danger)'}">${c.currentBalance <= 0 ? (t.caseClosedText || 'Case Closed ✅') : '₹' + c.currentBalance.toFixed(0)}</b></div></div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
                     <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
                 </div>
