@@ -318,11 +318,19 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-        // Bypass Auth and force direct database connection
-        if (typeof firebase !== 'undefined' && firebase.database) {
-            firebase.database().goOnline();
+        // 🔒 Secure Firebase Anonymous Authentication
+        if (typeof firebase !== 'undefined' && firebase.auth && firebase.database) {
+            auth.signInAnonymously()
+                .then(() => {
+                    console.log("Secure Anonymous Login Successful ✅");
+                    firebase.database().goOnline();
+                    setupFirebaseListener(); // Login ke baad hi listener chalega
+                })
+                .catch((error) => {
+                    console.error("Firebase Auth Error:", error.message);
+                    showToast("Secure Connection Failed! Check internet.");
+                });
         }
-        setupFirebaseListener();
 
         if (!document.getElementById('trash-modal')) {
             const trashHtml = `
