@@ -318,18 +318,20 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-        // 🔒 Secure Firebase Anonymous Authentication
+            // 🔒 Secure Firebase Anonymous Authentication
         if (typeof firebase !== 'undefined' && firebase.auth && firebase.database) {
-            auth.signInAnonymously()
-                .then(() => {
-                    console.log("Secure Anonymous Login Successful ✅");
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    console.log("Secure Anonymous Login Successful ✅ UID:", user.uid);
                     firebase.database().goOnline();
-                    setupFirebaseListener(); // Login ke baad hi listener chalega
-                })
-                .catch((error) => {
-                    console.error("Firebase Auth Error:", error.message);
-                    showToast("Secure Connection Failed! Check internet.");
-                });
+                    setupFirebaseListener(); 
+                } else {
+                    firebase.auth().signInAnonymously().catch((error) => {
+                        console.error("Firebase Auth Error:", error.message);
+                        showToast("Secure Connection Failed! Check internet.");
+                    });
+                }
+            });
         }
 
         if (!document.getElementById('trash-modal')) {
