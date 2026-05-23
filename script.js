@@ -2305,3 +2305,51 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 🤖 CREDIX SMART AI CHATBOX LOGIC ENDS
 // ==========================================
+
+// --- AI Chat Button Drag & Drop Logic ---
+const aiBtn = document.getElementById('ai-chat-btn');
+let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+aiBtn.onmousedown = dragMouseDown;
+aiBtn.ontouchstart = dragMouseDown;
+
+function dragMouseDown(e) {
+  e.preventDefault();
+  if (e.type === 'touchstart') {
+    pos3 = e.touches[0].clientX;
+    pos4 = e.touches[0].clientY;
+  } else {
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+  }
+  document.onmouseup = closeDragElement;
+  document.onmousemove = elementDrag;
+  document.ontouchend = closeDragElement;
+  document.ontouchmove = elementDrag;
+}
+
+function elementDrag(e) {
+  e.preventDefault();
+  if (e.type === 'touchmove') {
+    pos1 = pos3 - e.touches[0].clientX;
+    pos2 = pos4 - e.touches[0].clientY;
+    pos3 = e.touches[0].clientX;
+    pos4 = e.touches[0].clientY;
+  } else {
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+  }
+  aiBtn.style.top = (aiBtn.offsetTop - pos2) + "px";
+  aiBtn.style.left = (aiBtn.offsetLeft - pos1) + "px";
+  aiBtn.style.right = "auto"; // Remove right/bottom constraints
+  aiBtn.style.bottom = "auto";
+}
+
+function closeDragElement() {
+  document.onmouseup = null;
+  document.onmousemove = null;
+  document.ontouchend = null;
+  document.ontouchmove = null;
+}
