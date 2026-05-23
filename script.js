@@ -1991,3 +1991,317 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
             window.currentRecognition = null; 
         };
     }
+// ==========================================
+// 🤖 CREDIX SMART AI CHATBOX LOGIC STARTS
+// ==========================================
+
+const GEMINI_API_KEY = "AIzaSyAry2ppLLRxLt7SKgS99TZTvS7f6V3lW_I"; 
+
+// 🪄 Lock Screen Visibility Fix
+setInterval(() => {
+    const aiBtn = document.getElementById('ai-chat-btn');
+    const lockScreen = document.getElementById('lock-screen');
+    if(aiBtn && lockScreen) {
+        if(lockScreen.style.display !== 'none') {
+            aiBtn.style.display = 'none'; 
+        } else {
+            aiBtn.style.display = 'block'; 
+        }
+    }
+}, 500);
+
+function toggleAIChat() {
+    const chatWindow = document.getElementById('ai-chat-window');
+    if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
+        chatWindow.style.display = 'flex';
+        document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
+    } else {
+        chatWindow.style.display = 'none';
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+}
+
+function appendMessage(text, sender) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
+    
+    // Main message ka text
+    const textDiv = document.createElement('div');
+    textDiv.innerText = text;
+    msgDiv.appendChild(textDiv);
+    
+    // Professional Time Stamp (jaise 9:05 PM)
+    const timeDiv = document.createElement('div');
+    const now = new Date();
+    timeDiv.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    timeDiv.style.fontSize = "10px";
+    timeDiv.style.opacity = "0.6";
+    timeDiv.style.marginTop = "4px";
+    timeDiv.style.textAlign = sender === 'user' ? "right" : "left";
+    msgDiv.appendChild(timeDiv);
+
+    document.getElementById('ai-chat-messages').appendChild(msgDiv);
+    document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
+}
+
+// 🚦 SMART ROUTER: Local Keywords
+function isLocalQuery(text) {
+    const lowerText = text.toLowerCase();
+    const localKeywords = ["pending", "balance", "kishat", "kisht", "collection", "due", "paisa", "kitna", "baki", "hisaab", "total", "meter", "monthly", "daily", "dusra", "doosra", "second", "report", "detail", "status", "khata", "case", "batao", "check", "info", "aaj", "kis", "leni", "laini", "deni"];
+    if (localKeywords.some(keyword => lowerText.includes(keyword))) return true;
+
+    if (typeof db !== 'undefined' && db.length > 0) {
+        let cleanQueryWords = lowerText.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+        let hasName = db.some(c => {
+            if (!c.name || c.type === 'config' || c.type === 'trash') return false;
+            let cName = c.name.toLowerCase();
+            return cleanQueryWords.length > 0 && cleanQueryWords.every(qw => cName.includes(qw));
+        });
+        if (hasName) return true;
+    }
+    return false;
+}
+
+async function sendAIMessage() {
+    const inputEl = document.getElementById('ai-chat-input');
+    const text = inputEl.value.trim();
+    if (!text) return;
+    appendMessage(text, 'user');
+    inputEl.value = '';
+    
+    const typingId = "typing-" + Date.now();
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'ai-msg'; typingDiv.id = typingId;
+    typingDiv.innerText = "Data check kar raha hoon... 🕵️‍♂️";
+    document.getElementById('ai-chat-messages').appendChild(typingDiv);
+    document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
+
+    try {
+        if (isLocalQuery(text)) {
+            if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+            let localReply = "🟢 Kripya customer ka poora naam likhein.";
+            const query = text.toLowerCase();
+
+            if (typeof db !== 'undefined' && db.length > 0) {
+                // 🔥 STRICT ACTIVE FILTER: 0 Balance aur Archive wale bahar
+                const activeLoans = db.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
+
+                const getPendingData = (c) => {
+                    let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
+                    const todayObj = new Date(getISTDate()); const lastDateObj = new Date(lastPaidDate);
+                    let pAmt = 0; let pText = "";
+                    if (c.type === 'meter' || c.type === 'daily') {
+                        let kAmt = c.type === 'daily' ? (c.installment || 0) : ((c.principal * (c.rate || 0)) / 100);
+                        let dDiff = Math.max(0, Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24)));
+                        if(!c.history || c.history.length === 0) dDiff = Math.floor((todayObj - new Date(c.startDate)) / (1000 * 60 * 60 * 24));
+                        if(dDiff < 0) dDiff = 0;
+                        pAmt = dDiff * kAmt;
+                        pText = c.type === 'meter' ? `${dDiff} din pending (Aakhiri: ${formatDateDisplay(lastPaidDate)})` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
+                    } else {
+                        let kAmt = (c.principal * (c.rate || 0)) / 100;
+                        let nDate = new Date(lastPaidDate); nDate.setMonth(nDate.getMonth() + 1);
+                        pAmt = (todayObj >= nDate) ? kAmt : 0;
+                        pText = (todayObj >= nDate) ? `Due Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
+                    }
+                    return { pAmt, pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
+                };
+
+                // Queries differentiate karna
+                let isPendingQuery = query.includes("pending") || query.includes("kis kis") || query.includes("leni") || query.includes("laini") || query.includes("baki");
+                let isFullReportQuery = query.includes("aaj ki report") || query.includes("total report") || query.includes("summary") || query.includes("sabka");
+                
+                let ignoreWords = ["aaj", "ki", "ka", "ke", "report", "pending", "kishat", "kis", "kiski", "leni", "laini", "deni", "hai", "batao", "meter", "monthly", "daily", "dusra", "doosra", "wale", "hisaab", "baki"];
+                let cleanQueryWords = query.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !ignoreWords.includes(w));
+
+                let matchedCustomers = [];
+                if (cleanQueryWords.length > 0) {
+                    matchedCustomers = activeLoans.filter(c => {
+                        if(!c.name) return false;
+                        let cName = c.name.toLowerCase();
+                        return cleanQueryWords.every(qw => cName.includes(qw));
+                    });
+                }
+
+                if (matchedCustomers.length > 0) {
+                    // 🎯 SCENARIO 1: CUSTOMER MIL GAYA
+                    window.lastSearchedName = matchedCustomers[0].name.toLowerCase().trim();
+                    let filteredByType = matchedCustomers;
+                    if (query.includes("meter")) filteredByType = matchedCustomers.filter(c => c.type === 'meter');
+                    else if (query.includes("monthly") || query.includes("vyaj") || query.includes("mahine")) filteredByType = matchedCustomers.filter(c => c.type === 'monthly');
+                    else if (query.includes("daily") || query.includes("roz")) filteredByType = matchedCustomers.filter(c => c.type === 'daily');
+                    
+                    if (filteredByType.length > 0) {
+                        localReply = "";
+                        filteredByType.forEach(c => {
+                            let data = getPendingData(c);
+                            localReply += `🟢 **${c.name}** (${data.cType})\n• Pending: ₹${data.pAmt.toFixed(0)}\n• Detail: ${data.pText}\n\n`;
+                        });
+                        localReply = localReply.trim();
+                    } else { localReply = "🟢 Case nahi mila ya type (meter/monthly) galat hai."; }
+
+                } else if (isFullReportQuery || isPendingQuery) {
+                    // 🎯 SCENARIO 2: PROFESSIONAL REVIEW TAB STYLE REPORT
+                    let dailyReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
+                    let monthlyReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
+                    let meterReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
+                    let todayStr = getISTDate();
+
+                    activeLoans.forEach(c => {
+                        let type = (c.type || '').toLowerCase();
+                        let targetGroup = type === 'daily' ? dailyReport : type === 'monthly' ? monthlyReport : type === 'meter' ? meterReport : null;
+                        if (!targetGroup) return;
+
+                        let paidTodayAmt = 0;
+                        if (c.history && c.history.length > 0) {
+                            c.history.forEach(h => { if (h.date === todayStr) paidTodayAmt += parseFloat(h.paid || 0); });
+                        }
+
+                        let data = getPendingData(c);
+
+                        if (paidTodayAmt > 0) {
+                            targetGroup.received.push(`• ${c.name}: ₹${paidTodayAmt}`);
+                            targetGroup.totalRec += paidTodayAmt;
+                        }
+                        if (data.pAmt > 0) {
+                            targetGroup.pending.push(`• ${c.name}: ₹${data.pAmt.toFixed(0)}`);
+                            targetGroup.totalPend += data.pAmt;
+                        }
+                    });
+
+                    let showReceived = isFullReportQuery; // Agar sirf pending pucha, toh received nahi dikhayega
+                    
+                    const buildSection = (title, group) => {
+                        let text = ""; let hasData = false;
+                        if (showReceived && group.received.length > 0) {
+                            text += `\n✅ **Received (Total: ₹${group.totalRec})**\n` + group.received.join("\n") + "\n";
+                            hasData = true;
+                        }
+                        if (group.pending.length > 0) {
+                            text += `\n⏳ **Pending (Total: ₹${group.totalPend.toFixed(0)})**\n` + group.pending.join("\n") + "\n";
+                            hasData = true;
+                        }
+                        return hasData ? `\n➖➖ **${title}** ➖➖` + text : "";
+                    };
+
+                    let finalReport = buildSection("DAILY", dailyReport) + buildSection("MONTHLY", monthlyReport) + buildSection("METER", meterReport);
+
+                    if (finalReport.trim() !== "") {
+                        let header = isFullReportQuery ? "🟢 **AAJ KI REPORT**\n" : "🟢 **PENDING COLLECTION**\n";
+                        localReply = header + finalReport.trim();
+                    } else {
+                        localReply = "🟢 Aaj ke liye koi data (received/pending) nahi mila.";
+                    }
+                    window.lastSearchedName = ""; // Report dikhane ke baad memory saaf
+
+                } else if (query.includes("aaj") && (query.includes("case") || query.includes("naya"))) {
+                    // 🎯 SCENARIO 3: AAJ NAYE CASE KITNE DIYE
+                    const todayStr = getISTDate();
+                    const aajKeCases = activeLoans.filter(c => c.startDate === todayStr);
+                    let names = aajKeCases.map(c => c.name).join(", ");
+                    localReply = `🟢 Aaj total ${aajKeCases.length} naye case hue hain.\n${names ? 'Naam: ' + names : ""}`;
+                } else {
+                     localReply = "🟢 Main samjha nahi. Ya toh likhein 'Aaj ki report', 'Pending report', ya customer ka sahi naam likhein.";
+                }
+            } else { localReply = "🔴 Database abhi khali hai."; }
+            
+            appendMessage(localReply, 'ai');
+            return; 
+        }
+
+        // --- GEMINI API FALLBACK ---
+        let dbSummary = "Database abhi khali hai.";
+        if (typeof db !== 'undefined' && db.length > 0) {
+            let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash');
+            if (!isOwnerMode) {
+                pureDb = pureDb.filter(c => (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase() && !c.isPersonal).map(c => ({ name: c.name, type: c.type, currentBalance: c.currentBalance, startDate: c.startDate }));
+            }
+            dbSummary = JSON.stringify(pureDb); 
+        }
+                const aajKiDate = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // 🔥 SMART LANGUAGE PROMPT: AI ab user ki bhasha mein hi jawab dega!
+        const promptText = `Tum Credix Finance app ke AI assistant ho. Aaj date hai: ${aajKiDate}.
+        Agar user Staff hai (yani data mein details kam hain), toh usko chhota aur limited jawab do.
+        Backend code ya JSON mat dikhana. Data: ${dbSummary}.
+        IMPORTANT RULE: User ne jis bhasha (Hindi, Punjabi, ya English) mein sawaal poocha hai, usi bhasha aur lipi mein jawab do. Agar user ne Hinglish likhi hai, toh Hinglish mein jawab do. Agar Punjabi (Roman ya Gurmukhi) likhi hai, toh Punjabi mein jawab do.
+        Sawal: ${text}`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) });
+        const data = await response.json();
+        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+
+        if (data.error) { appendMessage("🚨 Google API Error: " + data.error.message, 'ai'); } 
+        else if (data.candidates && data.candidates[0].content.parts[0].text) {
+            appendMessage(data.candidates[0].content.parts[0].text, 'ai');
+            speakText(data.candidates[0].content.parts[0].text); 
+        } else { appendMessage("Kuch ajeeb error aaya hai.", 'ai'); }
+    } catch (error) {
+        console.error("AI Catch Error:", error);
+        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+        appendMessage("🚨 Network Error: Internet nahi chal raha.", 'ai');
+    }
+}
+
+function startAIChatVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Aapka browser voice chat support nahi karta.");
+        return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    const inputEl = document.getElementById('ai-chat-input');
+    let originalPlaceholder = inputEl.placeholder;
+    inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
+    inputEl.value = "";
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        inputEl.value = transcript;
+        inputEl.placeholder = originalPlaceholder;
+        sendAIMessage(); 
+    };
+
+    recognition.onerror = function(event) {
+        inputEl.placeholder = originalPlaceholder;
+        if(event.error !== 'no-speech') {
+            appendMessage("🚨 Aawaz clear nahi thi, dobara boliye.", 'ai');
+        }
+    };
+
+    recognition.onend = function() {
+        inputEl.placeholder = originalPlaceholder;
+    };
+
+    recognition.start();
+}
+
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        // Remove characters that make the voice sound robotic or read symbols
+        let cleanText = text.replace(/[*#_]/g, "").replace(/₹/g, "rupees ");
+        const msg = new SpeechSynthesisUtterance(cleanText);
+        msg.lang = 'hi-IN';
+        msg.rate = 1.0;
+        window.speechSynthesis.speak(msg);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const chatInput = document.getElementById('ai-chat-input');
+    if(chatInput) {
+        chatInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendAIMessage();
+            }
+        });
+    }
+});
+// ==========================================
+// 🤖 CREDIX SMART AI CHATBOX LOGIC ENDS
+// ==========================================

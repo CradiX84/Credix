@@ -479,6 +479,25 @@
     <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
 </div>
 
-<script src="script.js"></script>
+  <button id="ai-chat-btn" onclick="toggleAIChat()" style="display: none;">✨ AI Assistant</button>
+
+    <div id="ai-chat-window" style="display: none;">
+        <div id="ai-chat-header">
+            <span style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 20px;">🤖</span> 
+                <span style="color: white; font-weight: 800;">Credix AI</span>
+            </span>
+            <button onclick="toggleAIChat()">✖</button>
+        </div>
+        <div id="ai-chat-messages">
+            <div class="ai-msg">Namaste 👋! Main aapka Smart Assistant hoon. Boliye, aaj main aapki kya madad karoon?</div>
+        </div>
+        <div id="ai-chat-input-area">
+            <button id="ai-mic-btn" onclick="startAIChatVoice()" title="Bol kar likhein">🎤</button>
+            <input type="text" id="ai-chat-input" placeholder="Poochiye (Jaise: Rahul ki detail batao)...">
+            <button id="ai-send-btn" onclick="sendAIMessage()">➤</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
