@@ -1195,7 +1195,7 @@ div[id^="view-"] > div:first-of-type,
 
 #ai-chat-window {
     position: fixed;
-    bottom: 85px;
+    bottom: 120px;
     right: 25px;
     width: 340px;
     height: 480px;
@@ -1292,3 +1292,11 @@ div[id^="view-"] > div:first-of-type,
 #ai-send-btn { background: var(--accent-orange, #ff6b35); }
 #ai-send-btn:active, #ai-mic-btn:active { transform: scale(0.9); }
 /* --- AI CHATBOX END --- */
+/* Android phone ke liye extra adjustment */
+@media screen and (max-width: 600px) {
+    #ai-chat-window {
+        bottom: 140px !important; /* Phone par 140px upar rahega */
+        width: 90% !important;    /* Screen ke hisaab se width set */
+        right: 5% !important;     /* Center mein alignment */
+    }
+}
