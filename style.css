@@ -1177,18 +1177,22 @@ div[id^="view-"] > div:first-of-type,
 /* --- AI CHATBOX STYLES --- */
 #ai-chat-btn {
     position: fixed;
-    bottom: 100px;
-    right: 25px;
+    bottom: 95px;       
+    right: 20px;        
+    width: 52px;        
+    height: 52px;       
+    border-radius: 50%; 
     background: linear-gradient(135deg, #a855f7, #ff6b35);
     color: white;
     border: none;
-    padding: 14px 22px;
-    border-radius: 30px;
-    font-size: 15px;
-    font-weight: 800;
-    box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
+    padding: 0;
+    font-size: 22px;    
+    display: flex;      
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
     cursor: pointer;
-    z-index: 999999;
+    z-index: 999999 !important;
     transition: transform 0.2s ease;
 }
 #ai-chat-btn:active { transform: scale(0.95); }
