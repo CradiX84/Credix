@@ -1177,7 +1177,7 @@ div[id^="view-"] > div:first-of-type,
 /* --- AI CHATBOX STYLES --- */
 #ai-chat-btn {
     position: fixed;
-    bottom: 25px;
+    bottom: 100px;
     right: 25px;
     background: linear-gradient(135deg, #a855f7, #ff6b35);
     color: white;
@@ -1188,7 +1188,7 @@ div[id^="view-"] > div:first-of-type,
     font-weight: 800;
     box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
     cursor: pointer;
-    z-index: 9999;
+    z-index: 999999;
     transition: transform 0.2s ease;
 }
 #ai-chat-btn:active { transform: scale(0.95); }

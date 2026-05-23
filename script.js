@@ -1995,7 +1995,7 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
 // 🤖 CREDIX SMART AI CHATBOX LOGIC STARTS
 // ==========================================
 
-const GEMINI_API_KEY = "AIzaSyAry2ppLLRxLt7SKgS99TZTvS7f6V3lW_I"; 
+const GEMINI_API_KEY = "AIzaSyAm7Cv56NJ_iEwbW5e7OfCtnrhnziH7DDs"; 
 
 // 🪄 Lock Screen Visibility Fix
 setInterval(() => {
