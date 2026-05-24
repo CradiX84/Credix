@@ -573,30 +573,37 @@
 
     // VIP FIX: Logout par cache clear aur Firebase disconnect
     function logout() { 
-        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
-        document.getElementById('main-app').style.display = 'none'; 
-        document.getElementById('lock-screen').style.display = 'flex'; 
-        
-        // Disconnect from Firebase to stop background downloads
-        try {
-            database.ref('credix_db').off(); 
-        } catch(e) { console.log(e); }
-
-        resetPin(); 
-        isOwnerMode = false; 
-        deviceStaffName = ''; 
-        activeStaffPhoto = '';
-        activeLoginPin = ""; 
-        currentLang = 'en'; 
-        localStorage.setItem('paymitra_lang', 'en'); 
-        if(document.getElementById('lang-select')) document.getElementById('lang-select').value = 'en'; 
-        applyLang(); 
-        if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; 
-        if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; 
-        if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; 
-        document.getElementById('profile-icon-area').innerHTML = '⚙️';
-        switchTab('dash'); 
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
+    document.getElementById('main-app').style.display = 'none'; 
+    document.getElementById('lock-screen').style.display = 'flex'; 
+    
+    // --- NAYA CODE: Logout karte hi Chat History Clear ho jayegi ---
+    const chatMessages = document.getElementById('ai-chat-messages');
+    if(chatMessages) {
+        chatMessages.innerHTML = '<div class="ai-msg">Namaste 👋! Main aapka Smart Assistant hoon. Boliye, aaj main aapki kya madad karoon?</div>';
     }
+    // ---------------------------------------------------------------
+
+    // Disconnect from Firebase to stop background downloads
+    try {
+        database.ref('credix_db').off(); 
+    } catch(e) { console.log(e); }
+
+    resetPin(); 
+    isOwnerMode = false; 
+    deviceStaffName = ''; 
+    activeStaffPhoto = '';
+    activeLoginPin = ""; 
+    currentLang = 'en'; 
+    localStorage.setItem('paymitra_lang', 'en'); 
+    if(document.getElementById('lang-select')) document.getElementById('lang-select').value = 'en'; 
+    applyLang(); 
+    if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; 
+    if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; 
+    if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; 
+    document.getElementById('profile-icon-area').innerHTML = '⚙️';
+    switchTab('dash'); 
+}
     
     function validateSession(newDb) { if (isOwnerMode || deviceStaffName === '' || deviceStaffName === 'Default Staff') return true; let conf = newDb.find(x => x.type === 'config'); if (!conf || !conf.staffList) return true; let isValid = conf.staffList.some(s => s.name === deviceStaffName && s.pin === activeLoginPin); if (!isValid) { logout(); setTimeout(() => showToast("Access Revoked / PIN Changed!"), 500); return false; } return true; }
     
@@ -2053,7 +2060,7 @@ function isLocalQuery(text) {
     if (typeof db !== 'undefined' && db.length > 0) {
         let cleanQueryWords = lowerText.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
         let hasName = db.some(c => {
-            if (!c.name || c.type === 'config' || c.type === 'trash') return false;
+            if (!c.name || c.type === 'config' || c.type === 'trash' || c.isArchived || c.currentBalance <= 0) return false;
             let cName = c.name.toLowerCase();
             return cleanQueryWords.length > 0 && cleanQueryWords.every(qw => cName.includes(qw));
         });
@@ -2209,9 +2216,18 @@ async function sendAIMessage() {
         }
 
         // --- GEMINI API FALLBACK ---
+        
+        // NAYA CODE: Staff ko cloud API use karne se rokna (Bina shaq paida kiye)
+        if (!isOwnerMode) {
+            if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+            appendMessage("Maaf karna, main abhi sirf khaate aur pending kishat ki jaankari de sakta hoon. Kripya customer ka naam likhein ya 'Aaj ki report' type karein.", 'ai');
+            return; // Yeh API call ko yahin rok dega
+        }
+        // NAYA CODE KHATAM
+
         let dbSummary = "Database abhi khali hai.";
         if (typeof db !== 'undefined' && db.length > 0) {
-            let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash');
+            let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash' && !x.isArchived && x.currentBalance > 0);
             if (!isOwnerMode) {
                 pureDb = pureDb.filter(c => (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase() && !c.isPersonal).map(c => ({ name: c.name, type: c.type, currentBalance: c.currentBalance, startDate: c.startDate }));
             }
@@ -2279,14 +2295,39 @@ function startAIChatVoice() {
     recognition.start();
 }
 
-function speakText(text) {
+let wakeLock = null;
+
+async function speakText(text) {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
+        
+        // NAYA CODE: Screen ko off hone se rokne ke liye Wake Lock
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {
+            console.log("Wake Lock error: ", err);
+        }
+
         // Remove characters that make the voice sound robotic or read symbols
         let cleanText = text.replace(/[*#_]/g, "").replace(/₹/g, "rupees ");
         const msg = new SpeechSynthesisUtterance(cleanText);
         msg.lang = 'hi-IN';
         msg.rate = 1.0;
+        
+        // NAYA CODE: Jab aawaz khatam ho jaye ya error aaye, toh Wake Lock hata do
+        msg.onend = function() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        };
+        msg.onerror = function() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        };
+
         window.speechSynthesis.speak(msg);
     }
 }
