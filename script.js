@@ -2091,7 +2091,7 @@ function appendMessage(text, sender) {
         return detectIntent(text) !== 'unknown';
     }
     // --------------------------------------
-     async function sendAIMessage() {
+    async function sendAIMessage(isVoice = false) {
         const inputEl = document.getElementById('ai-chat-input');
         const text = inputEl.value.trim();
         if (!text) return;
@@ -2106,7 +2106,6 @@ function appendMessage(text, sender) {
         document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 
         try {
-            // 1. Local Database Se Data Nikalein
             if (isLocalQuery(text)) {
                 if(document.getElementById(typingId)) document.getElementById(typingId).remove();
                 let localReply = "";
@@ -2135,131 +2134,64 @@ function appendMessage(text, sender) {
 
                 let intent = detectIntent(text);
                 
-                                                // 🎯 1. PENDING & COLLECTION
                 if (intent === 'pending' || intent === 'collection') {
                     let isPendingQuery = (intent === 'pending');
                     let daily = { list: [], total: 0 }, monthly = { list: [], total: 0 }, meter = { list: [], total: 0 };
                     let todayStr = getISTDate();
-                    
                     activeLoans.forEach(c => {
                         let target = c.type === 'daily' ? daily : c.type === 'monthly' ? monthly : meter;
                         let val = isPendingQuery ? getPendingData(c).pAmt : (c.history ? c.history.filter(h => h.date === todayStr).reduce((s, h) => s + parseFloat(h.paid || 0), 0) : 0);
                         if (val > 0) { target.list.push(`• ${c.name}: ₹${val.toFixed(0)}`); target.total += val; }
                     });
-
                     let grandTotal = daily.total + monthly.total + meter.total;
-                    
                     const build = (t, g) => (g.list.length > 0) ? `\n➖➖ **${t} (₹${g.total.toFixed(0)})** ➖➖\n${g.list.join("\n")}` : "";
                     let title = isPendingQuery ? 'PENDING REPORT' : 'AAJ DI COLLECTION';
-                    
-                    if (grandTotal > 0) {
-                        localReply = `🟢 **${title}** (Grand Total: ₹${grandTotal.toFixed(0)})\n` + build("DAILY", daily) + build("MONTHLY", monthly) + build("METER", meter);
-                    } else {
-                        localReply = `🟢 Koi ${isPendingQuery ? 'pending kishat' : 'collection'} nahi hai.`;
-                    }
-                }
-                // 🎯 2. DAILY, MONTHLY, METER LISTS (NEW LOGIC)
-                else if (intent === 'daily_list' || intent === 'monthly_list' || intent === 'meter_list') {
-                    let targetType = intent.split('_')[0]; // Extacts 'daily', 'monthly', or 'meter'
-                    let filteredLoans = activeLoans.filter(c => c.type === targetType);
-                    
-                    if (filteredLoans.length > 0) {
-                        let listArr = [];
-                        let totalVal = 0;
-                        filteredLoans.forEach((c, i) => {
-                            listArr.push(`${i + 1}. **${c.name}**\n   Date: ${formatDateDisplay(c.startDate)} | Amt: ₹${c.principal.toFixed(0)}`);
-                            totalVal += c.principal;
-                        });
-                        localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n➖➖➖➖➖➖\n` + listArr.join('\n\n');
-                    } else {
-                        localReply = `🟢 Abhi koi ${targetType.toUpperCase()} case nahi hai.`;
-                    }
-                } 
-                // 🎯 3. CUSTOMER SEARCH
-                else {
+                    localReply = grandTotal > 0 ? `🟢 **${title}** (Grand Total: ₹${grandTotal.toFixed(0)})\n` + build("DAILY", daily) + build("MONTHLY", monthly) + build("METER", meter) : `🟢 Koi ${isPendingQuery ? 'pending kishat' : 'collection'} nahi hai.`;
+                } else if (intent === 'daily_list' || intent === 'monthly_list' || intent === 'meter_list') {
+                    let targetType = intent.split('_')[0]; 
+                    let filtered = activeLoans.filter(c => c.type === targetType);
+                    if (filtered.length > 0) {
+                        let totalVal = filtered.reduce((sum, c) => sum + c.principal, 0);
+                        localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n➖➖➖➖➖➖\n` + filtered.map((c, i) => `${i + 1}. **${c.name}**\n   Date: ${formatDateDisplay(c.startDate)} | Amt: ₹${c.principal.toFixed(0)}`).join('\n\n');
+                    } else localReply = `🟢 Abhi koi ${targetType.toUpperCase()} case nahi hai.`;
+                } else {
                     let matched = activeLoans.filter(c => c.name.toLowerCase().split(/\s+/).some(part => part.length > 2 && query.includes(part)));
-                    if (matched.length > 0) {
-                        localReply = matched.map(c => { let d = getPendingData(c); return `🟢 **${c.name}** (${c.type.toUpperCase()})\n• Bal: ₹${c.currentBalance.toFixed(0)}\n• Pending: ₹${d.pAmt.toFixed(0)}\n• ${d.pText}`; }).join("\n\n");
-                    } else {
-                        localReply = "🟢 Customer nahi mila. Kripya pura naam likhein.";
-                    }
+                    localReply = matched.length > 0 ? matched.map(c => { let d = getPendingData(c); return `🟢 **${c.name}** (${c.type.toUpperCase()})\n• Bal: ₹${c.currentBalance.toFixed(0)}\n• Pending: ₹${d.pAmt.toFixed(0)}\n• ${d.pText}`; }).join("\n\n") : "🟢 Customer nahi mila.";
                 }
                 
-                if(!localReply) localReply = "🟢 Samajh nahi paya, dobara try karein.";
                 appendMessage(localReply, 'ai');
+                if (isVoice) speakText(localReply);
                 return;
             }
 
-            // 2. GEMINI API FALLBACK (Sirf Owner Mode ke liye)
-        let dbSummary = "Database abhi khali hai.";
-        if (typeof db !== 'undefined' && db.length > 0) {
-            let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash');
             if (!isOwnerMode) {
-                pureDb = pureDb.filter(c => (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase() && !c.isPersonal).map(c => ({ name: c.name, type: c.type, currentBalance: c.currentBalance, startDate: c.startDate }));
+                if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+                let msg = "Maaf karna, main abhi sirf khaate aur pending kishat ki jaankari de sakta hoon.";
+                appendMessage(msg, 'ai');
+                if (isVoice) speakText(msg);
+                return; 
             }
-            dbSummary = JSON.stringify(pureDb); 
+
+            // [BAAKI API CALL WALA CODE WAHIN RAKHEIN JO APKE PAAS PEHLE SE THA]
+            // ... (Aapka API wala fetch logic yahan aayega) ...
+        } catch (e) {
+            if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+            appendMessage("🚨 Network Error", 'ai');
         }
-                const aajKiDate = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        
-        // 🔥 SMART LANGUAGE PROMPT: AI ab user ki bhasha mein hi jawab dega!
-        const promptText = `Tum Credix Finance app ke AI assistant ho. Aaj date hai: ${aajKiDate}.
-        Agar user Staff hai (yani data mein details kam hain), toh usko chhota aur limited jawab do.
-        Backend code ya JSON mat dikhana. Data: ${dbSummary}.
-        IMPORTANT RULE: User ne jis bhasha (Hindi, Punjabi, ya English) mein sawaal poocha hai, usi bhasha aur lipi mein jawab do. Agar user ne Hinglish likhi hai, toh Hinglish mein jawab do. Agar Punjabi (Roman ya Gurmukhi) likhi hai, toh Punjabi mein jawab do.
-        Sawal: ${text}`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) });
-        const data = await response.json();
-        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-
-        if (data.error) { appendMessage("🚨 Google API Error: " + data.error.message, 'ai'); } 
-        else if (data.candidates && data.candidates[0].content.parts[0].text) {
-            appendMessage(data.candidates[0].content.parts[0].text, 'ai');
-            speakText(data.candidates[0].content.parts[0].text); 
-        } else { appendMessage("Kuch ajeeb error aaya hai.", 'ai'); }
-    } catch (error) {
-        console.error("AI Catch Error:", error);
-        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-        appendMessage("🚨 Network Error: Internet nahi chal raha.", 'ai');
     }
-}
 
-function startAIChatVoice() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("Aapka browser voice chat support nahi karta.");
-        return;
+    function startAIChatVoice() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'hi-IN';
+        const inputEl = document.getElementById('ai-chat-input');
+        inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
+        recognition.onresult = (event) => {
+            inputEl.value = event.results[0][0].transcript;
+            sendAIMessage(true); // 🔥 Is 'true' ki wajah se ab sirf MIC par hi AI bolega!
+        };
+        recognition.onend = () => inputEl.placeholder = "Poochiye (Jaise: Rahul ki det...)";
+        recognition.start();
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    const inputEl = document.getElementById('ai-chat-input');
-    let originalPlaceholder = inputEl.placeholder;
-    inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
-    inputEl.value = "";
-
-    recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        inputEl.value = transcript;
-        inputEl.placeholder = originalPlaceholder;
-        sendAIMessage(); 
-    };
-
-    recognition.onerror = function(event) {
-        inputEl.placeholder = originalPlaceholder;
-        if(event.error !== 'no-speech') {
-            appendMessage("🚨 Aawaz clear nahi thi, dobara boliye.", 'ai');
-        }
-    };
-
-    recognition.onend = function() {
-        inputEl.placeholder = originalPlaceholder;
-    };
-
-    recognition.start();
-}
 
 function speakText(text) {
     if ('speechSynthesis' in window) {
