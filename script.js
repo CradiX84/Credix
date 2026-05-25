@@ -571,7 +571,7 @@
         }
     }
 
-    // VIP FIX: Logout par cache clear aur Firebase disconnect
+    // VIP FIX: Logout par cache clear, Firebase disconnect aur Chat clear
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
@@ -595,6 +595,13 @@
         if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; 
         if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; 
         document.getElementById('profile-icon-area').innerHTML = '⚙️';
+        
+        // 🧹 CHAT CLEAR FIX: Logout hote hi chat ki history screen se clear ho jayegi
+        const chatMessages = document.getElementById('ai-chat-messages');
+        if (chatMessages) chatMessages.innerHTML = '';
+        const chatInput = document.getElementById('ai-chat-input');
+        if (chatInput) chatInput.value = '';
+        
         switchTab('dash'); 
     }
     
@@ -1997,13 +2004,16 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
 
 const GEMINI_API_KEY = "AIzaSyAm7Cv56NJ_iEwbW5e7OfCtnrhnziH7DDs"; 
 
-// --- STEP 1: HIDDEN COMMAND DICTIONARY (FROM PDF) ---
+// --- STEP 1: HIDDEN COMMAND DICTIONARY (UPDATED WITH LIST TYPES) ---
 const COMMAND_INTENTS = {
-    pending: ["pending", "due", "baki", "overdue", "unpaid", "late", "/pending", "/due", "#due", "@pending"],
-    collection: ["collection", "recovery", "payment", "jama", "received", "/collection", "#cash", "#emi"],
-    customer_name: ["balance", "history", "profile", "account", "status", "detail", "/balance", "/history", "/customer"],
-    report: ["report", "summary", "sabka", "@monthly", "/report", "@today"],
-    whatsapp: ["whatsapp", "send"]
+    pending: ["pending", "due", "baki", "overdue", "unpaid", "late", "/pending", "/due", "पेंडिंग", "बाकी", "डियू", "kis kis", "leni"],
+    collection: ["collection", "recovery", "payment", "jama", "received", "/collection", "कलेक्शन", "जमा", "रिकवरी", "पेमेंट", "ayi"],
+    customer_name: ["balance", "history", "profile", "account", "status", "detail", "/balance", "/customer", "बैलेंस", "डिटेल", "खाता"],
+    report: ["report", "summary", "sabka", "/report", "@today", "रिपोर्ट"],
+    daily_list: ["daily", "डेली", "rozana", "/daily"],
+    monthly_list: ["monthly", "मंथली", "mahina", "/monthly", "vyaj"],
+    meter_list: ["meter", "मीटर", "/meter"],
+    whatsapp: ["whatsapp", "send", "व्हाट्सएप", "भेजो"]
 };
 // ---------------------------------------------------
 
@@ -2096,124 +2106,91 @@ function appendMessage(text, sender) {
         document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 
         try {
-            // --- STEP 3: INTENT ROUTING (Output Generation) ---
-            const intent = detectIntent(text); 
-
-            if (intent !== 'unknown') {
+            // 1. Local Database Se Data Nikalein
+            if (isLocalQuery(text)) {
                 if(document.getElementById(typingId)) document.getElementById(typingId).remove();
                 let localReply = "";
                 const query = text.toLowerCase();
+                const activeLoans = db.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
 
-                if (typeof db !== 'undefined' && db.length > 0) {
-                    const activeLoans = db.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
-                    const todayStr = getISTDate();
+                const getPendingData = (c) => {
+                    let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
+                    const todayObj = new Date(getISTDate()); const lastDateObj = new Date(lastPaidDate);
+                    let pAmt = 0; let pText = "";
+                    if (c.type === 'meter' || c.type === 'daily') {
+                        let kAmt = c.type === 'daily' ? (c.installment || 0) : ((c.principal * (c.rate || 0)) / 100);
+                        let dDiff = Math.max(0, Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24)));
+                        if(!c.history || c.history.length === 0) dDiff = Math.floor((todayObj - new Date(c.startDate)) / (1000 * 60 * 60 * 24));
+                        if(dDiff < 0) dDiff = 0;
+                        pAmt = dDiff * kAmt;
+                        pText = c.type === 'meter' ? `${dDiff} din pending` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
+                    } else {
+                        let kAmt = (c.principal * (c.rate || 0)) / 100;
+                        let nDate = new Date(lastPaidDate); nDate.setMonth(nDate.getMonth() + 1);
+                        pAmt = (todayObj >= nDate) ? kAmt : 0;
+                        pText = (todayObj >= nDate) ? `Due: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
+                    }
+                    return { pAmt, pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
+                };
 
-                    // Pending Data Helper
-                    const getPendingData = (c) => {
-                        let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
-                        const todayObj = new Date(todayStr); const lastDateObj = new Date(lastPaidDate);
-                        let pAmt = 0; let pText = "";
-                        if (c.type === 'meter' || c.type === 'daily') {
-                            let kAmt = c.type === 'daily' ? (c.installment || 0) : ((c.principal * (c.rate || 0)) / 100);
-                            let dDiff = Math.max(0, Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24)));
-                            if(!c.history || c.history.length === 0) dDiff = Math.floor((todayObj - new Date(c.startDate)) / (1000 * 60 * 60 * 24));
-                            if(dDiff < 0) dDiff = 0;
-                            pAmt = dDiff * kAmt;
-                            pText = c.type === 'meter' ? `${dDiff} din pending (Aakhiri: ${formatDateDisplay(lastPaidDate)})` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
-                        } else {
-                            let kAmt = (c.principal * (c.rate || 0)) / 100;
-                            let nDate = new Date(lastPaidDate); nDate.setMonth(nDate.getMonth() + 1);
-                            pAmt = (todayObj >= nDate) ? kAmt : 0;
-                            pText = (todayObj >= nDate) ? `Due Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
-                        }
-                        return { pAmt, pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
-                    };
-
-                                        // 🎯 1. PENDING REPORT
-                    if (intent === 'pending') {
-                        let dailyList = [], monthlyList = [], meterList = [];
-                        let totalPend = 0;
-                        activeLoans.forEach(c => {
-                            let data = getPendingData(c);
-                            if (data.pAmt > 0) {
-                                let itemStr = `• ${c.name}: ₹${data.pAmt.toFixed(0)}`;
-                                if (c.type === 'daily') dailyList.push(itemStr);
-                                else if (c.type === 'monthly') monthlyList.push(itemStr);
-                                else if (c.type === 'meter') meterList.push(itemStr);
-                                totalPend += data.pAmt;
-                            }
-                        });
-                        let replyParts = [`🟢 **PENDING REPORT** (Total: ₹${totalPend.toFixed(0)})`];
-                        if (dailyList.length > 0) replyParts.push(`\n➖➖ **DAILY** ➖➖\n` + dailyList.join("\n"));
-                        if (monthlyList.length > 0) replyParts.push(`\n➖➖ **MONTHLY** ➖➖\n` + monthlyList.join("\n"));
-                        if (meterList.length > 0) replyParts.push(`\n➖➖ **METER** ➖➖\n` + meterList.join("\n"));
-                        localReply = totalPend > 0 ? replyParts.join("\n") : "🟢 Koi pending kishat nahi hai. Sab clear hai!";
-                    } 
-                    // 🎯 2. COLLECTION REPORT
-                    else if (intent === 'collection') {
-                        let dailyList = [], monthlyList = [], meterList = [];
-                        let totalColl = 0;
-                        activeLoans.forEach(c => {
-                            if (c.history) {
-                                let paidToday = c.history.filter(h => h.date === todayStr).reduce((sum, h) => sum + parseFloat(h.paid), 0);
-                                if (paidToday > 0) {
-                                    let itemStr = `• ${c.name}: ₹${paidToday}`;
-                                    if (c.type === 'daily') dailyList.push(itemStr);
-                                    else if (c.type === 'monthly') monthlyList.push(itemStr);
-                                    else if (c.type === 'meter') meterList.push(itemStr);
-                                    totalColl += paidToday;
-                                }
-                            }
-                        });
-                        let replyParts = [`🟢 **AAJ DI COLLECTION** (Total: ₹${totalColl})`];
-                        if (dailyList.length > 0) replyParts.push(`\n➖➖ **DAILY** ➖➖\n` + dailyList.join("\n"));
-                        if (monthlyList.length > 0) replyParts.push(`\n➖➖ **MONTHLY** ➖➖\n` + monthlyList.join("\n"));
-                        if (meterList.length > 0) replyParts.push(`\n➖➖ **METER** ➖➖\n` + meterList.join("\n"));
-                        localReply = totalColl > 0 ? replyParts.join("\n") : "🟢 Aaj abhi tak koi collection nahi aayi hai.";
-                    }
-                    // 🎯 3. CUSTOMER REPORT
-                    else if (intent === 'customer_name') {
-                        let cleanQueryWords = query.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-                        let matchedCustomers = activeLoans.filter(c => {
-                            if(!c.name) return false;
-                            return cleanQueryWords.every(qw => c.name.toLowerCase().includes(qw));
-                        });
-                        
-                        if (matchedCustomers.length > 0) {
-                            matchedCustomers.forEach(c => {
-                                let data = getPendingData(c);
-                                localReply += `🟢 **${c.name}** (${data.cType})\n• Balance: ₹${c.currentBalance.toFixed(0)}\n• Pending: ₹${data.pAmt.toFixed(0)}\n• Detail: ${data.pText}\n\n`;
-                            });
-                            localReply = localReply.trim();
-                        } else {
-                            localReply = "🟢 Customer nahi mila. Kripya pura naam likhein.";
-                        }
-                    } 
-                    // 🎯 4. SUMMARY REPORT
-                    else if (intent === 'report') {
-                        let totalLoans = activeLoans.length;
-                        let totalBal = activeLoans.reduce((sum, c) => sum + c.currentBalance, 0);
-                        let totalColl = 0;
-                        activeLoans.forEach(c => {
-                            if (c.history) totalColl += c.history.filter(h => h.date === todayStr).reduce((sum, h) => sum + parseFloat(h.paid), 0);
-                        });
-                        localReply = `🟢 **BUSINESS SUMMARY**\n• Active Accounts: ${totalLoans}\n• Total Outstanding: ₹${totalBal.toFixed(0)}\n• Aaj Ki Collection: ₹${totalColl}`;
-                    }
-                    // 🎯 5. WHATSAPP SHORTCUT
-                    else if (intent === 'whatsapp') {
-                        localReply = "🟢 WhatsApp feature jaldi aa raha hai. Abhi Review tab se Report download kar sakte hain.";
-                    }
+                let intent = detectIntent(text);
+                
+                                                // 🎯 1. PENDING & COLLECTION
+                if (intent === 'pending' || intent === 'collection') {
+                    let isPendingQuery = (intent === 'pending');
+                    let daily = { list: [], total: 0 }, monthly = { list: [], total: 0 }, meter = { list: [], total: 0 };
+                    let todayStr = getISTDate();
                     
-                } else { 
-                    localReply = "🔴 Database abhi khali hai."; 
+                    activeLoans.forEach(c => {
+                        let target = c.type === 'daily' ? daily : c.type === 'monthly' ? monthly : meter;
+                        let val = isPendingQuery ? getPendingData(c).pAmt : (c.history ? c.history.filter(h => h.date === todayStr).reduce((s, h) => s + parseFloat(h.paid || 0), 0) : 0);
+                        if (val > 0) { target.list.push(`• ${c.name}: ₹${val.toFixed(0)}`); target.total += val; }
+                    });
+
+                    let grandTotal = daily.total + monthly.total + meter.total;
+                    
+                    const build = (t, g) => (g.list.length > 0) ? `\n➖➖ **${t} (₹${g.total.toFixed(0)})** ➖➖\n${g.list.join("\n")}` : "";
+                    let title = isPendingQuery ? 'PENDING REPORT' : 'AAJ DI COLLECTION';
+                    
+                    if (grandTotal > 0) {
+                        localReply = `🟢 **${title}** (Grand Total: ₹${grandTotal.toFixed(0)})\n` + build("DAILY", daily) + build("MONTHLY", monthly) + build("METER", meter);
+                    } else {
+                        localReply = `🟢 Koi ${isPendingQuery ? 'pending kishat' : 'collection'} nahi hai.`;
+                    }
+                }
+                // 🎯 2. DAILY, MONTHLY, METER LISTS (NEW LOGIC)
+                else if (intent === 'daily_list' || intent === 'monthly_list' || intent === 'meter_list') {
+                    let targetType = intent.split('_')[0]; // Extacts 'daily', 'monthly', or 'meter'
+                    let filteredLoans = activeLoans.filter(c => c.type === targetType);
+                    
+                    if (filteredLoans.length > 0) {
+                        let listArr = [];
+                        let totalVal = 0;
+                        filteredLoans.forEach((c, i) => {
+                            listArr.push(`${i + 1}. **${c.name}**\n   Date: ${formatDateDisplay(c.startDate)} | Amt: ₹${c.principal.toFixed(0)}`);
+                            totalVal += c.principal;
+                        });
+                        localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n➖➖➖➖➖➖\n` + listArr.join('\n\n');
+                    } else {
+                        localReply = `🟢 Abhi koi ${targetType.toUpperCase()} case nahi hai.`;
+                    }
+                } 
+                // 🎯 3. CUSTOMER SEARCH
+                else {
+                    let matched = activeLoans.filter(c => c.name.toLowerCase().split(/\s+/).some(part => part.length > 2 && query.includes(part)));
+                    if (matched.length > 0) {
+                        localReply = matched.map(c => { let d = getPendingData(c); return `🟢 **${c.name}** (${c.type.toUpperCase()})\n• Bal: ₹${c.currentBalance.toFixed(0)}\n• Pending: ₹${d.pAmt.toFixed(0)}\n• ${d.pText}`; }).join("\n\n");
+                    } else {
+                        localReply = "🟢 Customer nahi mila. Kripya pura naam likhein.";
+                    }
                 }
                 
+                if(!localReply) localReply = "🟢 Samajh nahi paya, dobara try karein.";
                 appendMessage(localReply, 'ai');
-                return; // Yahi se wapas mud jao, Google API ko hit NAHI karega!
+                return;
             }
 
-
-        // --- GEMINI API FALLBACK ---
+            // 2. GEMINI API FALLBACK (Sirf Owner Mode ke liye)
         let dbSummary = "Database abhi khali hai.";
         if (typeof db !== 'undefined' && db.length > 0) {
             let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash');
