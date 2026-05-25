@@ -2182,28 +2182,33 @@ function appendMessage(text, sender) {
 
     function startAIChatVoice() {
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'hi-IN';
+        
+        // 🔥 MAIN FIX: 'hi-IN' ko 'en-IN' kar diya. Ab sab kuch English letters mein type hoga aur database se match karega!
+        recognition.lang = 'en-IN'; 
+        
         const inputEl = document.getElementById('ai-chat-input');
         inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
         recognition.onresult = (event) => {
             inputEl.value = event.results[0][0].transcript;
-            sendAIMessage(true); // 🔥 Is 'true' ki wajah se ab sirf MIC par hi AI bolega!
+            sendAIMessage(true); // 🔥 Mic par AI bolega
         };
         recognition.onend = () => inputEl.placeholder = "Poochiye (Jaise: Rahul ki det...)";
         recognition.start();
     }
 
-function speakText(text) {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        // Remove characters that make the voice sound robotic or read symbols
-        let cleanText = text.replace(/[*#_]/g, "").replace(/₹/g, "rupees ");
-        const msg = new SpeechSynthesisUtterance(cleanText);
-        msg.lang = 'hi-IN';
-        msg.rate = 1.0;
-        window.speechSynthesis.speak(msg);
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
+            // 🔥 MAIN FIX: Ab yeh Star, Hash, Underscore ke sath-sath Minus (➖), Hyphen (-), aur Dot (•) ko bhi hatayega
+            let cleanText = text.replace(/[*#_➖\-•]/g, "").replace(/₹/g, "rupees ");
+            
+            const msg = new SpeechSynthesisUtterance(cleanText);
+            msg.lang = 'hi-IN';
+            msg.rate = 1.0;
+            window.speechSynthesis.speak(msg);
+        }
     }
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('ai-chat-input');
