@@ -2347,11 +2347,32 @@ function appendMessage(text, sender) {
                     let isPendingQuery = (intent === 'pending');
                     let daily = { list: [], total: 0 }, monthly = { list: [], total: 0 }, meter = { list: [], total: 0 };
                     let todayStr = getISTDate();
-                    activeLoans.forEach(c => {
+                    
+                    // 🔥 NAYA LOGIC: Collection mein unko bhi ginega jinka khaata aaj close hua hai
+                    let baseList = isPendingQuery ? activeLoans : aiData.filter(c => c.type !== 'config' && c.type !== 'trash' && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
+
+                    baseList.forEach(c => {
                         let target = c.type === 'daily' ? daily : c.type === 'monthly' ? monthly : meter;
-                        let val = isPendingQuery ? getPendingData(c).pAmt : (c.history ? c.history.filter(h => h.date === todayStr).reduce((s, h) => s + parseFloat(h.paid || 0), 0) : 0);
-                        if (val > 0) { target.list.push(`• ${c.name}: ₹${val.toFixed(0)}`); target.total += val; }
+                        let val = 0;
+                        let extraMsg = "";
+                        
+                        if (isPendingQuery) {
+                            val = getPendingData(c).pAmt;
+                        } else {
+                            // Collection nikalna: Aaj ki date mein kitne paise aaye
+                            val = c.history ? c.history.filter(h => h.date === todayStr).reduce((s, h) => s + parseFloat(h.paid || 0), 0) : 0;
+                            // Agar paise aaye aur balance 0 ho gaya, toh message add karo
+                            if (val > 0 && c.currentBalance <= 0) {
+                                extraMsg = " (Account Closed 🟢)";
+                            }
+                        }
+                        
+                        if (val > 0) { 
+                            target.list.push(`• ${c.name}: ₹${val.toFixed(0)}${extraMsg}`); 
+                            target.total += val; 
+                        }
                     });
+                    
                     let grandTotal = daily.total + monthly.total + meter.total;
                     const build = (t, g) => (g.list.length > 0) ? `\n➖➖ **${t} (₹${g.total.toFixed(0)})** ➖➖\n${g.list.join("\n")}` : "";
                     let title = isPendingQuery ? 'PENDING REPORT' : 'AAJ DI COLLECTION';
