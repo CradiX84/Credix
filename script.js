@@ -10,11 +10,27 @@
       measurementId: "G-7LZNQHW2KX"
     };
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth(); 
-    const database = firebase.database();
-    // ----------------------
+    // --- FIREBASE SMART OFFLINE WRAPPER ---
+    let auth = null;
+    let database = null;
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth(); 
+        database = firebase.database();
+    } else {
+        // Agar internet band hai toh dummy database banayega taaki app crash na ho
+        database = {
+            ref: () => ({
+                on: (ev, cb, err) => { if(err) err(); },
+                off: () => {},
+                once: () => Promise.reject(),
+                set: () => Promise.reject(),
+                update: () => Promise.reject()
+            }),
+            goOnline: () => {}, goOffline: () => {}
+        };
+    }
+    // --------------------------------------
 
     // --- INDIAN TIMEZONE HELPER ---
     function getISTDate() {
