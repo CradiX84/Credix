@@ -35,7 +35,9 @@
     let deviceStaffName = ''; 
     let activeStaffPhoto = '';
     let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; 
+    let lastSelectedHistoryIndex = null;
     let confirmActionCallback = null;
+
     let isSaving = false;
     let lastGeneratedReportData = null;
 
@@ -1096,7 +1098,32 @@
         } 
     }
 
-    function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
+        function toggleMultiDel(id) { 
+        multiDelMode[id] = !multiDelMode[id]; 
+        lastSelectedHistoryIndex = null; 
+        render(); 
+    }
+
+    function handleMultiSelectCheck(event, custId) {
+        let clickedCheckbox = event.target;
+        let allCheckboxes = Array.from(document.querySelectorAll(`.del-chk-${custId}`));
+        let currentIndex = allCheckboxes.findIndex(chk => chk === clickedCheckbox);
+        
+        if (clickedCheckbox.checked) {
+            if (lastSelectedHistoryIndex !== null && lastSelectedHistoryIndex !== currentIndex) {
+                // Pehle aur abhi wale click ke beech ke sabhi checkbox automatically tick karega
+                let start = Math.min(lastSelectedHistoryIndex, currentIndex);
+                let end = Math.max(lastSelectedHistoryIndex, currentIndex);
+                for (let i = start; i <= end; i++) {
+                    allCheckboxes[i].checked = true;
+                }
+            }
+            lastSelectedHistoryIndex = currentIndex;
+        } else {
+            // Agar uncheck kiya, toh yaadashat clear kar dega
+            lastSelectedHistoryIndex = null;
+        }
+    }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
         function openPayModal(id, prefillAmt = null) { 
@@ -1132,13 +1159,46 @@
         }
     }
     
-       function openBulkModal(id, startOverride = null, endOverride = null) { 
+    function openBulkModal(id, startOverride = null, endOverride = null) { 
         let c = db.find(x => x.id === id); 
         document.getElementById('bulk-id').value = id; 
         let todayStr = getISTDate(); // IST FIX
         
-        // 🔥 SMART OVERRIDE: Agar report se date aayi hai to wo bharega, warna aaj ki date
-        document.getElementById('bulk-start-date').value = (startOverride && typeof startOverride === 'string') ? startOverride : todayStr; 
+        // 🔥 SMART START DATE LOGIC
+        let calculatedStartDate = todayStr;
+        if (startOverride && typeof startOverride === 'string') {
+            calculatedStartDate = startOverride; // Agar Custom Report se aaya hai toh wahi date lega
+        } else {
+            if (c.history && c.history.length > 0) {
+                // Last payment date dhundho
+                let sortedHist = [...c.history].sort((a,b) => a.date > b.date ? 1 : -1);
+                let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
+                let nextDate = new Date(lastPaidDateStr);
+                
+                // Usme 1 din (ya 1 mahina) jodo
+                if (c.type === 'monthly') {
+                    nextDate.setMonth(nextDate.getMonth() + 1);
+                } else {
+                    nextDate.setDate(nextDate.getDate() + 1);
+                }
+                
+                // Format YYYY-MM-DD
+                let y = nextDate.getFullYear();
+                let m = String(nextDate.getMonth() + 1).padStart(2, '0');
+                let d = String(nextDate.getDate()).padStart(2, '0');
+                calculatedStartDate = `${y}-${m}-${d}`;
+                
+                // Agar advance payment ki wajah se next date aaj se bhi aage nikal jaye, toh aaj ki date dikhaye
+                if (calculatedStartDate > todayStr) {
+                    calculatedStartDate = todayStr;
+                }
+            } else {
+                // Agar koi purani payment nahi hai (Pehli kishat), toh account banne wali date se shuru karega
+                calculatedStartDate = c.startDate;
+            }
+        }
+
+        document.getElementById('bulk-start-date').value = calculatedStartDate; 
         document.getElementById('bulk-end-date').value = (endOverride && typeof endOverride === 'string') ? endOverride : todayStr; 
         
         let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * (c.rate||0)/100) : (c.installment || 0)); 
@@ -1961,7 +2021,7 @@
             let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
             let histData = c.history ? [...c.history] : [], hideSNo = false;
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
-            let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
+            let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
             accountsHtmlArray.push(`
