@@ -1,51 +1,43 @@
-const CACHE_NAME = 'credix-offline-v4';
+const CACHE_NAME = 'credix-offline-v2';
 
-const urlsToCache = [
-    './',
-    './index.html',
-    './style.css',
-    './script.js',
-    './manifest.json',
-    './logo.png'
-];
-
+// Install: Core files save karega
 self.addEventListener('install', (event) => {
-    self.skipWaiting();
+    self.skipWaiting(); // Naye update ko turant lagu karega
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll([
+                './',
+                './index.html',
+                './style.css',
+                './script.js',
+                './manifest.json',
+                './logo.png'
+            ]);
+        })
     );
 });
 
+// Activate: Purane cache ko hata kar naya chalayega
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName); // Purana kachra saaf karega
-                    }
-                })
-            );
-        }).then(() => self.clients.claim())
-    );
+    event.waitUntil(clients.claim()); 
 });
 
-// 🔥 SMART NETWORK FIRST LOGIC
+// Fetch: Jo bhi nayi file milegi (jaise Firebase/Dexie) usko automatically offline ke liye save kar lega
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     
     event.respondWith(
-        fetch(event.request)
-            .then((networkResponse) => {
-                // Agar internet ON hai toh hamesha NAYA code layega aur save karega
+        caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse; // Agar file save hai toh offline se de do
+            
+            return fetch(event.request).then((networkResponse) => {
                 return caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, networkResponse.clone());
+                    cache.put(event.request, networkResponse.clone()); // Nayi link ko hamesha ke liye save kar lo
                     return networkResponse;
                 });
-            })
-            .catch(() => {
-                // Agar internet OFF hai toh purana save kiya hua chalayega
-                return caches.match(event.request);
-            })
+            }).catch(() => {
+                console.log("Offline mode active");
+            });
+        })
     );
 });
