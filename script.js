@@ -1099,24 +1099,49 @@
     function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
-    function openPayModal(id) { 
+        function openPayModal(id, prefillAmt = null) { 
         let c = db.find(x => x.id === id); 
         document.getElementById('pay-id').value = id; 
-        document.getElementById('pay-date').value = getISTDate(); // IST FIX
-        let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
+        document.getElementById('pay-date').value = getISTDate(); 
+        let amt = 0;
+        if (prefillAmt !== null && prefillAmt > 0) {
+            amt = prefillAmt; // 🚀 Naya feature: Pending se direct total utha lega
+        } else {
+            amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
+        }
         document.getElementById('pay-amt').value = amt.toFixed(0); 
         document.getElementById('pay-modal').style.display = 'flex'; 
     }
 
-    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
+    function savePayment() { 
+        let id = parseInt(document.getElementById('pay-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('pay-amt').value); 
+        let dateStr = document.getElementById('pay-date').value; 
+        if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
+        if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } 
+        c.history.push({ date: dateStr, paid: amt }); 
+        recalculateCase(c); 
+        saveAndRender(); 
+        closeModal('pay-modal'); 
+        showToast("Payment Saved"); 
+        
+        // 🚀 SMART REFRESH: Agar Report wali screen khuli hai, toh auto-update/adjust ho jayega!
+        if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
+            generateReport();
+        }
+    }
     
-    function openBulkModal(id) { 
+       function openBulkModal(id, startOverride = null, endOverride = null) { 
         let c = db.find(x => x.id === id); 
         document.getElementById('bulk-id').value = id; 
         let todayStr = getISTDate(); // IST FIX
-        document.getElementById('bulk-start-date').value = todayStr; 
-        document.getElementById('bulk-end-date').value = todayStr; 
-        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); 
+        
+        // 🔥 SMART OVERRIDE: Agar report se date aayi hai to wo bharega, warna aaj ki date
+        document.getElementById('bulk-start-date').value = (startOverride && typeof startOverride === 'string') ? startOverride : todayStr; 
+        document.getElementById('bulk-end-date').value = (endOverride && typeof endOverride === 'string') ? endOverride : todayStr; 
+        
+        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * (c.rate||0)/100) : (c.installment || 0)); 
         document.getElementById('bulk-amt').value = amt.toFixed(0); 
         const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); 
         document.getElementById('bulk-freq-label').innerText = `(${freqText})`; 
@@ -1124,7 +1149,49 @@
         document.getElementById('bulk-modal').style.display = 'flex'; 
     }
 
-    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
+    function saveBulkPayment() { 
+        let id = parseInt(document.getElementById('bulk-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('bulk-amt').value); 
+        let startStr = document.getElementById('bulk-start-date').value; 
+        let endStr = document.getElementById('bulk-end-date').value; 
+        if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } 
+        let startDate = new Date(startStr); 
+        let endDate = new Date(endStr); 
+        if(endDate < startDate) return showToast("End date must be later"); 
+        let tempDate = new Date(startDate); 
+        let hasDuplicate = false; 
+        while(tempDate <= endDate) { 
+            let y = tempDate.getFullYear(); 
+            let m = String(tempDate.getMonth() + 1).padStart(2, '0'); 
+            let d = String(tempDate.getDate()).padStart(2, '0'); 
+            let pushDate = `${y}-${m}-${d}`; 
+            if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } 
+            if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); 
+        } 
+        if(hasDuplicate) { 
+            triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); 
+            return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); 
+        } 
+        let currentDate = new Date(startDate); 
+        while(currentDate <= endDate) { 
+            let y = currentDate.getFullYear(); 
+            let m = String(currentDate.getMonth() + 1).padStart(2, '0'); 
+            let d = String(currentDate.getDate()).padStart(2, '0'); 
+            let pushDate = `${y}-${m}-${d}`; 
+            c.history.push({ date: pushDate, paid: amt }); 
+            if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); 
+        } 
+        recalculateCase(c); 
+        saveAndRender(); 
+        closeModal('bulk-modal'); 
+        showToast("Bulk Saved!"); 
+
+        // 🔥 SMART REFRESH: Report screen khuli ho toh auto-update karega
+        if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
+            generateReport();
+        }
+    }
     
     function removeEditPhoto() {
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
@@ -1339,22 +1406,43 @@
                 
                 let historyUpToEnd = c.history ? c.history.filter(h => h.date <= rangeEndStr) : [];
 
-                if (c.type === 'daily' || c.type === 'meter') {
-                    amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
+                // SMART BULK DATA TRACKER
+                let missingDateStrings = []; 
+
+                if (c.type === 'daily') {
+                    amountPerUnit = c.installment || 0;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
-let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDate(iterDate.getDate() + 1); 
+                    let iterDate = new Date(sy, sm - 1, sd); 
+                    iterDate.setDate(iterDate.getDate() + 1); 
                     while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
                         if (!historyUpToEnd.some(h => h.date === currentCheckStr)) { 
                             accumulatedTotal += amountPerUnit; 
                             missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); 
+                            missingDateStrings.push(currentCheckStr);
                         }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
+                } else if (c.type === 'meter') {
+                    // 🔥 Naya Meter Logic: Total Paid se due date nikalna
+                    amountPerUnit = c.principal * (c.rate || 0) / 100;
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
+                    let daysPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
+                    
+                    let iterDate = new Date(sy, sm - 1, sd);
+                    iterDate.setDate(iterDate.getDate() + daysPaid); 
+                    
+                    while (toLocalYMD(iterDate) <= rangeEndStr) {
+                        let currentCheckStr = toLocalYMD(iterDate);
+                        accumulatedTotal += amountPerUnit; 
+                        missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); 
+                        missingDateStrings.push(currentCheckStr);
                         iterDate.setDate(iterDate.getDate() + 1);
                     }
                 } else if (c.type === 'monthly') {
                     amountPerUnit = c.principal * (c.rate || 0) / 100;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
-                    
                     let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
                     let monthsPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
                     
@@ -1368,11 +1456,20 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
                         if (cycle > monthsPaid) {
                             accumulatedTotal += amountPerUnit; 
                             missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); 
+                            missingDateStrings.push(nextDueStr);
                         }
                         cycle++;
                     }
                 }
-                if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
+                if (missedDates.length > 0) { 
+                    pendingsInRange.push({ 
+                        ...c, 
+                        accumulatedTotal: accumulatedTotal, 
+                        missedDatesStr: missedDates.join(", "),
+                        firstMissed: missingDateStrings.length > 0 ? missingDateStrings[0] : '',
+                        lastMissed: missingDateStrings.length > 0 ? missingDateStrings[missingDateStrings.length - 1] : ''
+                    });
+}
             }
 
             if (c.isArchived) {
@@ -1473,7 +1570,19 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
                 let perUnit = p.type === 'daily' ? (p.installment || 0) : (p.principal * (p.rate || 0) / 100);
                 let calcNote = `${count} × ₹${perUnit.toFixed(0)}`;
                 let typeTranslated = p.type === 'daily' ? t.fDaily : (p.type === 'monthly' ? t.fMonthly : t.fMeter);
-                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-wrap:break-word; white-space:normal;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
+                
+                // 🔥 SMART CLICK LOGIC: Single ya Bulk Check
+                let clickAction = "";
+                let badgeText = "RECEIVE";
+                
+                if (count > 1 && (p.type === 'daily' || p.type === 'meter')) {
+                    clickAction = `openBulkModal(${p.id}, '${p.firstMissed}', '${p.lastMissed}')`;
+                    badgeText = "BULK RECEIVE ⚡";
+                } else {
+                    clickAction = `openPayModal(${p.id}, ${p.accumulatedTotal})`;
+                }
+
+                html += `<div onclick="${clickAction}" style="cursor:pointer; display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%; transition:0.2s;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-wrap:break-word; white-space:normal;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b><br><span style="background:var(--success); color:white; font-weight:bold; font-size:9px; padding:4px 8px; border-radius:6px; margin-top:6px; display:inline-block; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${badgeText}</span></div></div></div>`;
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
