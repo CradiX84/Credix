@@ -26,6 +26,13 @@
         }).format(new Date());
     }
     
+    // --- OFFLINE AI DATABASE (INDEXEDDB) ---
+    const localDB = new Dexie("CredixAI_DB");
+    localDB.version(1).stores({
+        cases: 'id, name, type, isArchived, staffRef, startDate' 
+    });
+    // ---------------------------------------
+    
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
     let pin = ""; 
     let activeLoginPin = ""; 
@@ -896,7 +903,7 @@
         });
     }
 
-    function saveAndRender() {
+     function saveAndRender() {
         isSaving = true;
         let currentDbStr = JSON.stringify(db);
         localStorage.setItem('paymitra_v11', currentDbStr);
@@ -906,6 +913,12 @@
         
         let oldDb = [];
         try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
+        
+        // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
+        try {
+            let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
+            localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
+        } catch(e) {}
         
         const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
@@ -2275,11 +2288,22 @@ function appendMessage(text, sender) {
         document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 
         try {
+            // 🔥 AI OFFLINE ENGINE: IndexedDB se data fetch karega
+            let aiData = [];
+            try {
+                aiData = await localDB.cases.toArray(); 
+            } catch(e) {
+                console.log("IndexedDB read failed, falling back to memory db", e);
+                aiData = db; // Fallback agar DB load hone mein time lage
+            }
+            
             if (isLocalQuery(text)) {
                 if(document.getElementById(typingId)) document.getElementById(typingId).remove();
                 let localReply = "";
                 const query = text.toLowerCase();
-                const activeLoans = db.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
+                
+                // IndexedDB se aaye 'aiData' ka use karein
+                const activeLoans = aiData.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
 
                 const getPendingData = (c) => {
                     let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
@@ -2342,13 +2366,11 @@ function appendMessage(text, sender) {
             }
 
             // [BAAKI API CALL WALA CODE WAHIN RAKHEIN JO APKE PAAS PEHLE SE THA]
-            // ... (Aapka API wala fetch logic yahan aayega) ...
         } catch (e) {
             if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-            appendMessage("🚨 Network Error", 'ai');
+            appendMessage("🚨 Error reading data", 'ai');
         }
     }
-
     function startAIChatVoice() {
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         
