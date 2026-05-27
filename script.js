@@ -623,7 +623,8 @@
         
         // 🧹 CHAT CLEAR FIX: Logout hote hi chat ki history screen se clear ho jayegi
         const chatMessages = document.getElementById('ai-chat-messages');
-        if (chatMessages) chatMessages.innerHTML = '';
+        if (chatMessages) chatMessages.innerHTML = '<div class="ai-msg">Namaste 👋! Main aapka NAYA Smart Assistant hoon.\nBoliye, aaj main aapki kya madad karoon?</div>';
+
         const chatInput = document.getElementById('ai-chat-input');
         if (chatInput) chatInput.value = '';
         
