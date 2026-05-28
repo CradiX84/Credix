@@ -858,7 +858,7 @@
         render(); checkAutoBackup();
     }
 
-    function setupFirebaseListener() {
+        function setupFirebaseListener() {
         // App khulte hi phone ki memory wala data check karo
         let cachedDb = [];
         try {
@@ -867,8 +867,11 @@
         
         if (cachedDb.length > 0) {
             db = cachedDb;
-            window.lastSyncedDbStr = JSON.stringify(db);
+            // VIP FIX 2: App khulte hi Cloud ka aakhiri status load karo, local data ko sync nahi manna!
+            let savedSync = localStorage.getItem('paymitra_last_synced_v11');
+            window.lastSyncedDbStr = savedSync ? savedSync : JSON.stringify(db);
         }
+
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
@@ -949,12 +952,16 @@
             localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
         } catch(e) {}
         
-        const successCb = () => {
+              const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
+            // VIP FIX 3: Jab Cloud par data successfully chala jaye, tabhi memory card update karo
+            localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
+            
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
         };
+
         const errCb = (e) => {
             document.getElementById('sync-status').innerText = "Saved Offline";
             document.getElementById('cloud-indicator').className = "status-dot offline";
