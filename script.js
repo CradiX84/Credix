@@ -878,27 +878,39 @@
                 
                 // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    if (document.getElementById('main-app').style.display === 'none') {
-                        db = newDb;
-                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                        window.lastSyncedDbStr = JSON.stringify(db); 
-                        document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-                    } else {
+                    
+                    // NAYA SMART CHECK: Kya local data mein offline changes hain jo upload nahi hue?
+                    let hasOfflineChanges = (window.lastSyncedDbStr && window.lastSyncedDbStr !== JSON.stringify(db));
+
+                    if (hasOfflineChanges) {
+                        // Offline entries ko delete hone se bachaya aur unhe Delta Sync ke zariye cloud par bhej diya
                         if (!isSaving) {
-                            if(!validateSession(newDb)) return;
+                            saveAndRender(); 
+                        }
+                    } else {
+                        // Agar koi offline change nahi hai, toh Firebase ka naya data aaram se local mein save kar lo
+                        if (document.getElementById('main-app').style.display === 'none') {
                             db = newDb;
                             localStorage.setItem('paymitra_v11', JSON.stringify(db));
                             window.lastSyncedDbStr = JSON.stringify(db); 
-                            render();
-                            
-                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                renderTrash();
+                            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                        } else {
+                            if (!isSaving) {
+                                if(!validateSession(newDb)) return;
+                                db = newDb;
+                                localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                                window.lastSyncedDbStr = JSON.stringify(db); 
+                                render();
+                                
+                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                    renderTrash();
+                                }
+                                showToast("Data Auto-Updated!");
                             }
-                            showToast("Data Auto-Updated!");
                         }
                     }
                 }
-            } else {
+
                 document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
@@ -1089,7 +1101,7 @@
                 photoBase64 = await toSquareBase64(fileInput.files[0]);
             }
         }
-        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64 };
+        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64, isUnsynced: true };
         if(type === 'monthly') { 
             let rateVal = parseFloat(document.getElementById('rate').value);
             if(isNaN(rateVal)) { triggerShake('rate'); return showToast(tLang.missingRate || "Missing Interest Rate!"); }
