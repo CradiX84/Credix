@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
+<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -431,7 +432,17 @@
                         <b style="font-size:20px; color:var(--owner-gold);" id="rep-profit">₹0</b>
                     </div>
                 </div>
-                <button id="btn-rep-pdf" class="main-btn" style="margin-top:0; margin-bottom:20px; background:var(--owner-gold); color:black; display:none;" onclick="downloadReportPDF()">Download Professional PDF 📄</button>
+<button id="btn-rep-pdf" class="main-btn" style="margin-top:0; margin-bottom:20px; background:var(--owner-gold); color:black; display:none; align-items:center; gap:8px;" onclick="downloadReportPDF()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+    </svg>
+    Download Professional PDF
+</button>
+
                 <div id="rep-list" style="max-height: 450px; overflow-y: auto; padding-right:5px;"></div>
             </div>
         </div>
@@ -479,7 +490,7 @@
     <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
 </div>
 
-  <button id="ai-chat-btn" onclick="toggleAIChat()" style="display: none;">✨ AI Assistant</button>
+<button id="ai-chat-btn" onclick="toggleAIChat()" style="display: none;">✨</button>
 
     <div id="ai-chat-window" style="display: none;">
         <div id="ai-chat-header">
@@ -490,7 +501,8 @@
             <button onclick="toggleAIChat()">✖</button>
         </div>
         <div id="ai-chat-messages">
-            <div class="ai-msg">Namaste 👋! Main aapka Smart Assistant hoon. Boliye, aaj main aapki kya madad karoon?</div>
+            <div class="ai-msg">Namaste 👋! Main aapka NAYA Smart Assistant hoon.
+Boliye, aaj main aapki kya madad karoon?</div>
         </div>
         <div id="ai-chat-input-area">
             <button id="ai-mic-btn" onclick="startAIChatVoice()" title="Bol kar likhein">🎤</button>
@@ -498,6 +510,16 @@
             <button id="ai-send-btn" onclick="sendAIMessage()">➤</button>
         </div>
     </div>
+
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker Registered!'))
+                .catch(err => console.log('Service Worker Error!', err));
+            });
+        }
+    </script>
 </body>
 </html>

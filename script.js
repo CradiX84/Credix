@@ -10,11 +10,27 @@
       measurementId: "G-7LZNQHW2KX"
     };
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth(); 
-    const database = firebase.database();
-    // ----------------------
+    // --- FIREBASE SMART OFFLINE WRAPPER ---
+    let auth = null;
+    let database = null;
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth(); 
+        database = firebase.database();
+    } else {
+        // Agar internet band hai toh dummy database banayega taaki app crash na ho
+        database = {
+            ref: () => ({
+                on: (ev, cb, err) => { if(err) err(); },
+                off: () => {},
+                once: () => Promise.reject(),
+                set: () => Promise.reject(),
+                update: () => Promise.reject()
+            }),
+            goOnline: () => {}, goOffline: () => {}
+        };
+    }
+    // --------------------------------------
 
     // --- INDIAN TIMEZONE HELPER ---
     function getISTDate() {
@@ -26,6 +42,13 @@
         }).format(new Date());
     }
     
+    // --- OFFLINE AI DATABASE (INDEXEDDB) ---
+    const localDB = new Dexie("CredixAI_DB");
+    localDB.version(1).stores({
+        cases: 'id, name, type, isArchived, staffRef, startDate' 
+    });
+    // ---------------------------------------
+    
     let db = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
     let pin = ""; 
     let activeLoginPin = ""; 
@@ -35,7 +58,9 @@
     let deviceStaffName = ''; 
     let activeStaffPhoto = '';
     let currentTab = 'dash'; let openViews = {}; let multiDelMode = {}; 
+    let lastSelectedHistoryIndex = null;
     let confirmActionCallback = null;
+
     let isSaving = false;
     let lastGeneratedReportData = null;
 
@@ -571,7 +596,7 @@
         }
     }
 
-    // VIP FIX: Logout par cache clear aur Firebase disconnect
+    // VIP FIX: Logout par cache clear, Firebase disconnect aur Chat clear
     function logout() { 
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
         document.getElementById('main-app').style.display = 'none'; 
@@ -595,6 +620,14 @@
         if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; 
         if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; 
         document.getElementById('profile-icon-area').innerHTML = '⚙️';
+        
+        // 🧹 CHAT CLEAR FIX: Logout hote hi chat ki history screen se clear ho jayegi
+        const chatMessages = document.getElementById('ai-chat-messages');
+        if (chatMessages) chatMessages.innerHTML = '<div class="ai-msg">Namaste 👋! Main aapka NAYA Smart Assistant hoon.\nBoliye, aaj main aapki kya madad karoon?</div>';
+
+        const chatInput = document.getElementById('ai-chat-input');
+        if (chatInput) chatInput.value = '';
+        
         switchTab('dash'); 
     }
     
@@ -825,7 +858,7 @@
         render(); checkAutoBackup();
     }
 
-    function setupFirebaseListener() {
+        function setupFirebaseListener() {
         // App khulte hi phone ki memory wala data check karo
         let cachedDb = [];
         try {
@@ -834,8 +867,11 @@
         
         if (cachedDb.length > 0) {
             db = cachedDb;
-            window.lastSyncedDbStr = JSON.stringify(db);
+            // VIP FIX 2: App khulte hi Cloud ka aakhiri status load karo, local data ko sync nahi manna!
+            let savedSync = localStorage.getItem('paymitra_last_synced_v11');
+            window.lastSyncedDbStr = savedSync ? savedSync : JSON.stringify(db);
         }
+
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
@@ -845,27 +881,39 @@
                 
                 // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    if (document.getElementById('main-app').style.display === 'none') {
-                        db = newDb;
-                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                        window.lastSyncedDbStr = JSON.stringify(db); 
-                        document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-                    } else {
+                    
+                    // NAYA SMART CHECK: Kya local data mein offline changes hain jo upload nahi hue?
+                    let hasOfflineChanges = (window.lastSyncedDbStr && window.lastSyncedDbStr !== JSON.stringify(db));
+
+                    if (hasOfflineChanges) {
+                        // Offline entries ko delete hone se bachaya aur unhe Delta Sync ke zariye cloud par bhej diya
                         if (!isSaving) {
-                            if(!validateSession(newDb)) return;
+                            saveAndRender(); 
+                        }
+                    } else {
+                        // Agar koi offline change nahi hai, toh Firebase ka naya data aaram se local mein save kar lo
+                        if (document.getElementById('main-app').style.display === 'none') {
                             db = newDb;
                             localStorage.setItem('paymitra_v11', JSON.stringify(db));
                             window.lastSyncedDbStr = JSON.stringify(db); 
-                            render();
-                            
-                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                renderTrash();
+                            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                        } else {
+                            if (!isSaving) {
+                                if(!validateSession(newDb)) return;
+                                db = newDb;
+                                localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                                window.lastSyncedDbStr = JSON.stringify(db); 
+                                render();
+                                
+                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                    renderTrash();
+                                }
+                                showToast("Data Auto-Updated!");
                             }
-                            showToast("Data Auto-Updated!");
                         }
                     }
                 }
-            } else {
+
                 document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
@@ -887,7 +935,7 @@
         });
     }
 
-    function saveAndRender() {
+     function saveAndRender() {
         isSaving = true;
         let currentDbStr = JSON.stringify(db);
         localStorage.setItem('paymitra_v11', currentDbStr);
@@ -898,12 +946,22 @@
         let oldDb = [];
         try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
         
-        const successCb = () => {
+        // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
+        try {
+            let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
+            localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
+        } catch(e) {}
+        
+              const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
+            // VIP FIX 3: Jab Cloud par data successfully chala jaye, tabhi memory card update karo
+            localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
+            
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
         };
+
         const errCb = (e) => {
             document.getElementById('sync-status').innerText = "Saved Offline";
             document.getElementById('cloud-indicator').className = "status-dot offline";
@@ -1050,7 +1108,7 @@
                 photoBase64 = await toSquareBase64(fileInput.files[0]);
             }
         }
-        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64 };
+        let cust = { id: Date.now(), name, principal: amt, type, startDate: date, history: [], staffRef: staffRef, isPersonal: isPersonal, isArchived: false, photo: photoBase64, isUnsynced: true };
         if(type === 'monthly') { 
             let rateVal = parseFloat(document.getElementById('rate').value);
             if(isNaN(rateVal)) { triggerShake('rate'); return showToast(tLang.missingRate || "Missing Interest Rate!"); }
@@ -1089,27 +1147,110 @@
         } 
     }
 
-    function toggleMultiDel(id) { multiDelMode[id] = !multiDelMode[id]; render(); }
+        function toggleMultiDel(id) { 
+        multiDelMode[id] = !multiDelMode[id]; 
+        lastSelectedHistoryIndex = null; 
+        render(); 
+    }
+
+    function handleMultiSelectCheck(event, custId) {
+        let clickedCheckbox = event.target;
+        let allCheckboxes = Array.from(document.querySelectorAll(`.del-chk-${custId}`));
+        let currentIndex = allCheckboxes.findIndex(chk => chk === clickedCheckbox);
+        
+        if (clickedCheckbox.checked) {
+            if (lastSelectedHistoryIndex !== null && lastSelectedHistoryIndex !== currentIndex) {
+                // Pehle aur abhi wale click ke beech ke sabhi checkbox automatically tick karega
+                let start = Math.min(lastSelectedHistoryIndex, currentIndex);
+                let end = Math.max(lastSelectedHistoryIndex, currentIndex);
+                for (let i = start; i <= end; i++) {
+                    allCheckboxes[i].checked = true;
+                }
+            }
+            lastSelectedHistoryIndex = currentIndex;
+        } else {
+            // Agar uncheck kiya, toh yaadashat clear kar dega
+            lastSelectedHistoryIndex = null;
+        }
+    }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
-    function openPayModal(id) { 
+        function openPayModal(id, prefillAmt = null) { 
         let c = db.find(x => x.id === id); 
         document.getElementById('pay-id').value = id; 
-        document.getElementById('pay-date').value = getISTDate(); // IST FIX
-        let amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
+        document.getElementById('pay-date').value = getISTDate(); 
+        let amt = 0;
+        if (prefillAmt !== null && prefillAmt > 0) {
+            amt = prefillAmt; // 🚀 Naya feature: Pending se direct total utha lega
+        } else {
+            amt = c.type === 'monthly' ? (c.currentBalance * (c.rate||0)/100) : (c.type === 'meter' ? (c.currentBalance * (c.rate||0)/100) : (c.installment || 0)); 
+        }
         document.getElementById('pay-amt').value = amt.toFixed(0); 
         document.getElementById('pay-modal').style.display = 'flex'; 
     }
 
-    function savePayment() { let id = parseInt(document.getElementById('pay-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('pay-amt').value); let dateStr = document.getElementById('pay-date').value; if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } c.history.push({ date: dateStr, paid: amt }); recalculateCase(c); saveAndRender(); closeModal('pay-modal'); showToast("Payment Saved"); }
+    function savePayment() { 
+        let id = parseInt(document.getElementById('pay-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('pay-amt').value); 
+        let dateStr = document.getElementById('pay-date').value; 
+        if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
+        if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } 
+        c.history.push({ date: dateStr, paid: amt }); 
+        recalculateCase(c); 
+        saveAndRender(); 
+        closeModal('pay-modal'); 
+        showToast("Payment Saved"); 
+        
+        // 🚀 SMART REFRESH: Agar Report wali screen khuli hai, toh auto-update/adjust ho jayega!
+        if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
+            generateReport();
+        }
+    }
     
-    function openBulkModal(id) { 
+    function openBulkModal(id, startOverride = null, endOverride = null) { 
         let c = db.find(x => x.id === id); 
         document.getElementById('bulk-id').value = id; 
         let todayStr = getISTDate(); // IST FIX
-        document.getElementById('bulk-start-date').value = todayStr; 
-        document.getElementById('bulk-end-date').value = todayStr; 
-        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * 0.01) : (c.installment || 0)); 
+        
+        // 🔥 SMART START DATE LOGIC
+        let calculatedStartDate = todayStr;
+        if (startOverride && typeof startOverride === 'string') {
+            calculatedStartDate = startOverride; // Agar Custom Report se aaya hai toh wahi date lega
+        } else {
+            if (c.history && c.history.length > 0) {
+                // Last payment date dhundho
+                let sortedHist = [...c.history].sort((a,b) => a.date > b.date ? 1 : -1);
+                let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
+                let nextDate = new Date(lastPaidDateStr);
+                
+                // Usme 1 din (ya 1 mahina) jodo
+                if (c.type === 'monthly') {
+                    nextDate.setMonth(nextDate.getMonth() + 1);
+                } else {
+                    nextDate.setDate(nextDate.getDate() + 1);
+                }
+                
+                // Format YYYY-MM-DD
+                let y = nextDate.getFullYear();
+                let m = String(nextDate.getMonth() + 1).padStart(2, '0');
+                let d = String(nextDate.getDate()).padStart(2, '0');
+                calculatedStartDate = `${y}-${m}-${d}`;
+                
+                // Agar advance payment ki wajah se next date aaj se bhi aage nikal jaye, toh aaj ki date dikhaye
+                if (calculatedStartDate > todayStr) {
+                    calculatedStartDate = todayStr;
+                }
+            } else {
+                // Agar koi purani payment nahi hai (Pehli kishat), toh account banne wali date se shuru karega
+                calculatedStartDate = c.startDate;
+            }
+        }
+
+        document.getElementById('bulk-start-date').value = calculatedStartDate; 
+        document.getElementById('bulk-end-date').value = (endOverride && typeof endOverride === 'string') ? endOverride : todayStr; 
+        
+        let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * (c.rate||0)/100) : (c.installment || 0)); 
         document.getElementById('bulk-amt').value = amt.toFixed(0); 
         const t = i18n[currentLang]; const freqText = c.type === 'monthly' ? t.fMonthly : (c.type === 'meter' ? t.fMeter : t.fDaily); 
         document.getElementById('bulk-freq-label').innerText = `(${freqText})`; 
@@ -1117,7 +1258,49 @@
         document.getElementById('bulk-modal').style.display = 'flex'; 
     }
 
-    function saveBulkPayment() { let id = parseInt(document.getElementById('bulk-id').value); let c = db.find(x => x.id === id); let amt = parseFloat(document.getElementById('bulk-amt').value); let startStr = document.getElementById('bulk-start-date').value; let endStr = document.getElementById('bulk-end-date').value; if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } let startDate = new Date(startStr); let endDate = new Date(endStr); if(endDate < startDate) return showToast("End date must be later"); let tempDate = new Date(startDate); let hasDuplicate = false; while(tempDate <= endDate) { let y = tempDate.getFullYear(); let m = String(tempDate.getMonth() + 1).padStart(2, '0'); let d = String(tempDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); } if(hasDuplicate) { triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } let currentDate = new Date(startDate); while(currentDate <= endDate) { let y = currentDate.getFullYear(); let m = String(currentDate.getMonth() + 1).padStart(2, '0'); let d = String(currentDate.getDate()).padStart(2, '0'); let pushDate = `${y}-${m}-${d}`; c.history.push({ date: pushDate, paid: amt }); if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); } recalculateCase(c); saveAndRender(); closeModal('bulk-modal'); showToast("Bulk Saved!"); }
+    function saveBulkPayment() { 
+        let id = parseInt(document.getElementById('bulk-id').value); 
+        let c = db.find(x => x.id === id); 
+        let amt = parseFloat(document.getElementById('bulk-amt').value); 
+        let startStr = document.getElementById('bulk-start-date').value; 
+        let endStr = document.getElementById('bulk-end-date').value; 
+        if(!amt || !startStr || !endStr) { triggerShake('bulk-amt'); return; } 
+        let startDate = new Date(startStr); 
+        let endDate = new Date(endStr); 
+        if(endDate < startDate) return showToast("End date must be later"); 
+        let tempDate = new Date(startDate); 
+        let hasDuplicate = false; 
+        while(tempDate <= endDate) { 
+            let y = tempDate.getFullYear(); 
+            let m = String(tempDate.getMonth() + 1).padStart(2, '0'); 
+            let d = String(tempDate.getDate()).padStart(2, '0'); 
+            let pushDate = `${y}-${m}-${d}`; 
+            if(c.history && c.history.some(h => h.date === pushDate)) { hasDuplicate = true; break; } 
+            if(c.type === 'monthly') tempDate.setMonth(tempDate.getMonth() + 1); else tempDate.setDate(tempDate.getDate() + 1); 
+        } 
+        if(hasDuplicate) { 
+            triggerShake('bulk-start-date'); triggerShake('bulk-end-date'); 
+            return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); 
+        } 
+        let currentDate = new Date(startDate); 
+        while(currentDate <= endDate) { 
+            let y = currentDate.getFullYear(); 
+            let m = String(currentDate.getMonth() + 1).padStart(2, '0'); 
+            let d = String(currentDate.getDate()).padStart(2, '0'); 
+            let pushDate = `${y}-${m}-${d}`; 
+            c.history.push({ date: pushDate, paid: amt }); 
+            if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); 
+        } 
+        recalculateCase(c); 
+        saveAndRender(); 
+        closeModal('bulk-modal'); 
+        showToast("Bulk Saved!"); 
+
+        // 🔥 SMART REFRESH: Report screen khuli ho toh auto-update karega
+        if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
+            generateReport();
+        }
+    }
     
     function removeEditPhoto() {
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
@@ -1332,22 +1515,43 @@
                 
                 let historyUpToEnd = c.history ? c.history.filter(h => h.date <= rangeEndStr) : [];
 
-                if (c.type === 'daily' || c.type === 'meter') {
-                    amountPerUnit = c.type === 'daily' ? (c.installment || 0) : (c.principal * (c.rate || 0) / 100);
+                // SMART BULK DATA TRACKER
+                let missingDateStrings = []; 
+
+                if (c.type === 'daily') {
+                    amountPerUnit = c.installment || 0;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
-let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDate(iterDate.getDate() + 1); 
+                    let iterDate = new Date(sy, sm - 1, sd); 
+                    iterDate.setDate(iterDate.getDate() + 1); 
                     while (toLocalYMD(iterDate) <= rangeEndStr) {
                         let currentCheckStr = toLocalYMD(iterDate);
                         if (!historyUpToEnd.some(h => h.date === currentCheckStr)) { 
                             accumulatedTotal += amountPerUnit; 
                             missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); 
+                            missingDateStrings.push(currentCheckStr);
                         }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
+                } else if (c.type === 'meter') {
+                    // 🔥 Naya Meter Logic: Total Paid se due date nikalna
+                    amountPerUnit = c.principal * (c.rate || 0) / 100;
+                    let [sy, sm, sd] = c.startDate.split('-').map(Number);
+                    let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
+                    let daysPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
+                    
+                    let iterDate = new Date(sy, sm - 1, sd);
+                    iterDate.setDate(iterDate.getDate() + daysPaid); 
+                    
+                    while (toLocalYMD(iterDate) <= rangeEndStr) {
+                        let currentCheckStr = toLocalYMD(iterDate);
+                        accumulatedTotal += amountPerUnit; 
+                        missedDates.push(String(iterDate.getDate()).padStart(2,'0') + "/" + String(iterDate.getMonth()+1).padStart(2,'0')); 
+                        missingDateStrings.push(currentCheckStr);
                         iterDate.setDate(iterDate.getDate() + 1);
                     }
                 } else if (c.type === 'monthly') {
                     amountPerUnit = c.principal * (c.rate || 0) / 100;
                     let [sy, sm, sd] = c.startDate.split('-').map(Number);
-                    
                     let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
                     let monthsPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
                     
@@ -1361,11 +1565,20 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
                         if (cycle > monthsPaid) {
                             accumulatedTotal += amountPerUnit; 
                             missedDates.push(String(nextDue.getDate()).padStart(2,'0') + "/" + String(nextDue.getMonth()+1).padStart(2,'0')); 
+                            missingDateStrings.push(nextDueStr);
                         }
                         cycle++;
                     }
                 }
-                if (missedDates.length > 0) { pendingsInRange.push({ ...c, accumulatedTotal: accumulatedTotal, missedDatesStr: missedDates.join(", ") }); }
+                if (missedDates.length > 0) { 
+                    pendingsInRange.push({ 
+                        ...c, 
+                        accumulatedTotal: accumulatedTotal, 
+                        missedDatesStr: missedDates.join(", "),
+                        firstMissed: missingDateStrings.length > 0 ? missingDateStrings[0] : '',
+                        lastMissed: missingDateStrings.length > 0 ? missingDateStrings[missingDateStrings.length - 1] : ''
+                    });
+}
             }
 
             if (c.isArchived) {
@@ -1466,7 +1679,19 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
                 let perUnit = p.type === 'daily' ? (p.installment || 0) : (p.principal * (p.rate || 0) / 100);
                 let calcNote = `${count} × ₹${perUnit.toFixed(0)}`;
                 let typeTranslated = p.type === 'daily' ? t.fDaily : (p.type === 'monthly' ? t.fMonthly : t.fMeter);
-                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-wrap:break-word; white-space:normal;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b></div></div></div>`;
+                
+                // 🔥 SMART CLICK LOGIC: Single ya Bulk Check
+                let clickAction = "";
+                let badgeText = "RECEIVE";
+                
+                if (count > 1 && (p.type === 'daily' || p.type === 'meter')) {
+                    clickAction = `openBulkModal(${p.id}, '${p.firstMissed}', '${p.lastMissed}')`;
+                    badgeText = "BULK RECEIVE ⚡";
+                } else {
+                    clickAction = `openPayModal(${p.id}, ${p.accumulatedTotal})`;
+                }
+
+                html += `<div onclick="${clickAction}" style="cursor:pointer; display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%; transition:0.2s;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-wrap:break-word; white-space:normal;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b><br><span style="background:var(--success); color:white; font-weight:bold; font-size:9px; padding:4px 8px; border-radius:6px; margin-top:6px; display:inline-block; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${badgeText}</span></div></div></div>`;
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
@@ -1845,7 +2070,7 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
             let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
             let histData = c.history ? [...c.history] : [], hideSNo = false;
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
-            let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
+            let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
             accountsHtmlArray.push(`
@@ -1991,11 +2216,24 @@ let iterDate = new Date(sy, sm - 1, sd); if (c.type === 'daily') iterDate.setDat
             window.currentRecognition = null; 
         };
     }
-// ==========================================
+//==========================================
 // 🤖 CREDIX SMART AI CHATBOX LOGIC STARTS
 // ==========================================
 
 const GEMINI_API_KEY = "AIzaSyAm7Cv56NJ_iEwbW5e7OfCtnrhnziH7DDs"; 
+
+// --- STEP 1: HIDDEN COMMAND DICTIONARY (UPDATED WITH LIST TYPES) ---
+const COMMAND_INTENTS = {
+    pending: ["pending", "due", "baki", "overdue", "unpaid", "late", "/pending", "/due", "पेंडिंग", "बाकी", "डियू", "kis kis", "leni"],
+    collection: ["collection", "recovery", "payment", "jama", "received", "/collection", "कलेक्शन", "जमा", "रिकवरी", "पेमेंट", "ayi"],
+    customer_name: ["balance", "history", "profile", "account", "status", "detail", "/balance", "/customer", "बैलेंस", "डिटेल", "खाता"],
+    report: ["report", "summary", "sabka", "/report", "@today", "रिपोर्ट"],
+    daily_list: ["daily", "डेली", "rozana", "/daily"],
+    monthly_list: ["monthly", "मंथली", "mahina", "/monthly", "vyaj"],
+    meter_list: ["meter", "मीटर", "/meter"],
+    whatsapp: ["whatsapp", "send", "व्हाट्सएप", "भेजो"]
+};
+// ---------------------------------------------------
 
 // 🪄 Lock Screen Visibility Fix
 setInterval(() => {
@@ -2044,47 +2282,64 @@ function appendMessage(text, sender) {
     document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 }
 
-// 🚦 SMART ROUTER: Local Keywords
-function isLocalQuery(text) {
-    const lowerText = text.toLowerCase();
-    const localKeywords = ["pending", "balance", "kishat", "kisht", "collection", "due", "paisa", "kitna", "baki", "hisaab", "total", "meter", "monthly", "daily", "dusra", "doosra", "second", "report", "detail", "status", "khata", "case", "batao", "check", "info", "aaj", "kis", "leni", "laini", "deni"];
-    if (localKeywords.some(keyword => lowerText.includes(keyword))) return true;
+    // --- STEP 2: SMART INTENT DETECTION ---
+    // 🚦 SMART ROUTER: Local Keywords & Intents
+    function detectIntent(text) {
+        const lowerText = text.toLowerCase().trim();
+        
+        for (const [intent, keywords] of Object.entries(COMMAND_INTENTS)) {
+            if (keywords.some(kw => lowerText.includes(kw.toLowerCase()))) {
+                return intent; 
+            }
+        }
 
-    if (typeof db !== 'undefined' && db.length > 0) {
-        let cleanQueryWords = lowerText.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-        let hasName = db.some(c => {
-            if (!c.name || c.type === 'config' || c.type === 'trash') return false;
-            let cName = c.name.toLowerCase();
-            return cleanQueryWords.length > 0 && cleanQueryWords.every(qw => cName.includes(qw));
-        });
-        if (hasName) return true;
+        if (typeof db !== 'undefined' && db.length > 0) {
+            let hasName = db.some(c => {
+                if (!c.name || c.type === 'config' || c.type === 'trash' || c.isArchived || c.currentBalance <= 0) return false;
+                let cNameParts = c.name.toLowerCase().split(/\s+/);
+                // Yeh line "Anil balance" mein se Anil ko alag karke pehchanegi
+                return cNameParts.some(part => part.length > 2 && lowerText.includes(part));
+            });
+            if (hasName) return 'customer_name';
+        }
+        return 'unknown';
     }
-    return false;
-}
 
-async function sendAIMessage() {
-    const inputEl = document.getElementById('ai-chat-input');
-    const text = inputEl.value.trim();
-    if (!text) return;
-    appendMessage(text, 'user');
-    inputEl.value = '';
-    
-    const typingId = "typing-" + Date.now();
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'ai-msg'; typingDiv.id = typingId;
-    typingDiv.innerText = "Data check kar raha hoon... 🕵️‍♂️";
-    document.getElementById('ai-chat-messages').appendChild(typingDiv);
-    document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
+    function isLocalQuery(text) {
+        return detectIntent(text) !== 'unknown';
+    }
+    // --------------------------------------
+    async function sendAIMessage(isVoice = false) {
+        const inputEl = document.getElementById('ai-chat-input');
+        const text = inputEl.value.trim();
+        if (!text) return;
+        appendMessage(text, 'user');
+        inputEl.value = '';
+        
+        const typingId = "typing-" + Date.now();
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'ai-msg'; typingDiv.id = typingId;
+        typingDiv.innerText = "Data check kar raha hoon... 🕵️‍♂️";
+        document.getElementById('ai-chat-messages').appendChild(typingDiv);
+        document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 
-    try {
-        if (isLocalQuery(text)) {
-            if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-            let localReply = "🟢 Kripya customer ka poora naam likhein.";
-            const query = text.toLowerCase();
-
-            if (typeof db !== 'undefined' && db.length > 0) {
-                // 🔥 STRICT ACTIVE FILTER: 0 Balance aur Archive wale bahar
-                const activeLoans = db.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
+        try {
+            // 🔥 AI OFFLINE ENGINE: IndexedDB se data fetch karega
+            let aiData = [];
+            try {
+                aiData = await localDB.cases.toArray(); 
+            } catch(e) {
+                console.log("IndexedDB read failed, falling back to memory db", e);
+                aiData = db; // Fallback agar DB load hone mein time lage
+            }
+            
+            if (isLocalQuery(text)) {
+                if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+                let localReply = "";
+                const query = text.toLowerCase();
+                
+                // IndexedDB se aaye 'aiData' ka use karein
+                const activeLoans = aiData.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
 
                 const getPendingData = (c) => {
                     let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
@@ -2096,200 +2351,112 @@ async function sendAIMessage() {
                         if(!c.history || c.history.length === 0) dDiff = Math.floor((todayObj - new Date(c.startDate)) / (1000 * 60 * 60 * 24));
                         if(dDiff < 0) dDiff = 0;
                         pAmt = dDiff * kAmt;
-                        pText = c.type === 'meter' ? `${dDiff} din pending (Aakhiri: ${formatDateDisplay(lastPaidDate)})` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
+                        pText = c.type === 'meter' ? `${dDiff} din pending` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
                     } else {
                         let kAmt = (c.principal * (c.rate || 0)) / 100;
                         let nDate = new Date(lastPaidDate); nDate.setMonth(nDate.getMonth() + 1);
                         pAmt = (todayObj >= nDate) ? kAmt : 0;
-                        pText = (todayObj >= nDate) ? `Due Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next Date: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
+                        pText = (todayObj >= nDate) ? `Due: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
                     }
                     return { pAmt, pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
                 };
 
-                // Queries differentiate karna
-                let isPendingQuery = query.includes("pending") || query.includes("kis kis") || query.includes("leni") || query.includes("laini") || query.includes("baki");
-                let isFullReportQuery = query.includes("aaj ki report") || query.includes("total report") || query.includes("summary") || query.includes("sabka");
+                let intent = detectIntent(text);
                 
-                let ignoreWords = ["aaj", "ki", "ka", "ke", "report", "pending", "kishat", "kis", "kiski", "leni", "laini", "deni", "hai", "batao", "meter", "monthly", "daily", "dusra", "doosra", "wale", "hisaab", "baki"];
-                let cleanQueryWords = query.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !ignoreWords.includes(w));
-
-                let matchedCustomers = [];
-                if (cleanQueryWords.length > 0) {
-                    matchedCustomers = activeLoans.filter(c => {
-                        if(!c.name) return false;
-                        let cName = c.name.toLowerCase();
-                        return cleanQueryWords.every(qw => cName.includes(qw));
-                    });
-                }
-
-                if (matchedCustomers.length > 0) {
-                    // 🎯 SCENARIO 1: CUSTOMER MIL GAYA
-                    window.lastSearchedName = matchedCustomers[0].name.toLowerCase().trim();
-                    let filteredByType = matchedCustomers;
-                    if (query.includes("meter")) filteredByType = matchedCustomers.filter(c => c.type === 'meter');
-                    else if (query.includes("monthly") || query.includes("vyaj") || query.includes("mahine")) filteredByType = matchedCustomers.filter(c => c.type === 'monthly');
-                    else if (query.includes("daily") || query.includes("roz")) filteredByType = matchedCustomers.filter(c => c.type === 'daily');
-                    
-                    if (filteredByType.length > 0) {
-                        localReply = "";
-                        filteredByType.forEach(c => {
-                            let data = getPendingData(c);
-                            localReply += `🟢 **${c.name}** (${data.cType})\n• Pending: ₹${data.pAmt.toFixed(0)}\n• Detail: ${data.pText}\n\n`;
-                        });
-                        localReply = localReply.trim();
-                    } else { localReply = "🟢 Case nahi mila ya type (meter/monthly) galat hai."; }
-
-                } else if (isFullReportQuery || isPendingQuery) {
-                    // 🎯 SCENARIO 2: PROFESSIONAL REVIEW TAB STYLE REPORT
-                    let dailyReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
-                    let monthlyReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
-                    let meterReport = { received: [], pending: [], totalRec: 0, totalPend: 0 };
+                if (intent === 'pending' || intent === 'collection') {
+                    let isPendingQuery = (intent === 'pending');
+                    let daily = { list: [], total: 0 }, monthly = { list: [], total: 0 }, meter = { list: [], total: 0 };
                     let todayStr = getISTDate();
+                    
+                    // 🔥 NAYA LOGIC: Collection mein unko bhi ginega jinka khaata aaj close hua hai
+                    let baseList = isPendingQuery ? activeLoans : aiData.filter(c => c.type !== 'config' && c.type !== 'trash' && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
 
-                    activeLoans.forEach(c => {
-                        let type = (c.type || '').toLowerCase();
-                        let targetGroup = type === 'daily' ? dailyReport : type === 'monthly' ? monthlyReport : type === 'meter' ? meterReport : null;
-                        if (!targetGroup) return;
-
-                        let paidTodayAmt = 0;
-                        if (c.history && c.history.length > 0) {
-                            c.history.forEach(h => { if (h.date === todayStr) paidTodayAmt += parseFloat(h.paid || 0); });
+                    baseList.forEach(c => {
+                        let target = c.type === 'daily' ? daily : c.type === 'monthly' ? monthly : meter;
+                        let val = 0;
+                        let extraMsg = "";
+                        
+                        if (isPendingQuery) {
+                            val = getPendingData(c).pAmt;
+                        } else {
+                            // Collection nikalna: Aaj ki date mein kitne paise aaye
+                            val = c.history ? c.history.filter(h => h.date === todayStr).reduce((s, h) => s + parseFloat(h.paid || 0), 0) : 0;
+                            // Agar paise aaye aur balance 0 ho gaya, toh message add karo
+                            if (val > 0 && c.currentBalance <= 0) {
+                                extraMsg = " (Account Closed 🟢)";
+                            }
                         }
-
-                        let data = getPendingData(c);
-
-                        if (paidTodayAmt > 0) {
-                            targetGroup.received.push(`• ${c.name}: ₹${paidTodayAmt}`);
-                            targetGroup.totalRec += paidTodayAmt;
-                        }
-                        if (data.pAmt > 0) {
-                            targetGroup.pending.push(`• ${c.name}: ₹${data.pAmt.toFixed(0)}`);
-                            targetGroup.totalPend += data.pAmt;
+                        
+                        if (val > 0) { 
+                            target.list.push(`• ${c.name}: ₹${val.toFixed(0)}${extraMsg}`); 
+                            target.total += val; 
                         }
                     });
-
-                    let showReceived = isFullReportQuery; // Agar sirf pending pucha, toh received nahi dikhayega
                     
-                    const buildSection = (title, group) => {
-                        let text = ""; let hasData = false;
-                        if (showReceived && group.received.length > 0) {
-                            text += `\n✅ **Received (Total: ₹${group.totalRec})**\n` + group.received.join("\n") + "\n";
-                            hasData = true;
-                        }
-                        if (group.pending.length > 0) {
-                            text += `\n⏳ **Pending (Total: ₹${group.totalPend.toFixed(0)})**\n` + group.pending.join("\n") + "\n";
-                            hasData = true;
-                        }
-                        return hasData ? `\n➖➖ **${title}** ➖➖` + text : "";
-                    };
-
-                    let finalReport = buildSection("DAILY", dailyReport) + buildSection("MONTHLY", monthlyReport) + buildSection("METER", meterReport);
-
-                    if (finalReport.trim() !== "") {
-                        let header = isFullReportQuery ? "🟢 **AAJ KI REPORT**\n" : "🟢 **PENDING COLLECTION**\n";
-                        localReply = header + finalReport.trim();
-                    } else {
-                        localReply = "🟢 Aaj ke liye koi data (received/pending) nahi mila.";
-                    }
-                    window.lastSearchedName = ""; // Report dikhane ke baad memory saaf
-
-                } else if (query.includes("aaj") && (query.includes("case") || query.includes("naya"))) {
-                    // 🎯 SCENARIO 3: AAJ NAYE CASE KITNE DIYE
-                    const todayStr = getISTDate();
-                    const aajKeCases = activeLoans.filter(c => c.startDate === todayStr);
-                    let names = aajKeCases.map(c => c.name).join(", ");
-                    localReply = `🟢 Aaj total ${aajKeCases.length} naye case hue hain.\n${names ? 'Naam: ' + names : ""}`;
+                    let grandTotal = daily.total + monthly.total + meter.total;
+                    const build = (t, g) => (g.list.length > 0) ? `\n➖➖ **${t} (₹${g.total.toFixed(0)})** ➖➖\n${g.list.join("\n")}` : "";
+                    let title = isPendingQuery ? 'PENDING REPORT' : 'AAJ DI COLLECTION';
+                    localReply = grandTotal > 0 ? `🟢 **${title}** (Grand Total: ₹${grandTotal.toFixed(0)})\n` + build("DAILY", daily) + build("MONTHLY", monthly) + build("METER", meter) : `🟢 Koi ${isPendingQuery ? 'pending kishat' : 'collection'} nahi hai.`;
+                } else if (intent === 'daily_list' || intent === 'monthly_list' || intent === 'meter_list') {
+                    let targetType = intent.split('_')[0]; 
+                    let filtered = activeLoans.filter(c => c.type === targetType);
+                    if (filtered.length > 0) {
+                        let totalVal = filtered.reduce((sum, c) => sum + c.principal, 0);
+                        localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n➖➖➖➖➖➖\n` + filtered.map((c, i) => `${i + 1}. **${c.name}**\n   Date: ${formatDateDisplay(c.startDate)} | Amt: ₹${c.principal.toFixed(0)}`).join('\n\n');
+                    } else localReply = `🟢 Abhi koi ${targetType.toUpperCase()} case nahi hai.`;
                 } else {
-                     localReply = "🟢 Main samjha nahi. Ya toh likhein 'Aaj ki report', 'Pending report', ya customer ka sahi naam likhein.";
+                    let matched = activeLoans.filter(c => c.name.toLowerCase().split(/\s+/).some(part => part.length > 2 && query.includes(part)));
+                    localReply = matched.length > 0 ? matched.map(c => { let d = getPendingData(c); return `🟢 **${c.name}** (${c.type.toUpperCase()})\n• Bal: ₹${c.currentBalance.toFixed(0)}\n• Pending: ₹${d.pAmt.toFixed(0)}\n• ${d.pText}`; }).join("\n\n") : "🟢 Customer nahi mila.";
                 }
-            } else { localReply = "🔴 Database abhi khali hai."; }
-            
-            appendMessage(localReply, 'ai');
-            return; 
-        }
-
-        // --- GEMINI API FALLBACK ---
-        let dbSummary = "Database abhi khali hai.";
-        if (typeof db !== 'undefined' && db.length > 0) {
-            let pureDb = db.filter(x => x.type !== 'config' && x.type !== 'trash');
-            if (!isOwnerMode) {
-                pureDb = pureDb.filter(c => (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase() && !c.isPersonal).map(c => ({ name: c.name, type: c.type, currentBalance: c.currentBalance, startDate: c.startDate }));
+                
+                appendMessage(localReply, 'ai');
+                if (isVoice) speakText(localReply);
+                return;
             }
-            dbSummary = JSON.stringify(pureDb); 
+
+            if (!isOwnerMode) {
+                if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+                let msg = "Maaf karna, main abhi sirf khaate aur pending kishat ki jaankari de sakta hoon.";
+                appendMessage(msg, 'ai');
+                if (isVoice) speakText(msg);
+                return; 
+            }
+
+            // [BAAKI API CALL WALA CODE WAHIN RAKHEIN JO APKE PAAS PEHLE SE THA]
+        } catch (e) {
+            if(document.getElementById(typingId)) document.getElementById(typingId).remove();
+            appendMessage("🚨 Error reading data", 'ai');
         }
-                const aajKiDate = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    function startAIChatVoice() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         
-        // 🔥 SMART LANGUAGE PROMPT: AI ab user ki bhasha mein hi jawab dega!
-        const promptText = `Tum Credix Finance app ke AI assistant ho. Aaj date hai: ${aajKiDate}.
-        Agar user Staff hai (yani data mein details kam hain), toh usko chhota aur limited jawab do.
-        Backend code ya JSON mat dikhana. Data: ${dbSummary}.
-        IMPORTANT RULE: User ne jis bhasha (Hindi, Punjabi, ya English) mein sawaal poocha hai, usi bhasha aur lipi mein jawab do. Agar user ne Hinglish likhi hai, toh Hinglish mein jawab do. Agar Punjabi (Roman ya Gurmukhi) likhi hai, toh Punjabi mein jawab do.
-        Sawal: ${text}`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) });
-        const data = await response.json();
-        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-
-        if (data.error) { appendMessage("🚨 Google API Error: " + data.error.message, 'ai'); } 
-        else if (data.candidates && data.candidates[0].content.parts[0].text) {
-            appendMessage(data.candidates[0].content.parts[0].text, 'ai');
-            speakText(data.candidates[0].content.parts[0].text); 
-        } else { appendMessage("Kuch ajeeb error aaya hai.", 'ai'); }
-    } catch (error) {
-        console.error("AI Catch Error:", error);
-        if(document.getElementById(typingId)) document.getElementById(typingId).remove();
-        appendMessage("🚨 Network Error: Internet nahi chal raha.", 'ai');
+        // 🔥 MAIN FIX: 'hi-IN' ko 'en-IN' kar diya. Ab sab kuch English letters mein type hoga aur database se match karega!
+        recognition.lang = 'en-IN'; 
+        
+        const inputEl = document.getElementById('ai-chat-input');
+        inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
+        recognition.onresult = (event) => {
+            inputEl.value = event.results[0][0].transcript;
+            sendAIMessage(true); // 🔥 Mic par AI bolega
+        };
+        recognition.onend = () => inputEl.placeholder = "Poochiye (Jaise: Rahul ki det...)";
+        recognition.start();
     }
-}
 
-function startAIChatVoice() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("Aapka browser voice chat support nahi karta.");
-        return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    const inputEl = document.getElementById('ai-chat-input');
-    let originalPlaceholder = inputEl.placeholder;
-    inputEl.placeholder = "Sun raha hoon... Boliye 🎙️";
-    inputEl.value = "";
-
-    recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        inputEl.value = transcript;
-        inputEl.placeholder = originalPlaceholder;
-        sendAIMessage(); 
-    };
-
-    recognition.onerror = function(event) {
-        inputEl.placeholder = originalPlaceholder;
-        if(event.error !== 'no-speech') {
-            appendMessage("🚨 Aawaz clear nahi thi, dobara boliye.", 'ai');
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
+            // 🔥 MAIN FIX: Ab yeh Star, Hash, Underscore ke sath-sath Minus (➖), Hyphen (-), aur Dot (•) ko bhi hatayega
+            let cleanText = text.replace(/[*#_➖\-•]/g, "").replace(/₹/g, "rupees ");
+            
+            const msg = new SpeechSynthesisUtterance(cleanText);
+            msg.lang = 'hi-IN';
+            msg.rate = 1.0;
+            window.speechSynthesis.speak(msg);
         }
-    };
-
-    recognition.onend = function() {
-        inputEl.placeholder = originalPlaceholder;
-    };
-
-    recognition.start();
-}
-
-function speakText(text) {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        // Remove characters that make the voice sound robotic or read symbols
-        let cleanText = text.replace(/[*#_]/g, "").replace(/₹/g, "rupees ");
-        const msg = new SpeechSynthesisUtterance(cleanText);
-        msg.lang = 'hi-IN';
-        msg.rate = 1.0;
-        window.speechSynthesis.speak(msg);
     }
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('ai-chat-input');
@@ -2305,3 +2472,27 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 🤖 CREDIX SMART AI CHATBOX LOGIC ENDS
 // ==========================================
+const aiBtn = document.getElementById('ai-chat-btn');
+let moved = false;
+
+// Drag start hone par scroll ko lock karo
+aiBtn.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Yeh sabse zaruri hai, isse background nahi hilega
+    moved = true; 
+    let touch = e.touches[0];
+    aiBtn.style.left = (touch.clientX - 25) + 'px';
+    aiBtn.style.top = (touch.clientY - 25) + 'px';
+    aiBtn.style.right = 'auto';
+    aiBtn.style.bottom = 'auto';
+}, { passive: false });
+
+aiBtn.addEventListener('touchend', (e) => {
+    if (!moved) {
+        toggleAIChat();
+    }
+    moved = false; 
+});
+
+aiBtn.addEventListener('click', () => {
+    if (!moved) toggleAIChat();
+});
