@@ -1702,8 +1702,7 @@
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
             let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
             reportHtml += renderPendings(pendingDaily, t.repPendDaily, "var(--danger)", "rgba(255, 59, 107, 0.05)");
-        reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#C77B63", "rgba(199, 123, 99, 0.05)");
-
+            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
             reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
         }
 
@@ -1784,136 +1783,99 @@
         document.getElementById('rep-list').innerHTML = reportHtml; document.getElementById('rep-results').style.display = 'block'; document.getElementById('rep-list').scrollTop = 0;
     }
 
-function downloadReportPDF() {
-    if(!lastGeneratedReportData) return showToast("Generate report first!");
-    try {
-        const { jsPDF } = window.jspdf; 
-        const doc = new jsPDF(); 
-        const data = lastGeneratedReportData; 
-        const marginX = 14; 
-        let currentY = 20;
+    function downloadReportPDF() {
+        if(!lastGeneratedReportData) return showToast("Generate report first!");
+        try {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const data = lastGeneratedReportData; const marginX = 14; let currentY = 20;
+            doc.setFontSize(24); doc.setTextColor(255, 107, 53); doc.text("Credix.", marginX, currentY);
+            doc.setFontSize(10); doc.setTextColor(100); doc.text(`Business Activity Statement`, marginX, currentY + 8);
+            doc.text(`Period: ${formatDateDisplay(data.start)} to ${formatDateDisplay(data.end)}`, 140, currentY + 8);
+            currentY += 14; doc.setDrawColor(220); doc.line(marginX, currentY, 196, currentY); currentY += 10;
+            doc.setFontSize(12); doc.setTextColor(0); doc.setFont(undefined, 'bold'); doc.text("Financial Summary", marginX, currentY); currentY += 6;
+            doc.autoTable({ startY: currentY, head: [['Description', 'Total Amount (INR)']], body: [['Total Capital Given (New Cases)', `RS. ${Number(data.totalGiven).toLocaleString()}`], ['Total Cash Recovered (Recoveries)', `RS. ${Number(data.totalReturned).toLocaleString()}`]], theme: 'grid', styles: { fontSize: 10 }, headStyles: { fillColor: [50, 50, 50] } });
+            currentY = doc.lastAutoTable.finalY + 15;
 
-        // --- NEW PREMIUM UI THEME ---
-        const theme = { 
-            bg: [241, 237, 231],       // Matte Cream Background
-            primary: [29, 130, 123],   // Teal Accent
-            accent: [199, 123, 99],    // Copper / Gold Accent
-            textDark: [58, 59, 60]     // Deep Grey Text
-        };
+            const renderNewCases = (list, title, color, typeLabel) => {
+                if (list.length === 0) return;
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
+                let totalValue = 0;
+                let body = list.map((c, i) => { 
+                    let amtToDisplay = Number(c.actualCashGiven || c.principal || 0); 
+                    totalValue += amtToDisplay; 
+                    return [i + 1, c.name, formatDateDisplay(c.startDate), typeLabel, `RS. ${amtToDisplay.toLocaleString()}`]; 
+                });
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: body, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] } });
+                currentY = doc.lastAutoTable.finalY + 12;
+            };
 
-        // Helper: Adds Cream Background & Credix Watermark
-        const drawBgAndWatermark = () => {
-            doc.setFillColor(...theme.bg);
-            doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
-            doc.setTextColor(228, 224, 218); // Faded watermark color
-            doc.setFontSize(80);
-            doc.setFont(undefined, 'bold');
-            const textWidth = doc.getStringUnitWidth("Credix") * doc.getFontSize() / doc.internal.scaleFactor;
-            const x = (doc.internal.pageSize.getWidth() - textWidth) / 2;
-            const y = doc.internal.pageSize.getHeight() / 2;
-            doc.text("Credix", x, y, { angle: 45 });
-        };
+            renderNewCases(data.newCasesDaily, "NEW PORTFOLIO ADDITIONS (DAILY)", [255, 107, 53], "DAILY");
+            renderNewCases(data.newCasesMonthly, "NEW PORTFOLIO ADDITIONS (MONTHLY)", [184, 134, 11], "MONTHLY");
+            renderNewCases(data.newCasesMeter, "NEW PORTFOLIO ADDITIONS (METER)", [168, 85, 247], "METER");
 
-        // Helper: Checks if new page is needed and re-applies background
-        const checkPage = (height = 270) => {
-            if (currentY > height) { 
-                doc.addPage(); 
-                drawBgAndWatermark(); 
-                currentY = 20; 
+            if (data.paymentsDaily.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(40, 167, 69); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); let totalDaily = 0; let dailyTableBody = data.paymentsDaily.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalDaily += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: dailyTableBody, foot: [['', '', '', 'TOTAL DAILY RECOVERY', `RS. ${totalDaily.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [40, 167, 69] }, footStyles: { fillColor: [40, 167, 69], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            if (data.paymentsMeter.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(168, 85, 247); doc.text("METER RECOVERY LOG", marginX, currentY); let totalMeter = 0; let meterTableBody = data.paymentsMeter.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalMeter += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'METER').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: meterTableBody, foot: [['', '', '', 'TOTAL METER RECOVERY', `RS. ${totalMeter.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [168, 85, 247] }, footStyles: { fillColor: [168, 85, 247], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+            if (data.paymentsMonthly.length > 0) { if (currentY > 250) { doc.addPage(); currentY = 20; } doc.setFontSize(11); doc.setTextColor(212, 175, 55); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY); let totalMonthly = 0; let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => { let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99'; let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99'; return (dateA > dateB ? 1 : -1); }); let monthlyTableBody = sortedMonthlyPayments.map((p, i) => { let dates = p.hits.map(h => formatDateDisplay(h.date)).sort().join(", "); totalMonthly += Number(p.total || 0); return [i + 1, p.name, dates, `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']], body: monthlyTableBody, foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: [184, 134, 11] }, footStyles: { fillColor: [184, 134, 11], textColor: [255, 255, 255] } }); currentY = doc.lastAutoTable.finalY + 12; }
+
+            const renderPendings = (list, title, color) => {
+                if (list.length === 0) return;
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
+                let totalPending = 0;
+                let body = list.map((p, i) => { totalPending += Number(p.accumulatedTotal || 0); return [i + 1, p.name, p.type.toUpperCase(), p.missedDatesStr, `RS. ${Number(p.accumulatedTotal).toFixed(0).toLocaleString()}`]; });
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']], body: body, foot: [['', '', '', 'TOTAL PENDING', `RS. ${totalPending.toFixed(0).toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] } });
+                currentY = doc.lastAutoTable.finalY + 12;
+            };
+
+            if (data.pendingsInRange && data.pendingsInRange.length > 0) {
+                renderPendings(data.pendingsInRange.filter(p => p.type === 'daily'), "PENDING COLLECTIONS (DAILY)", [255, 59, 107]);
+                renderPendings(data.pendingsInRange.filter(p => p.type === 'monthly'), "PENDING COLLECTIONS (MONTHLY)", [61, 169, 252]);
+                renderPendings(data.pendingsInRange.filter(p => p.type === 'meter'), "PENDING COLLECTIONS (METER)", [192, 132, 252]);
             }
-        };
 
-        // Apply to first page
-        drawBgAndWatermark();
+            const renderClosedPdf = (list, title, color) => {
+                if (list.length === 0) return;
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(11); doc.setTextColor(color[0], color[1], color[2]); doc.text(title, marginX, currentY);
+                let totalVal = 0;
+                let totalRec = 0;
+                let body = list.map((c, i) => { 
+                    totalVal += Number(c.principal || 0); 
+                    totalRec += Number(c.recoveredInRange || 0);
+                    
+                    let detailStr = '';
+                    if (c.type === 'monthly') {
+                        detailStr = `${c.hitsCount} Months`;
+                    } else {
+                        let perUnit = c.installment || 0;
+                        let regularRec = c.recoveredInRange || 0;
+                        let parts = [];
+                        
+                        if (c.closingAmount && c.closingAmount !== perUnit && c.closingAmount > 0) {
+                            regularRec -= c.closingAmount;
+                            parts.push(`RS. ${c.closingAmount.toFixed(0)} (Final)`);
+                        }
+                        if (regularRec > 0 && perUnit > 0) {
+                            let eqDays = Math.round(regularRec / perUnit);
+                            parts.push(`${eqDays} Kishats`);
+                        }
+                        
+                        detailStr = parts.length > 0 ? parts.join(" + ") : `Lump Sum`;
+                    }
+                    
+                    return [i + 1, c.name, c.type.toUpperCase(), formatDateDisplay(c.closedDate), `RS. ${Number(c.recoveredInRange || 0).toLocaleString()} (${detailStr})`, `RS. ${Number(c.principal).toLocaleString()}`]; 
+                });
+                doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Case Type', 'Closed On', 'Received (In Range)', 'Principal Settled']], body: body, foot: [['', '', '', 'TOTAL:', `RS. ${totalRec.toLocaleString()}`, `RS. ${totalVal.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] } });
+                currentY = doc.lastAutoTable.finalY + 12;
+            };
 
-        // --- HEADER ---
-        doc.setFontSize(26); doc.setTextColor(...theme.primary); doc.setFont(undefined, 'bold'); doc.text("Credix.", marginX, currentY);
-        doc.setFontSize(11); doc.setTextColor(...theme.textDark); doc.setFont(undefined, 'normal'); doc.text(`Business Activity Statement`, marginX, currentY + 8);
-        doc.setFont(undefined, 'bold'); doc.setTextColor(...theme.accent); doc.text(`Period: ${formatDateDisplay(data.start)} to ${formatDateDisplay(data.end)}`, 140, currentY + 8);
-        currentY += 16; doc.setDrawColor(...theme.primary); doc.setLineWidth(0.5); doc.line(marginX, currentY, 196, currentY); currentY += 12;
-        
-        // --- FINANCIAL SUMMARY ---
-        doc.setFontSize(13); doc.setTextColor(...theme.textDark); doc.text("Financial Summary", marginX, currentY); currentY += 6;
-        doc.autoTable({ startY: currentY, head: [['Description', 'Total Amount (INR)']], body: [['Total Capital Given (New Cases)', `RS. ${Number(data.totalGiven).toLocaleString()}`], ['Total Cash Recovered (Recoveries)', `RS. ${Number(data.totalReturned).toLocaleString()}`]], theme: 'grid', styles: { fontSize: 11, textColor: theme.textDark, fillColor: theme.bg }, headStyles: { fillColor: theme.primary, textColor: [255, 255, 255] } });
-        currentY = doc.lastAutoTable.finalY + 15;
+            if (data.closedCasesInRange && data.closedCasesInRange.length > 0) {
+                renderClosedPdf(data.closedCasesInRange, "ARCHIVED (CLOSED) CASES SETTLED", [138, 141, 152]);
+            }
 
-        // --- RENDER NEW CASES ---
-        const renderNewCases = (list, title, color, typeLabel) => {
-            if (list.length === 0) return;
-            checkPage(250);
-            doc.setFontSize(11); doc.setTextColor(...color); doc.text(title, marginX, currentY);
-            let totalValue = 0;
-            let body = list.map((c, i) => { let amtToDisplay = Number(c.actualCashGiven || c.principal || 0); totalValue += amtToDisplay; return [i + 1, c.name, formatDateDisplay(c.startDate), typeLabel, `RS. ${amtToDisplay.toLocaleString()}`]; });
-            doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Given', 'Case Type', 'Principal Amount']], body: body, foot: [['', '', '', 'TOTAL NEW CAPITAL', `RS. ${totalValue.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } });
-            currentY = doc.lastAutoTable.finalY + 15;
-        };
-
-        renderNewCases(data.newCasesDaily, "NEW PORTFOLIO ADDITIONS (DAILY)", theme.primary, "DAILY");
-        renderNewCases(data.newCasesMonthly, "NEW PORTFOLIO ADDITIONS (MONTHLY)", theme.accent, "MONTHLY");
-        renderNewCases(data.newCasesMeter, "NEW PORTFOLIO ADDITIONS (METER)", theme.textDark, "METER");
-
-        // --- RENDER RECOVERIES ---
-        if (data.paymentsDaily.length > 0) { checkPage(250); doc.setFontSize(11); doc.setTextColor(...theme.primary); doc.text("DAILY RECOVERY LOG (KISHATS)", marginX, currentY); let totalDaily = 0; let dailyTableBody = data.paymentsDaily.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalDaily += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'DAILY').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: dailyTableBody, foot: [['', '', '', 'TOTAL DAILY RECOVERY', `RS. ${totalDaily.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: theme.primary }, footStyles: { fillColor: theme.primary, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } }); currentY = doc.lastAutoTable.finalY + 15; }
-        
-        if (data.paymentsMeter.length > 0) { checkPage(250); doc.setFontSize(11); doc.setTextColor(...theme.textDark); doc.text("METER RECOVERY LOG", marginX, currentY); let totalMeter = 0; let meterTableBody = data.paymentsMeter.map((p, i) => { let dates = p.hits.map(h => h.date).sort(); let summary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); totalMeter += Number(p.total || 0); return [i + 1, p.name, summary, (p.type || 'METER').toUpperCase(), `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Date Range', 'Basis', 'Total Received']], body: meterTableBody, foot: [['', '', '', 'TOTAL METER RECOVERY', `RS. ${totalMeter.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: theme.textDark }, footStyles: { fillColor: theme.textDark, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } }); currentY = doc.lastAutoTable.finalY + 15; }
-        
-        if (data.paymentsMonthly.length > 0) { checkPage(250); doc.setFontSize(11); doc.setTextColor(...theme.accent); doc.text("MONTHLY INTEREST LOG (VYAJ)", marginX, currentY); let totalMonthly = 0; let sortedMonthlyPayments = [...data.paymentsMonthly].sort((a, b) => { let dateA = a.hits && a.hits.length > 0 ? a.hits.map(h => h.date).sort()[0] : '9999-99-99'; let dateB = b.hits && b.hits.length > 0 ? b.hits.map(h => h.date).sort()[0] : '9999-99-99'; return (dateA > dateB ? 1 : -1); }); let monthlyTableBody = sortedMonthlyPayments.map((p, i) => { let dates = p.hits.map(h => formatDateDisplay(h.date)).sort().join(", "); totalMonthly += Number(p.total || 0); return [i + 1, p.name, dates, `RS. ${Number(p.total).toLocaleString()}`]; }); doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Payment Specific Dates', 'Total Interest']], body: monthlyTableBody, foot: [['', '', 'TOTAL MONTHLY INTEREST', `RS. ${totalMonthly.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: theme.accent }, footStyles: { fillColor: theme.accent, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } }); currentY = doc.lastAutoTable.finalY + 15; }
-
-        // --- RENDER PENDINGS ---
-        const renderPendings = (list, title, color) => {
-            if (list.length === 0) return;
-            checkPage(250);
-            doc.setFontSize(11); doc.setTextColor(...color); doc.text(title, marginX, currentY);
-            let totalPending = 0;
-            let body = list.map((p, i) => { totalPending += Number(p.accumulatedTotal || 0); return [i + 1, p.name, p.type.toUpperCase(), p.missedDatesStr, `RS. ${Number(p.accumulatedTotal).toFixed(0).toLocaleString()}`]; });
-            doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Basis', 'Missed Dates', 'Pending Amount']], body: body, foot: [['', '', '', 'TOTAL PENDING', `RS. ${totalPending.toFixed(0).toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } });
-            currentY = doc.lastAutoTable.finalY + 15;
-        };
-
-        if (data.pendingsInRange && data.pendingsInRange.length > 0) {
-            renderPendings(data.pendingsInRange.filter(p => p.type === 'daily'), "PENDING COLLECTIONS (DAILY)", theme.primary);
-            renderPendings(data.pendingsInRange.filter(p => p.type === 'monthly'), "PENDING COLLECTIONS (MONTHLY)", theme.accent);
-            renderPendings(data.pendingsInRange.filter(p => p.type === 'meter'), "PENDING COLLECTIONS (METER)", theme.textDark);
-        }
-
-        // --- RENDER CLOSED CASES ---
-        const renderClosedPdf = (list, title, color) => {
-            if (list.length === 0) return;
-            checkPage(250);
-            doc.setFontSize(11); doc.setTextColor(...color); doc.text(title, marginX, currentY);
-            let totalVal = 0; let totalRec = 0;
-            let body = list.map((c, i) => { 
-                totalVal += Number(c.principal || 0); totalRec += Number(c.recoveredInRange || 0);
-                let detailStr = '';
-                if (c.type === 'monthly') { detailStr = `${c.hitsCount} Months`; } else {
-                    let perUnit = c.installment || 0; let regularRec = c.recoveredInRange || 0; let parts = [];
-                    if (c.closingAmount && c.closingAmount !== perUnit && c.closingAmount > 0) { regularRec -= c.closingAmount; parts.push(`RS. ${c.closingAmount.toFixed(0)} (Final)`); }
-                    if (regularRec > 0 && perUnit > 0) { let eqDays = Math.round(regularRec / perUnit); parts.push(`${eqDays} Kishats`); }
-                    detailStr = parts.length > 0 ? parts.join(" + ") : `Lump Sum`;
-                }
-                return [i + 1, c.name, c.type.toUpperCase(), formatDateDisplay(c.closedDate), `RS. ${Number(c.recoveredInRange || 0).toLocaleString()} (${detailStr})`, `RS. ${Number(c.principal).toLocaleString()}`]; 
-            });
-            doc.autoTable({ startY: currentY + 4, head: [['S.No', 'Customer Name', 'Case Type', 'Closed On', 'Received (In Range)', 'Principal Settled']], body: body, foot: [['', '', '', 'TOTAL:', `RS. ${totalRec.toLocaleString()}`, `RS. ${totalVal.toLocaleString()}`]], theme: 'striped', headStyles: { fillColor: color }, footStyles: { fillColor: color, textColor: [255, 255, 255] }, styles: { textColor: theme.textDark, fillColor: theme.bg }, alternateRowStyles: { fillColor: [248, 246, 242] } });
-            currentY = doc.lastAutoTable.finalY + 15;
-        };
-
-        if (data.closedCasesInRange && data.closedCasesInRange.length > 0) {
-            renderClosedPdf(data.closedCasesInRange, "ARCHIVED (CLOSED) CASES SETTLED", [138, 141, 152]);
-        }
-
-        // --- FOOTER & SAVE ---
-        checkPage(270); 
-        doc.setFontSize(9); doc.setTextColor(...theme.textDark); doc.setFont(undefined, 'italic'); 
-        doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); 
-        
-        doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); 
-        showToast("Premium PDF Downloaded! 📄");
-    } catch (err) { 
-        console.error(err); 
-        showToast("Error generating PDF. Try again."); 
+            if (currentY > 270) { doc.addPage(); currentY = 20; } doc.setFontSize(9); doc.setTextColor(150); doc.setFont(undefined, 'italic'); doc.text("End of Professional Business Report. Generated by Credix Premium.", marginX, currentY + 10); doc.save(`Credix_Business_Report_${data.start}_to_${data.end}.pdf`); showToast("Professional PDF Downloaded!");
+        } catch (err) { console.error(err); showToast("Error generating PDF. Try again."); }
     }
-}
-
 
     // --- BULLETPROOF: STAFF SPECIFIC BLUE PDF REPORT ---
     window.downloadStaffPDF = function() {
@@ -2150,34 +2112,13 @@ function downloadReportPDF() {
             finalHtml += accountsHtmlArray.join('');
         }
         document.getElementById('dashboard').innerHTML = finalHtml; document.getElementById('sum-cases').innerText = tC; document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
-let aCount = 0, cCount = 0;
-db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
-    if (!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
-    if(!c.isArchived) aCount++; else cCount++;
-});
-if (document.getElementById('donut-active')) document.getElementById('donut-active').innerText = aCount;
-if (document.getElementById('donut-closed')) document.getElementById('donut-closed').innerText = cCount;
-
-}
+    }
 
     function renderStats() {
-    let mPrin = 0, dPrin = 0;
-    let activeCount = 0, closedCount = 0, totalCases = 0;
-    let meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0;
-
+        let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
         db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
-if (!c.isArchived) {
-    activeCount++; // Active cases yahan gine jayenge
-    totalPrin += c.principal; 
-    totalBal += c.currentBalance; 
-    if(c.type === 'monthly') mPrin += c.principal; 
-    else if(c.type === 'meter') meterPrin += c.principal; 
-    else dPrin += c.principal; 
-} else {
-    closedCount++; // Closed cases yahan gine jayenge
-}
-
+            if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
             if(isOwnerMode) { 
                 globalInvested += c.principal; 
@@ -2193,7 +2134,6 @@ if (!c.isArchived) {
                 } 
             }
         });
-
         if(isOwnerMode) { document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); }
         document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
     }
