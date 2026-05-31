@@ -649,95 +649,78 @@ div:has(> #txt-remaining) {
 }
 
 /* ========================================= */
-/* 13. ANDROID & MOBILE SCREEN MASTER FIX    */
+/* 13. PROFESSIONAL MOBILE UI (BANKING APP)  */
 /* ========================================= */
 
-/* Android ko zabardasti font bada karne se rokna */
 html, body {
     -webkit-text-size-adjust: 100% !important;
     text-size-adjust: 100% !important;
 }
 
-    /* 6. Fix App Header & Logo Space */
-    .header-top { padding-bottom: 10px !important; min-height: auto !important; }
-    .app-title img { height: 80px !important; margin-top: -5px !important; }
+/* Global Lock Logo (Desktop + iPad) */
+.lock-logo { width: 180px !important; margin-bottom: 20px !important; display: block; margin: 0 auto; }
 
-    /* 7. Compact Customer Cards for Mobile */
-    .cust-card { 
-        padding: 14px 15px !important; 
-        margin-bottom: 12px !important; 
-        border-radius: 24px !important; 
-    }
-    .c-name { font-size: 16px !important; margin-bottom: 2px !important; }
-    .cust-avatar { width: 40px !important; height: 40px !important; }
+/* Sirf Mobile Screens (Phones) ke liye Compact Design */
+@media screen and (max-width: 600px) {
+    /* Global & Header */
+    body { padding: 12px 10px 100px 10px !important; }
+    .header-top { padding-bottom: 10px !important; min-height: 50px !important; }
+    .app-title { font-size: 22px !important; }
+    .app-title img { height: 60px !important; margin-right: 5px !important; }
+    .sub-title { font-size: 12px !important; }
+    .profile-btn { width: 40px !important; height: 40px !important; }
+
+    /* Lock Screen (Perfect Fit) */
+    .lock-content { padding: 0 15px !important; margin-top: -30px !important; }
+    .lock-logo { width: 120px !important; margin-bottom: 30px !important; }
+    .calc-keypad { gap: 12px !important; max-width: 250px !important; }
+    .calc-btn { max-width: 65px !important; font-size: 22px !important; }
+    .pin-dots { margin-bottom: 30px !important; }
+    .lock-sub { margin-bottom: 30px !important; font-size: 12px !important; }
+
+    /* Dashboard Summary Cards */
+    .summary-row { gap: 10px !important; margin-bottom: 20px !important; }
+    .sum-card { padding: 15px 12px !important; border-radius: 20px !important; }
+    .sum-card-full { padding: 18px 15px !important; border-radius: 20px !important; }
+    .sum-card span { font-size: 10px !important; margin-bottom: 4px !important; }
+    .sum-card b { font-size: 22px !important; }
+    .sum-card-full b { font-size: 28px !important; }
+    .sum-card-full::after { font-size: 65px !important; right: -5px !important; bottom: -12px !important; }
+
+    /* Donut Chart (Chhota kiya) */
+    .donut-chart-wrap { width: 90px !important; height: 90px !important; margin: 10px 0 !important; }
+    .donut-inner { width: 70px !important; height: 70px !important; }
+    .donut-inner b { font-size: 24px !important; }
+    .donut-legend { font-size: 10px !important; gap: 10px !important; }
+
+    /* Accounts & Customer Cards (Clean & Compact) */
+    .cust-card { padding: 12px 14px !important; margin-bottom: 12px !important; border-radius: 20px !important; }
+    .c-name { font-size: 15px !important; gap: 8px !important; margin-bottom: 2px !important; }
+    .c-sub { font-size: 11px !important; }
     .c-bal { font-size: 18px !important; }
+    .cust-avatar { width: 36px !important; height: 36px !important; border-width: 1.5px !important; }
+    .pill-tag { padding: 5px 10px !important; font-size: 9px !important; margin-bottom: 10px !important; }
+    .status-txt { font-size: 11px !important; }
+    .btn-row { gap: 10px !important; margin-top: 12px !important; }
 
-    /* 1. Fix Total Principal Card (Numbers tootne se rokna) */
-    .sum-card-full {
-        padding: 20px 15px !important;
-    }
-    .sum-card-full span {
-        font-size: 13px !important;
-    }
-    .sum-card-full b {
-        font-size: 28px !important; 
-        white-space: normal !important; 
-        word-break: break-all !important; 
-    }
-    .sum-card-full::after {
-        font-size: 70px !important;
-        right: 0px !important;
-        bottom: -10px !important;
-    }
-
-    /* 2. Top Summary Cards (Total Cases & Outstanding) Fix */
-    #section-summary {
-        gap: 10px !important;
-    }
-    .sum-card {
-        padding: 15px 10px !important;
-    }
-    .sum-card b {
-        font-size: 20px !important;
-        white-space: nowrap !important;
-    }
-    .sum-card span {
-        font-size: 9px !important;
-        white-space: nowrap !important;
-    }
-
-    /* 3. Fix 3-Boxes in Review Section */
-    #rep-results > div:first-child > div {
-        padding: 12px 5px !important; 
-        min-width: 0 !important;
-    }
-    #rep-results span {
-        font-size: 9px !important; 
-        letter-spacing: 0 !important;
-        white-space: nowrap !important; 
-    }
-    #rep-results b {
-        font-size: 16px !important;
-    }
-
-    /* 4. Customer Name aur Amount Adjustments */
-    .c-name { font-size: 16px !important; }
-    .c-bal { font-size: 18px !important; }
-
-    /* 5. Fix Lock Screen PIN Buttons */
-    .lock-content {
-        padding: 0 10px !important;
-        margin-top: -20px !important;
-    }
-    .calc-keypad {
-        gap: 15px !important;
-        max-width: 280px !important;
-    }
-    .calc-btn {
-        max-width: 65px !important;
-        font-size: 24px !important;
-    }
-    .pin-dots {
-        margin-bottom: 25px !important;
-    }
+    /* Inputs & Action Buttons */
+    .input-group, .filter-dropdown { height: 50px !important; padding: 0 12px !important; border-radius: 16px !important; margin-bottom: 12px !important; }
+    .input-group input, .input-group select { font-size: 14px !important; padding: 10px 0 !important; }
+    .main-btn, .s-btn { padding: 14px !important; font-size: 13px !important; border-radius: 16px !important; }
+    
+    /* Bottom Nav */
+    .bottom-nav { width: 92% !important; max-width: 100% !important; padding: 6px 10px !important; border-radius: 25px !important; bottom: 15px !important; }
+    .nav-item { padding: 5px 0 !important; }
+    .nav-item .nav-icon { font-size: 22px !important; width: 26px !important; height: 26px !important; }
+    
+    /* Review Section */
+    #rep-results > div:first-child > div { padding: 10px 5px !important; border-radius: 15px !important; }
+    #rep-results span { font-size: 9px !important; }
+    #rep-results b { font-size: 15px !important; }
+    #rep-list > div:has(> div) { padding: 12px !important; border-radius: 16px !important; margin-bottom: 12px !important; }
+    
+    /* AI Chat Window */
+    #ai-chat-window { bottom: 100px !important; width: 90% !important; right: 5% !important; height: 400px !important; }
+    #ai-chat-btn, .ai-chat-btn { bottom: 85px !important; width: 50px !important; height: 50px !important; right: 15px !important; }
+    #ai-chat-btn svg { width: 22px !important; height: 22px !important; }
 }
