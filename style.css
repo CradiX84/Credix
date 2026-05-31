@@ -660,36 +660,12 @@ html, body {
 /* Global Lock Logo (Desktop + iPad) */
 .lock-logo { width: 180px !important; margin-bottom: 20px !important; display: block; margin: 0 auto; }
 
-/* ========================================= */
-/* 13. PROFESSIONAL MOBILE UI (BANKING APP)  */
-/* ========================================= */
-
-html, body {
-    -webkit-text-size-adjust: 100% !important;
-    text-size-adjust: 100% !important;
-}
-
-/* Global Lock Logo (Desktop + iPad) */
-.lock-logo { width: 180px !important; margin-bottom: 20px !important; display: block; margin: 0 auto; }
-
-/* ========================================= */
-/* 13. PROFESSIONAL MOBILE UI (BANKING APP)  */
-/* ========================================= */
-
-html, body {
-    -webkit-text-size-adjust: 100% !important;
-    text-size-adjust: 100% !important;
-}
-
-/* Global Lock Logo (Desktop + iPad) */
-.lock-logo { width: 180px !important; margin-bottom: 20px !important; display: block; margin: 0 auto; }
-
 /* Sirf Mobile Screens (Phones) ke liye Compact Design */
 @media screen and (max-width: 600px) {
-    /* 1. Global & Header */
+    /* 1. Global & Header (Bada Logo) */
     body { padding: 10px 8px 90px 8px !important; }
     .header-top { padding-bottom: 15px !important; min-height: auto !important; align-items: flex-start !important; }
-    .app-title img { height: 95px !important; margin: 0 10px 0 0 !important; margin-top: -5px !important; }
+    .app-title img { height: 85px !important; margin: 0 10px 0 0 !important; margin-top: -5px !important; }
     .app-title { font-size: 22px !important; }
     #t-appSub { margin-top: 0px !important; font-size: 12px !important; }
     .profile-btn { width: 38px !important; height: 38px !important; font-size: 15px !important; }
@@ -719,7 +695,7 @@ html, body {
     .legend-item { display: inline-flex !important; align-items: center !important; white-space: nowrap !important; font-size: 11px !important; }
     .legend-item span { white-space: nowrap !important; }
 
-    /* 4. Accounts Cards */
+    /* 4. Accounts Cards (Buttons Auto-Align Fix) */
     .cust-card { padding: 12px 14px !important; border-radius: 16px !important; margin-bottom: 10px !important; }
     .card-header { margin-bottom: 6px !important; }
     .c-name { font-size: 15px !important; margin-bottom: 2px !important; }
@@ -727,7 +703,16 @@ html, body {
     .c-bal { font-size: 16px !important; }
     .cust-avatar { width: 36px !important; height: 36px !important; }
     
-    .btn-row { display: flex !important; gap: 10px !important; align-items: center !important; margin-top: 10px !important; }
+    /* Auto alignment row */
+    .btn-row { 
+        display: flex !important; 
+        justify-content: space-between !important; /* Spreads buttons evenly */
+        align-items: center !important; 
+        margin-top: 10px !important; 
+        width: 100% !important;
+        gap: 8px !important;
+    }
+    /* The 3 round buttons */
     .btn-row .s-btn:not(.collect) { 
         flex: 0 0 35px !important; 
         width: 35px !important;
@@ -737,14 +722,16 @@ html, body {
         display: flex !important; align-items: center !important; justify-content: center !important;
         font-size: 14px !important; 
     }
+    /* The Collect (Receive) button */
     .btn-row .s-btn.collect {
-        width: 110px !important; 
-        margin-left: auto !important;
-        height: 35px !important; 
+        flex: 0 0 110px !important; /* Fixed width */
+        width: 110px !important;
+        height: 32px !important; 
         padding: 0 !important;
-        border-radius: 18px !important;
+        border-radius: 16px !important;
         font-size: 13px !important;
         font-weight: 800 !important;
+        margin: 0 !important; /* Removes any auto margin that was causing gaps */
     }
 
     /* 5. Review Section (DATES, ALIGNMENT & BUTTON OVERLAP FIX) */
@@ -760,15 +747,17 @@ html, body {
     #rep-results span { font-size: 8px !important; text-align: center !important; white-space: nowrap !important; margin-bottom: 4px !important;}
     #rep-results b { font-size: 13px !important; }
     
-    /* THE MASTER FIX FOR REVIEW CARDS: FLEX HATAKAR BLOCK KIYA TAQI OVERLAP NA HO */
+    /* Card Structure */
     #rep-list > div:has(> div) { 
         padding: 15px !important; 
         border-radius: 16px !important; 
-        display: block !important; 
+        display: flex !important; 
+        flex-direction: column !important; /* Vertical stack */
+        align-items: stretch !important; 
         text-align: left !important;
-        overflow: hidden !important;
     }
     
+    /* First row inside card (Name & Bal) */
     #rep-list > div:has(> div) > div:first-of-type { 
         display: flex !important; 
         flex-direction: row !important; 
@@ -777,36 +766,51 @@ html, body {
         width: 100% !important;
     }
 
-    /* KISHAT AUR NAAM WAPAS LEFT ALIGN */
-    #rep-list .c-name, #rep-list .c-sub, #rep-list div {
+    /* Overriding inline center alignment injected by JS for dates/kishat */
+    #rep-list div[style*="text-align: center"],
+    #rep-list div[style*="text-align:center"] {
         text-align: left !important;
+        display: block !important;
+        width: 100% !important;
+        margin-top: 5px !important;
+    }
+    
+    /* Kishat and Profit row override */
+    #rep-list div[style*="justify-content: space-between"],
+    #rep-list div[style*="justify-content:space-between"] {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        text-align: left !important;
+        margin-top: 5px !important;
     }
 
-    /* METER DATES BOX SE BAAHAR NA JANE KA FIX */
-    #rep-list div[style*="font-size: 13px"], #rep-list div[style*="font-size:13px"], #rep-list .c-sub {
+    /* Handling long text (Meter dates) */
+    #rep-list div[style*="font-size: 13px"], 
+    #rep-list div[style*="font-size:13px"] {
         word-wrap: break-word !important;
-        word-break: break-all !important; /* Yahan Dates Tootengi */
+        word-break: break-word !important;
         white-space: normal !important;
         text-align: left !important;
-        line-height: 1.5 !important;
+        line-height: 1.4 !important;
         margin-top: 5px !important;
         width: 100% !important;
         display: block !important;
     }
 
-    /* BULK BUTTON NEECHE RIGHT MEIN BINA KISI OVERLAP KE */
+    /* Bulk Receive Button */
     #rep-list button.s-btn.collect, 
     #rep-list button[style*="background:var(--success)"] { 
-        display: inline-block !important;
-        float: right !important; /* Button wapas right mein */
-        clear: both !important; /* Overlap se bachayega */
-        margin-top: 12px !important; 
-        margin-bottom: 5px !important;
+        align-self: flex-end !important; /* Pushes button to bottom right */
+        margin-top: 10px !important; 
         height: 32px !important; 
         padding: 0 14px !important; 
         border-radius: 16px !important; 
         font-size: 11px !important; 
         width: auto !important; 
+        position: static !important; /* Fixes overlap */
+        float: none !important;
     }
 
     /* General Inputs */
@@ -821,143 +825,4 @@ html, body {
     /* AI Chat */
     #ai-chat-window { bottom: 85px !important; width: 92% !important; right: 4% !important; height: 380px !important; }
     #ai-chat-btn, .ai-chat-btn { bottom: 75px !important; width: 42px !important; height: 42px !important; right: 12px !important; }
-}
-
-    /* ============================================== */
-    /* REVIEW TAB: DATES & KISHAT LEFT ALIGNMENT FIX  */
-    /* ============================================== */
-
-    /* 1. Date ko Center se Left laane ke liye */
-    #rep-list div[style*="text-align: center"], 
-    #rep-list div[style*="text-align:center"] {
-        text-align: left !important;
-        display: block !important;
-        width: 100% !important;
-        margin-top: 4px !important;
-    }
-
-    /* 2. Kishat ko Left aur Profit ko wapas Right kone mein bhejney ke liye */
-    #rep-list div[style*="justify-content: space-between"], 
-    #rep-list div[style*="justify-content:space-between"] {
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin-top: 4px !important;
-    }
-
-/* ========================================= */
-/* THE NUCLEAR OVERRIDE (FINAL FIX)          */
-/* ========================================= */
-@media screen and (max-width: 600px) {
-    
-    /* 1. ACCOUNTS "RECEIVE" BUTTON ZABARDASTI CHHOTA KIYA */
-    #main-app .cust-card .btn-row .s-btn.collect,
-    .cust-card .btn-row .s-btn.collect {
-        flex: 0 0 110px !important; 
-        width: 110px !important;
-        max-width: 110px !important;
-        min-width: 110px !important;
-        margin-left: auto !important;
-        height: 32px !important;
-        border-radius: 16px !important;
-        padding: 0 !important;
-    }
-
-    /* 2. REVIEW TAB "KISHAT" AUR "DATE" KO LEFT MEIN DHAKELA */
-    #rep-list div[style*="text-align: center"],
-    #rep-list div[style*="text-align:center"] {
-        text-align: left !important;
-        align-items: flex-start !important;
-        justify-content: flex-start !important;
-        width: 100% !important;
-        display: block !important;
-    }
-    
-    /* Profit ko right mein rakhne ke liye */
-    #rep-list div[style*="justify-content: space-between"],
-    #rep-list div[style*="justify-content:space-between"] {
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        width: 100% !important;
-        text-align: left !important;
-    }
-
-    /* 3. METER DATES AUR BULK BUTTON OVERLAP FIX */
-    #rep-list > div:has(> div) {
-        position: relative !important; /* Button ko iske andar lock karne ke liye */
-        padding-bottom: 50px !important; /* Button ke liye niche khali jagah banayi */
-    }
-
-    #rep-list div[style*="font-size: 13px"],
-    #rep-list div[style*="font-size:13px"] {
-        display: block !important;
-        word-wrap: break-word !important;
-        white-space: normal !important;
-        text-align: left !important;
-        width: 100% !important;
-    }
-    
-    /* Bulk Button ko kone mein chipkaya */
-    #rep-list button.s-btn.collect,
-    #rep-list button[style*="background:var(--success)"] {
-        position: absolute !important;
-        right: 15px !important;
-        bottom: 12px !important;
-        float: none !important;
-        margin: 0 !important;
-        width: auto !important;
-        height: 30px !important;
-        padding: 0 12px !important;
-    }
-}
-
-/* ================================================== */
-/* 1. ACCOUNTS BUTTONS AUTO-ALIGNMENT FIX             */
-/* ================================================== */
-.cust-card .btn-row {
-    justify-content: space-between !important; /* Charo buttons ko barabar failayega */
-    width: 100% !important;
-}
-.cust-card .btn-row .s-btn.collect {
-    margin-left: 0 !important; /* Gaddha (gap) khatam karega */
-}
-
-/* ================================================== */
-/* 2. REVIEW TAB (DATES, KISHAT & BUTTON OVERLAP FIX) */
-/* ================================================== */
-
-/* Card ko column banayega taaki ek ke neeche ek aayein */
-#rep-list > div:has(> div) {
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 15px !important;
-}
-
-/* Pehli line (Naam aur Amount) ko aamne-saamne rakhega */
-#rep-list > div:has(> div) > div:first-of-type {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    width: 100% !important;
-}
-
-/* Dates aur Kishat ko jabardasti Left karega aur box mein todega */
-#rep-list > div:has(> div) > div:not(:first-of-type) {
-    text-align: left !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    display: block !important;
-    width: 100% !important;
-    margin-top: 5px !important;
-}
-
-/* Bulk Receive button ko text ke theek neeche Right side mein set karega */
-#rep-list button.s-btn.collect,
-#rep-list button[style*="background:var(--success)"] {
-    position: static !important; /* Hawa mein udna band karega (Overlap fix) */
-    align-self: flex-end !important; /* Right side dhakelega */
-    margin-top: 10px !important;
 }
