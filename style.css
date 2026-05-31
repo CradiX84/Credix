@@ -713,12 +713,17 @@ html, body {
     .nav-item { padding: 5px 0 !important; }
     .nav-item .nav-icon { font-size: 22px !important; width: 26px !important; height: 26px !important; }
     
-    /* Review Section */
+    /* Review Section - Fix Dates & Overlapping Buttons */
     #rep-results > div:first-child > div { padding: 10px 5px !important; border-radius: 15px !important; }
     #rep-results span { font-size: 9px !important; }
     #rep-results b { font-size: 15px !important; }
-    #rep-list > div:has(> div) { padding: 12px !important; border-radius: 16px !important; margin-bottom: 12px !important; }
-    
+    #rep-list > div:has(> div) { padding: 12px !important; border-radius: 16px !important; margin-bottom: 12px !important; overflow: hidden !important; word-wrap: break-word !important; }
+    #rep-list > div:has(> div) > div[style*="display: flex"] { flex-direction: column !important; align-items: flex-start !important; }
+    #rep-list button.s-btn.collect, #rep-list button[style*="background:var(--success)"] { float: none !important; width: 100% !important; margin-top: 15px !important; }
+
+    /* Fix Text overflowing for Pending Dates */
+    .c-sub, .pill-tag { word-break: break-word !important; white-space: normal !important; overflow-wrap: anywhere !important; }
+
     /* AI Chat Window */
     #ai-chat-window { bottom: 100px !important; width: 90% !important; right: 5% !important; height: 400px !important; }
     #ai-chat-btn, .ai-chat-btn { bottom: 85px !important; width: 50px !important; height: 50px !important; right: 15px !important; }
