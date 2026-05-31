@@ -913,3 +913,51 @@ html, body {
         padding: 0 12px !important;
     }
 }
+
+/* ================================================== */
+/* 1. ACCOUNTS BUTTONS AUTO-ALIGNMENT FIX             */
+/* ================================================== */
+.cust-card .btn-row {
+    justify-content: space-between !important; /* Charo buttons ko barabar failayega */
+    width: 100% !important;
+}
+.cust-card .btn-row .s-btn.collect {
+    margin-left: 0 !important; /* Gaddha (gap) khatam karega */
+}
+
+/* ================================================== */
+/* 2. REVIEW TAB (DATES, KISHAT & BUTTON OVERLAP FIX) */
+/* ================================================== */
+
+/* Card ko column banayega taaki ek ke neeche ek aayein */
+#rep-list > div:has(> div) {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 15px !important;
+}
+
+/* Pehli line (Naam aur Amount) ko aamne-saamne rakhega */
+#rep-list > div:has(> div) > div:first-of-type {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+
+/* Dates aur Kishat ko jabardasti Left karega aur box mein todega */
+#rep-list > div:has(> div) > div:not(:first-of-type) {
+    text-align: left !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    display: block !important;
+    width: 100% !important;
+    margin-top: 5px !important;
+}
+
+/* Bulk Receive button ko text ke theek neeche Right side mein set karega */
+#rep-list button.s-btn.collect,
+#rep-list button[style*="background:var(--success)"] {
+    position: static !important; /* Hawa mein udna band karega (Overlap fix) */
+    align-self: flex-end !important; /* Right side dhakelega */
+    margin-top: 10px !important;
+}
