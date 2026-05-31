@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.json">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#ff6a00">
+    <meta name="theme-color" content="⁠#1D827B">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Credix">
     <link rel="apple-touch-icon" href="logo.png">
@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
-<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -242,7 +242,8 @@
 <div id="lock-screen">
 
     <div class="lock-content">
-        <h1 class="lock-title">Credix.</h1>
+<img src="logo.png" style="width: 250px; margin-bottom: -30px; margin-top: -60px; display: block;">
+
         <p id="t-lockSub" class="lock-sub">Enter 4-Digit Login ID</p>
 
         <div class="pin-dots" id="dots-container">
@@ -281,16 +282,20 @@
 </div>
 
 <div class="container" id="main-app" style="display:none; max-width:600px; margin:auto;">
-    <div class="header-top">
-        <div>
-            <h3 class="app-title">Credix. <span id="owner-title-badge" style="font-size:14px; display:none;">👑</span></h3>
-            <div class="sub-title" id="t-appSub">Welcome Back 👋</div>
-        </div>
-        <div class="profile-btn" onclick="openSettings()">
-            <span id="profile-icon-area">⚙️</span>
-            <div class="owner-badge" id="owner-badge">PRO</div>
-        </div>
+<div class="header-top">
+    <div>
+        <h3 class="app-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            <img src="logo.png" style="height: 120px; margin-left: -5px; display: block;"> 
+            <span id="owner-title-badge" style="font-size:14px; display:none;"></span>
+        </h3>
+        <div class="sub-title" id="t-appSub" style="margin-top: -15px;">Welcome Back 👋</div>
     </div>
+
+    <div class="profile-btn" onclick="openSettings()">
+        <span id="profile-icon-area">⚙️</span>
+        <div class="owner-badge" id="owner-badge">PRO</div>
+    </div>
+</div>
 
     <div class="sync-bar">
         <div class="status-indicator"><div class="status-dot" id="cloud-indicator"></div> <span id="sync-status">Cloud Synced</span></div>
@@ -303,17 +308,40 @@
                 <span id="t-sumPrin">Total Principal</span>
                 <b id="sum-principal">₹0</b>
             </div>
-            <div class="sum-card">
-                <span id="t-sumCases">Total Cases</span>
-                <b id="sum-cases">0</b>
-            </div>
-            <div class="sum-card">
-                <span id="t-sumOut">Outstanding</span>
-                <b style="color: var(--danger);" id="sum-balance">₹0</b>
-            </div>
-        </div>
+            
+            <div class="sum-card" style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+                <svg class="donut-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
 
-        <div id="section-add" style="margin-bottom: 25px;">
+                <span id="t-sumCases" style="align-self: flex-start; position: relative; z-index: 2;">Total Cases</span>
+
+                <div class="donut-chart-wrap" style="position: relative; z-index: 2;">
+                    <div id="cases-donut" class="donut-ring" style="background: conic-gradient(var(--teal-main) 0% 60%, var(--copper-main) 60% 100%);">
+                        <div class="donut-inner">
+                            <b id="sum-cases">83</b>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="donut-legend" style="position: relative; z-index: 2;">
+                    <div class="legend-item"><span class="dot active-dot"></span>Active: <span id="donut-active">50</span></div>
+                    <div class="legend-item"><span class="dot closed-dot"></span>Closed: <span id="donut-closed">33</span></div>
+                </div>
+            </div>
+
+            <div class="sum-card" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; position: relative; overflow: hidden;">
+                <svg class="out-watermark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                
+                <span id="t-sumOut" style="position: relative; z-index: 2;">Outstanding</span>
+                <b style="color: var(--danger); position: relative; z-index: 2;" id="sum-balance">₹0</b>
+            </div>
+            
+        </div> <div id="section-add" style="margin-bottom: 25px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h3 style="margin:0; font-size:16px; font-weight:600;" id="t-addTitle">Create Record</h3>
             </div>
@@ -421,7 +449,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <div style="flex:1; min-width:30%;">
                         <span id="t-repGiven" style="font-size:12px; color:var(--text-muted);">Total Given</span><br>
-                        <b style="font-size:20px; color:var(--accent-orange);" id="rep-given">₹0</b>
+                        <b style="font-size:20px; color:var(--teal-main);" id="rep-given">₹0</b>
                     </div>
                     <div style="flex:1; min-width:30%; text-align:center;">
                         <span id="t-repRet" style="font-size:12px; color:var(--text-muted);">Total Recovered</span><br>
@@ -432,7 +460,17 @@
                         <b style="font-size:20px; color:var(--owner-gold);" id="rep-profit">₹0</b>
                     </div>
                 </div>
-                <button id="btn-rep-pdf" class="main-btn" style="margin-top:0; margin-bottom:20px; background:var(--owner-gold); color:black; display:none;" onclick="downloadReportPDF()">Download Professional PDF 📄</button>
+<button id="btn-rep-pdf" class="main-btn" style="margin-top:0; margin-bottom:20px; background:var(--owner-gold); color:black; display:none; align-items:center; gap:8px;" onclick="downloadReportPDF()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+    </svg>
+    Download Professional PDF
+</button>
+
                 <div id="rep-list" style="max-height: 450px; overflow-y: auto; padding-right:5px;"></div>
             </div>
         </div>
@@ -480,7 +518,11 @@
     <div class="nav-item" id="nav-stats" onclick="switchTab('stats')"><span class="nav-icon">📊</span><span id="t-navStats">Review</span></div>
 </div>
 
-<button id="ai-chat-btn" onclick="toggleAIChat()" style="display: none;">✨</button>
+<button id="ai-chat-btn" onclick="toggleAIChat()" style="display: none;"><svg width="26" height="26" viewBox="0 0 24 24" style="fill: var(--teal-main);">
+    <path d="M10 2L12.5 8.5L19 11L12.5 13.5L10 20L7.5 13.5L1 11L7.5 8.5L10 2Z" />
+    <path d="M19 14L19.8 16.2L22 17L19.8 17.8L19 20L18.2 17.8L16 17L18.2 16.2L19 14Z" />
+</svg>
+</button>
 
     <div id="ai-chat-window" style="display: none;">
         <div id="ai-chat-header">
