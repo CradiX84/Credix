@@ -689,7 +689,7 @@ html, body {
     /* 1. Global & Header */
     body { padding: 10px 8px 90px 8px !important; }
     .header-top { padding-bottom: 15px !important; min-height: auto !important; align-items: flex-start !important; }
-    .app-title img { height: 75px !important; margin: 0 10px 0 0 !important; margin-top: -5px !important; }
+    .app-title img { height: 95px !important; margin: 0 10px 0 0 !important; margin-top: -5px !important; }
     .app-title { font-size: 22px !important; }
     #t-appSub { margin-top: 0px !important; font-size: 12px !important; }
     .profile-btn { width: 38px !important; height: 38px !important; font-size: 15px !important; }
@@ -738,7 +738,8 @@ html, body {
         font-size: 14px !important; 
     }
     .btn-row .s-btn.collect {
-        flex: 1 !important; 
+        width: 110px !important; 
+        margin-left: auto !important;
         height: 35px !important; 
         padding: 0 !important;
         border-radius: 18px !important;
@@ -821,3 +822,27 @@ html, body {
     #ai-chat-window { bottom: 85px !important; width: 92% !important; right: 4% !important; height: 380px !important; }
     #ai-chat-btn, .ai-chat-btn { bottom: 75px !important; width: 42px !important; height: 42px !important; right: 12px !important; }
 }
+
+    /* ============================================== */
+    /* REVIEW TAB: DATES & KISHAT LEFT ALIGNMENT FIX  */
+    /* ============================================== */
+
+    /* 1. Date ko Center se Left laane ke liye */
+    #rep-list div[style*="text-align: center"], 
+    #rep-list div[style*="text-align:center"] {
+        text-align: left !important;
+        display: block !important;
+        width: 100% !important;
+        margin-top: 4px !important;
+    }
+
+    /* 2. Kishat ko Left aur Profit ko wapas Right kone mein bhejney ke liye */
+    #rep-list div[style*="justify-content: space-between"], 
+    #rep-list div[style*="justify-content:space-between"] {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: 4px !important;
+    }
