@@ -259,8 +259,6 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 #ai-mic-btn { background: var(--bg-base); box-shadow: var(--shadow-out); border: 2px solid #ffffff; color: var(--text-main); }
 #ai-send-btn:active, #ai-mic-btn:active { box-shadow: var(--shadow-in); transform: scale(0.92); border-color: transparent; }
 
-@media screen and (max-width: 600px) { #ai-chat-window { bottom: 140px !important; width: 90% !important; right: 5% !important; } }
-
 /* --- OPTIMIZATION & FIXES --- */
 .cust-card, .sum-card, .search-stat-card, .glass-card, .calc-btn { transform: translateZ(0); -webkit-transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; will-change: transform, opacity; }
 .bottom-nav { transform: translateX(-50%) translateZ(0) !important; -webkit-transform: translateX(-50%) translateZ(0) !important; will-change: transform, backdrop-filter; }
@@ -489,7 +487,7 @@ div[id^="view-"] .main-btn:not([style*="background"]) * {
 
 /* 1. Dashboard Master Grid (Fixes the layout breaking) */
 .summary-row {
-    display: grid; /* 🚨 Yahan se humne !important hata diya hai taaki JS ise hide kar sake */
+    display: grid; 
     grid-template-columns: 1fr 1fr !important;
     grid-template-rows: auto auto !important;
     gap: 16px !important;
@@ -622,7 +620,6 @@ body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"])
 /* ========================================= */
 /* 10. REPORT LIST BLUE TO COPPER FIX (FINAL)*/
 /* ========================================= */
-/* '*' ka matlab hai ki report list ke andar ka har ek element check hoga */
 #rep-list *[style*="#2196F3" i], 
 #rep-list *[style*="#2196f3" i], 
 #rep-list *[style*="#0ea5e9" i], 
@@ -662,21 +659,50 @@ html, body {
 }
 
 /* Sirf Mobile Screens ke liye design adjustments */
-@media screen and (max-width: 500px) {
-    /* 1. Fix Total Principal Card (Numbers tootne se rokna) */
-    .sum-card-full b {
-        font-size: 32px !important; 
-        white-space: nowrap !important;
+@media screen and (max-width: 600px) {
+    
+    /* AI Chat Window Setup */
+    #ai-chat-window { 
+        bottom: 140px !important; 
+        width: 90% !important; 
+        right: 5% !important; 
     }
+    
+    /* 1. Fix Total Principal Card (Numbers tootne se rokna) */
     .sum-card-full {
-        padding: 24px 15px !important;
+        padding: 20px 15px !important;
+    }
+    .sum-card-full span {
+        font-size: 13px !important;
+    }
+    .sum-card-full b {
+        font-size: 28px !important; 
+        white-space: normal !important; 
+        word-break: break-all !important; 
     }
     .sum-card-full::after {
-        font-size: 90px !important;
-        right: 5px !important;
+        font-size: 70px !important;
+        right: 0px !important;
+        bottom: -10px !important;
     }
 
-    /* 2. Fix 3-Boxes in Review Section (Jaise "TOTAL RECOVE RED") */
+    /* 2. Top Summary Cards (Total Cases & Outstanding) Fix */
+    #section-summary {
+        gap: 10px !important;
+    }
+    .sum-card {
+        padding: 15px 10px !important;
+    }
+    .sum-card b {
+        font-size: 20px !important;
+        white-space: nowrap !important;
+    }
+    .sum-card span {
+        font-size: 9px !important;
+        white-space: nowrap !important;
+    }
+
+    /* 3. Fix 3-Boxes in Review Section */
     #rep-results > div:first-child > div {
         padding: 12px 5px !important; 
         min-width: 0 !important;
@@ -690,21 +716,24 @@ html, body {
         font-size: 16px !important;
     }
 
-    /* 3. Dashboard Top Summary Cards Fix */
-    .sum-card b {
-        font-size: 20px !important;
-        white-space: nowrap !important;
-    }
-    .sum-card span {
-        font-size: 9px !important;
-        white-space: nowrap !important;
-    }
-    
     /* 4. Customer Name aur Amount Adjustments */
-    .c-name {
-        font-size: 16px !important;
+    .c-name { font-size: 16px !important; }
+    .c-bal { font-size: 18px !important; }
+
+    /* 5. Fix Lock Screen PIN Buttons */
+    .lock-content {
+        padding: 0 10px !important;
+        margin-top: -20px !important;
     }
-    .c-bal {
-        font-size: 18px !important;
+    .calc-keypad {
+        gap: 15px !important;
+        max-width: 280px !important;
+    }
+    .calc-btn {
+        max-width: 65px !important;
+        font-size: 24px !important;
+    }
+    .pin-dots {
+        margin-bottom: 25px !important;
     }
 }
