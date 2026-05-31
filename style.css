@@ -826,3 +826,76 @@ html, body {
     #ai-chat-window { bottom: 85px !important; width: 92% !important; right: 4% !important; height: 380px !important; }
     #ai-chat-btn, .ai-chat-btn { bottom: 75px !important; width: 42px !important; height: 42px !important; right: 12px !important; }
 }
+
+/* ========================================================= */
+/* FINAL SURGICAL FIXES (GAP, CENTER TEXT, METER OVERFLOW)   */
+/* ========================================================= */
+
+/* 1. ACCOUNTS BUTTONS GAP FIX (Sath mein layega) */
+.cust-card .btn-row {
+    display: flex !important;
+    justify-content: flex-start !important; /* Buttons ko left mein ek sath pack karega */
+    gap: 12px !important; /* Sirf 12px ka natural gap */
+    width: 100% !important;
+}
+.cust-card .btn-row .s-btn.collect {
+    margin-left: 0 !important; /* Gaddha khatam */
+    flex: 1 !important; /* Bachi hui jagah lega taaki right side ajeeb na lage */
+    max-width: 130px !important; /* Par zyada lamba (bada) nahi hoga */
+    height: 34px !important; /* Slim height */
+    border-radius: 17px !important;
+}
+
+/* 2. REVIEW TAB: DATES ZABARDASTI LEFT & KISHAT ALIGNMENT */
+#rep-list > div:has(> div) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+/* Doosri line (Date) ko forcefully Left karega */
+#rep-list > div:has(> div) > div:nth-child(2) {
+    text-align: left !important;
+    display: block !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+}
+#rep-list > div:has(> div) > div:nth-child(2) * {
+    text-align: left !important;
+    margin: 0 !important;
+}
+
+/* Teesri line (Kishat aur Profit) ko Left-Right set karega */
+#rep-list > div:has(> div) > div:nth-child(3) {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    text-align: left !important;
+}
+
+
+/* 3. METER DATES OVERFLOW & BULK BUTTON FIX */
+#rep-list div[style*="font-size: 13px"], 
+#rep-list div[style*="font-size:13px"],
+#rep-list .c-sub {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important; /* Text ko box ke andar todega */
+    text-align: left !important;
+    display: block !important;
+    width: 100% !important;
+    line-height: 1.4 !important;
+}
+
+/* Bulk button ko text ke theek neeche right side mein layega */
+#rep-list button.s-btn.collect, 
+#rep-list button[style*="background:var(--success)"] {
+    position: relative !important;
+    align-self: flex-end !important;
+    float: right !important;
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+    clear: both !important;
+    width: auto !important;
+}
