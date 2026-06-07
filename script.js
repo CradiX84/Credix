@@ -877,7 +877,16 @@
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+newDb.forEach(item => { 
+    if(item.type !== 'config' && item.type !== 'trash') {
+        if (!item.history) {
+            item.history = [];
+        } else if (!Array.isArray(item.history)) {
+            item.history = Object.values(item.history); 
+        }
+    }
+});
+
                 
                 // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
@@ -985,21 +994,10 @@
                 } else if (oldItem && !newItem) {
                     updates[i] = null; 
                     hasChanges = true;
-                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                    for (let key in newItem) {
-                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
-                            updates[i + '/' + key] = newItem[key]; 
-                            hasChanges = true;
-                        }
-                    }
-                    for (let key in oldItem) {
-                        if (!(key in newItem)) {
-                            updates[i + '/' + key] = null;
-                            hasChanges = true;
-                        }
-                    }
-                }
-            }
+} else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+    updates[i] = newItem; 
+    hasChanges = true;
+}
             
             if (hasChanges) {
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
