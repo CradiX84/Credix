@@ -859,6 +859,49 @@
     }
 
 
+    function setupFirebaseListener() {
+        let cachedDb = [];
+        try {
+            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+        } catch(e) {}
+        
+        if (cachedDb.length > 0) {
+            db = cachedDb;
+        }
+
+        database.ref('credix_db').on('value', (snapshot) => {
+            if(snapshot.exists()) {
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+
+                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
+                newDb = newDb.filter(item => item !== null && item !== undefined);
+                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+
+                // Agar cloud par naya data hai, toh turant screen update karo
+                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                    if (!isSaving) {
+                        db = newDb;
+                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
+
+                        if (document.getElementById('main-app').style.display !== 'none') {
+                            if(!validateSession(db)) return;
+                            render();
+                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                renderTrash();
+                            }
+                        }
+                    }
+                }
+            }
+            document.getElementById('sync-status').innerText = "Cloud Synced";
+            document.getElementById('cloud-indicator').className = "status-dot";
+        }, (error) => {
+            document.getElementById('sync-status').innerText = "Offline Mode";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+        });
+    }
+
 
     function hardRefresh() { 
         document.getElementById('sync-status').innerText = "Syncing...";
