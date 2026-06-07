@@ -870,16 +870,13 @@
         });
     }
 
-        function saveAndRender() {
+            function saveAndRender() {
         isSaving = true;
         let currentDbStr = JSON.stringify(db);
         localStorage.setItem('paymitra_v11', currentDbStr);
         render();
         document.getElementById('sync-status').innerText = "Saving to Cloud...";
         document.getElementById('cloud-indicator').className = "status-dot";
-        
-        let oldDb = [];
-        try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
         
         // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
         try {
@@ -889,9 +886,7 @@
         
         const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
-            // VIP FIX 3: Jab Cloud par data successfully chala jaye, tabhi memory card update karo
             localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
-            
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
@@ -903,55 +898,8 @@
             isSaving = false;
         };
 
-        if (oldDb.length === 0) {
-            database.ref('credix_db').set(db).then(successCb).catch(errCb);
-        } else {
-            let updates = {};
-            let hasChanges = false;
-            
-            // 🛡️ NAYA BANKING-GRADE DELTA SYNC (Unique ID Logic)
-            for (let i = 0; i < db.length; i++) {
-                let newItem = db[i];
-                
-                // Puraane database mein exactly yahi customer ID se dhoondho
-                let oldItem = oldDb.find(x => x && x.id === newItem.id);
-                let oldIndex = oldDb.findIndex(x => x && x.id === newItem.id);
-                
-                if (!oldItem || oldIndex !== i) {
-                    // Agar naya case hai YA case close hone ki wajah se position badli hai
-                    updates[i] = newItem; 
-                    hasChanges = true;
-                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                    // Agar purane case mein koi nayi kishat aayi hai (sirf specific fields update karo)
-                    for (let key in newItem) {
-                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
-                            updates[i + '/' + key] = newItem[key]; 
-                            hasChanges = true;
-                        }
-                    }
-                    for (let key in oldItem) {
-                        if (!(key in newItem)) {
-                            updates[i + '/' + key] = null;
-                            hasChanges = true;
-                        }
-                    }
-                }
-            }
-            
-            // Agar koi case permanently close/delete hua hai, toh Firebase list se aakhiri fालतू items mita do
-            if (oldDb.length > db.length) {
-                for (let i = db.length; i < oldDb.length; i++) {
-                    updates[i] = null;
-                    hasChanges = true;
-                }
-            }
-            
-            if (hasChanges) {
-                database.ref('credix_db').update(updates).then(successCb).catch(errCb);
-            } else {
-                successCb();
-            }
-        }
+        // 🛡️ ROCK SOLID SYNC: Har baar poora data exactly match karega, koi mismatch error nahi aayega!
+        database.ref('credix_db').set(db).then(successCb).catch(errCb);
     }
 
 
