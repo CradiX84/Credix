@@ -877,16 +877,7 @@
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-newDb.forEach(item => { 
-    if(item.type !== 'config' && item.type !== 'trash') {
-        if (!item.history) {
-            item.history = [];
-        } else if (!Array.isArray(item.history)) {
-            item.history = Object.values(item.history); 
-        }
-    }
-});
-
+                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
                 
                 // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
@@ -994,10 +985,21 @@ newDb.forEach(item => {
                 } else if (oldItem && !newItem) {
                     updates[i] = null; 
                     hasChanges = true;
-} else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-    updates[i] = newItem; 
-    hasChanges = true;
-}
+                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+                    for (let key in newItem) {
+                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
+                            updates[i + '/' + key] = newItem[key]; 
+                            hasChanges = true;
+                        }
+                    }
+                    for (let key in oldItem) {
+                        if (!(key in newItem)) {
+                            updates[i + '/' + key] = null;
+                            hasChanges = true;
+                        }
+                    }
+                }
+            }
             
             if (hasChanges) {
                 database.ref('credix_db').update(updates).then(successCb).catch(errCb);
@@ -1006,7 +1008,7 @@ newDb.forEach(item => {
             }
         }
     }
-}
+
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
     function triggerShake(id) { let el = document.getElementById(id); if(el) { let group = el.closest('.input-group'); if(group) { group.classList.add('shake-error'); setTimeout(() => group.classList.remove('shake-error'), 400); } } }
