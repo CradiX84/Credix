@@ -722,21 +722,24 @@
         } else if (window._pendingStaffPhotoRemoval) {
             conf.staffList[idx].photo = "";
         }
-        saveAndRender(); 
-        renderStaffList(); 
+        
+        if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 UI TURBO REFRESH
         closeModal('edit-staff-pin-modal'); 
         showToast("Staff Profile Updated!"); 
+        try { saveAndRender(); } catch(e) {}
     }
 
     function deleteStaff(idx) { 
         askConfirm("Delete this staff account? They will be logged out instantly.", () => { 
             let conf = getConfig(); 
             conf.staffList.splice(idx, 1); 
-            saveAndRender(); 
-            renderStaffList(); 
+            
+            if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 UI TURBO REFRESH
             showToast("Staff Account Deleted!");
+            try { saveAndRender(); } catch(e) {}
         }); 
     }
+
 
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
     function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
@@ -908,6 +911,8 @@
         database.ref('credix_db').once('value').then(() => {
             document.getElementById('sync-status').innerText = "Cloud Synced";
             showToast("Sync Successful!");
+            if (typeof render === 'function') render(); // 🚀 Naya data turant parde par dikhao!
+
         }).catch(() => {
             document.getElementById('sync-status').innerText = "Offline Mode";
         });
@@ -941,9 +946,33 @@
             isSaving = false;
         };
 
-        // 🛡️ ROCK SOLID SYNC: Har baar poora data exactly match karega, koi mismatch error nahi aayega!
-        database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        // 🚀 SMART DELTA SYNC: Poora DB nahi bhejna, sirf jo badla hai wahi bhejenge!
+        try {
+            let oldDbStr = localStorage.getItem('paymitra_last_synced_v11');
+            if (oldDbStr) {
+                let oldDb = JSON.parse(oldDbStr);
+                let updates = {};
+                
+                db.forEach((item, index) => {
+                    let oldItem = oldDb.find(x => x.id === item.id);
+                    if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
+                        updates[`${index}`] = item; 
+                    }
+                });
+
+                if (Object.keys(updates).length > 0) {
+                    database.ref('credix_db').update(updates).then(successCb).catch(errCb);
+                } else {
+                    successCb();
+                }
+            } else {
+                database.ref('credix_db').set(db).then(successCb).catch(errCb);
+            }
+        } catch(e) {
+            database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        }
     }
+
 
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
@@ -1135,15 +1164,17 @@
         if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } 
         c.history.push({ date: dateStr, paid: amt }); 
         recalculateCase(c); 
-        saveAndRender(); 
+        
+        if (typeof render === 'function') render(); // 🚀 UI TURBO REFRESH
         closeModal('pay-modal'); 
         showToast("Payment Saved"); 
+        try { saveAndRender(); } catch(e) {} // ☁️ CLOUD SYNC
         
-        // 🚀 SMART REFRESH: Agar Report wali screen khuli hai, toh auto-update/adjust ho jayega!
         if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
             generateReport();
         }
     }
+
     
     function openBulkModal(id, startOverride = null, endOverride = null) { 
         let c = db.find(x => x.id === id); 
@@ -1229,15 +1260,17 @@
             if(c.type === 'monthly') currentDate.setMonth(currentDate.getMonth() + 1); else currentDate.setDate(currentDate.getDate() + 1); 
         } 
         recalculateCase(c); 
-        saveAndRender(); 
+        
+        if (typeof render === 'function') render(); // 🚀 UI TURBO REFRESH
         closeModal('bulk-modal'); 
         showToast("Bulk Saved!"); 
+        try { saveAndRender(); } catch(e) {} // ☁️ CLOUD SYNC
 
-        // 🔥 SMART REFRESH: Report screen khuli ho toh auto-update karega
         if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
             generateReport();
         }
     }
+
     
     function removeEditPhoto() {
         document.getElementById('edit-photo-preview-wrap').style.display = 'none';
@@ -1316,14 +1349,16 @@
         askConfirm("Move this entry to Recycle Bin?", () => { 
             let c = db.find(x => x.id === custId); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            if (!tr.histories) tr.histories = []; 
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let deletedEntry = c.history[originalIndex];
             tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
             c.history.splice(originalIndex, 1); 
             recalculateCase(c); 
-            saveAndRender(); 
+            
+            if (typeof render === 'function') render(); // 🚀 UI TURBO REFRESH
             showToast("Entry Moved to Recycle Bin! 🗑️"); 
+            try { saveAndRender(); } catch(e) {}
         }); 
     }
 
@@ -1333,7 +1368,7 @@
         askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
             let c = db.find(x => x.id === id); 
             let tr = getTrash();
-            if (!tr.histories) tr.histories = []; // FIREBASE EMPTY ARRAY FIX
+            if (!tr.histories) tr.histories = []; 
             let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
             let indices = Array.from(checks).map(ck => parseInt(ck.value)).sort((a,b) => b-a); 
             indices.forEach(idx => { 
@@ -1343,10 +1378,13 @@
             }); 
             multiDelMode[id] = false; 
             recalculateCase(c); 
-            saveAndRender(); 
+            
+            if (typeof render === 'function') render(); // 🚀 UI TURBO REFRESH
             showToast("Selected Moved to Recycle Bin! 🗑️"); 
+            try { saveAndRender(); } catch(e) {}
         }); 
     }
+
 
     function toggleArchiveUI(id) { let c = db.find(x => x.id === id); let isArchiving = !c.isArchived; let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; askConfirm(msg, () => { c.isArchived = isArchiving; saveAndRender(); showToast(isArchiving ? (i18n[currentLang].archiveToast || "Archived!") : (i18n[currentLang].unarchiveToast || "Unarchived!")); }); }
 
