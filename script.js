@@ -722,24 +722,52 @@
         } else if (window._pendingStaffPhotoRemoval) {
             conf.staffList[idx].photo = "";
         }
-        saveAndRender(); 
-        renderStaffList(); 
-        closeModal('edit-staff-pin-modal'); 
-        showToast("Staff Profile Updated!"); 
-    }
+            if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 Pehle UI update karo
+            closeModal('edit-staff-pin-modal');
+            showToast("Staff Profile Updated!");
+            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein bhejo
+}
+
 
     function deleteStaff(idx) { 
         askConfirm("Delete this staff account? They will be logged out instantly.", () => { 
             let conf = getConfig(); 
             conf.staffList.splice(idx, 1); 
-            saveAndRender(); 
-            renderStaffList(); 
+              if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 Pehle UI update
             showToast("Staff Account Deleted!");
+            try { saveAndRender(); } catch(e) {} 
+
         }); 
     }
 
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
-    function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
+        function saveSecretPin() {
+            let oldP = document.getElementById('old-secret-pin').value;
+            let newP = document.getElementById('new-secret-pin').value;
+            if(oldP === secretPin) {
+                if(newP.trim() !== '') {
+                    secretPin = newP;
+                    localStorage.setItem('paymitra_secret', secretPin);
+                    
+                    // 🚀 NAYA: Owner PIN ko chupke se Firebase Cloud par bhej do
+                    database.ref('credix_db_secret').set(secretPin);
+                    
+                    showToast("Owner PIN Updated 👑!");
+                    closeModal('secret-pin-modal');
+                }
+            } else { 
+                showToast("Incorrect Old Owner PIN!"); 
+            }
+        }
+
+        // 🚀 NAYA ENGINE: Jab bhi Cloud par Owner PIN badle, sabhi phones apna PIN turant update kar lein
+        database.ref('credix_db_secret').on('value', (snap) => {
+            if(snap.exists()) {
+                secretPin = snap.val();
+                localStorage.setItem('paymitra_secret', secretPin);
+            }
+        });
+
     
     function exportData() { 
         let d = new Date(); 
@@ -858,8 +886,8 @@
         render(); checkAutoBackup();
     }
 
-        function setupFirebaseListener() {
-        // App khulte hi phone ki memory wala data check karo
+
+    function setupFirebaseListener() {
         let cachedDb = [];
         try {
             cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
@@ -867,147 +895,98 @@
         
         if (cachedDb.length > 0) {
             db = cachedDb;
-            // VIP FIX 2: App khulte hi Cloud ka aakhiri status load karo, local data ko sync nahi manna!
-            let savedSync = localStorage.getItem('paymitra_last_synced_v11');
-            window.lastSyncedDbStr = savedSync ? savedSync : JSON.stringify(db);
         }
-
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
-                
-                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
-                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    
-                    // NAYA SMART CHECK: Kya local data mein offline changes hain jo upload nahi hue?
-                    let hasOfflineChanges = (window.lastSyncedDbStr && window.lastSyncedDbStr !== JSON.stringify(db));
 
-                    if (hasOfflineChanges) {
-                        // Offline entries ko delete hone se bachaya aur unhe Delta Sync ke zariye cloud par bhej diya
-                        if (!isSaving) {
-                            saveAndRender(); 
-                        }
-                    } else {
-                        // Agar koi offline change nahi hai, toh Firebase ka naya data aaram se local mein save kar lo
-                        if (document.getElementById('main-app').style.display === 'none') {
-                            db = newDb;
-                            localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                            window.lastSyncedDbStr = JSON.stringify(db); 
-                            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
-                        } else {
-                            if (!isSaving) {
-                                if(!validateSession(newDb)) return;
-                                db = newDb;
-                                localStorage.setItem('paymitra_v11', JSON.stringify(db));
-                                window.lastSyncedDbStr = JSON.stringify(db); 
-                                render();
-                                
-                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                    renderTrash();
-                                }
-                                showToast("Data Auto-Updated!");
+                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
+                newDb = newDb.filter(item => item !== null && item !== undefined);
+                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+
+                // Agar cloud par naya data hai, toh turant screen update karo
+                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                    if (!isSaving) {
+                        db = newDb;
+                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
+
+                        if (document.getElementById('main-app').style.display !== 'none') {
+                            if(!validateSession(db)) return;
+                            render();
+                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                renderTrash();
                             }
                         }
                     }
                 }
-
-                document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
         }, (error) => {
             document.getElementById('sync-status').innerText = "Offline Mode";
             document.getElementById('cloud-indicator').className = "status-dot offline";
-            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         });
     }
+
 
     function hardRefresh() { 
         document.getElementById('sync-status').innerText = "Syncing...";
         database.ref('credix_db').once('value').then(() => {
             document.getElementById('sync-status').innerText = "Cloud Synced";
             showToast("Sync Successful!");
+            if (typeof render === 'function') render(); // 🚀 Naya data turant parde par dikhao!
+
         }).catch(() => {
             document.getElementById('sync-status').innerText = "Offline Mode";
         });
     }
 
-     function saveAndRender() {
-        isSaving = true;
-        let currentDbStr = JSON.stringify(db);
-        localStorage.setItem('paymitra_v11', currentDbStr);
-        render();
-        document.getElementById('sync-status').innerText = "Saving to Cloud...";
-        document.getElementById('cloud-indicator').className = "status-dot";
-        
-        let oldDb = [];
-        try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
-        
-        // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
+              function setupFirebaseListener() {
+        let cachedDb = [];
         try {
-            let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
-            localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
+            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
         } catch(e) {}
         
-              const successCb = () => {
-            window.lastSyncedDbStr = currentDbStr; 
-            // VIP FIX 3: Jab Cloud par data successfully chala jaye, tabhi memory card update karo
-            localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
-            
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
-            isSaving = false;
-        };
+        if (cachedDb.length > 0) {
+            db = cachedDb;
+        }
 
-        const errCb = (e) => {
-            document.getElementById('sync-status').innerText = "Saved Offline";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
-            isSaving = false;
-        };
+        database.ref('credix_db').on('value', (snapshot) => {
+            if(snapshot.exists()) {
+                let newDb = snapshot.val();
+                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
 
-        if (oldDb.length === 0) {
-            database.ref('credix_db').set(db).then(successCb).catch(errCb);
-        } else {
-            let updates = {};
-            let hasChanges = false;
-            let maxLen = Math.max(oldDb.length, db.length);
-            
-            for (let i = 0; i < maxLen; i++) {
-                let oldItem = oldDb[i];
-                let newItem = db[i];
-                
-                if (!oldItem && newItem) {
-                    updates[i] = newItem; 
-                    hasChanges = true;
-                } else if (oldItem && !newItem) {
-                    updates[i] = null; 
-                    hasChanges = true;
-                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-                    for (let key in newItem) {
-                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
-                            updates[i + '/' + key] = newItem[key]; 
-                            hasChanges = true;
-                        }
-                    }
-                    for (let key in oldItem) {
-                        if (!(key in newItem)) {
-                            updates[i + '/' + key] = null;
-                            hasChanges = true;
+                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
+                newDb = newDb.filter(item => item !== null && item !== undefined);
+                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+
+                // Agar cloud par naya data hai, toh turant screen update karo
+                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                    if (!isSaving) {
+                        db = newDb;
+                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
+
+                        if (document.getElementById('main-app').style.display !== 'none') {
+                            if(!validateSession(db)) return;
+                            render();
+                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                renderTrash();
+                            }
                         }
                     }
                 }
             }
-            
-            if (hasChanges) {
-                database.ref('credix_db').update(updates).then(successCb).catch(errCb);
-            } else {
-                successCb();
-            }
-        }
+            document.getElementById('sync-status').innerText = "Cloud Synced";
+            document.getElementById('cloud-indicator').className = "status-dot";
+        }, (error) => {
+            document.getElementById('sync-status').innerText = "Offline Mode";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+        });
     }
+
+
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
@@ -1175,8 +1154,15 @@
     }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
-        function openPayModal(id, prefillAmt = null) { 
-        let c = db.find(x => x.id === id); 
+ function openPayModal(id, prefillAmt = null) {
+    let c = db.find(x => x.id === id);
+
+    // 🔒 ZERO BALANCE LOCK: Agar balance 0 ya minus mein hai, toh modal mat kholo
+    if (c && c.type === 'daily' && c.currentBalance <= 0) {
+        showToast("Yeh account poora ho chuka hai (Zero Balance)!");
+        return; 
+    }
+
         document.getElementById('pay-id').value = id; 
         document.getElementById('pay-date').value = getISTDate(); 
         let amt = 0;
@@ -1197,10 +1183,23 @@
         if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
         if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } 
         c.history.push({ date: dateStr, paid: amt }); 
-        recalculateCase(c); 
-        saveAndRender(); 
-        closeModal('pay-modal'); 
-        showToast("Payment Saved"); 
+            recalculateCase(c);
+            
+            // 🚀 FORCE REFRESH: Firebase ka wait kiye bina screen ko turant update karo!
+            if (typeof render === 'function') {
+                render(); 
+            }
+            
+            closeModal('pay-modal'); 
+            showToast("Payment Saved"); 
+            
+            // ☁️ Cloud par data piche background mein bhejo
+            try {
+                saveAndRender(); 
+            } catch(err) {
+                console.log("Cloud sync lag", err);
+            }
+
         
         // 🚀 SMART REFRESH: Agar Report wali screen khuli hai, toh auto-update/adjust ho jayega!
         if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
@@ -1384,9 +1383,11 @@
             let deletedEntry = c.history[originalIndex];
             tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
             c.history.splice(originalIndex, 1); 
-            recalculateCase(c); 
-            saveAndRender(); 
-            showToast("Entry Moved to Recycle Bin! 🗑️"); 
+            recalculateCase(c);
+            if (typeof render === 'function') render(); // 🚀 Force Refresh pehle!
+            showToast("Entry Moved to Recycle Bin! 🗑️");
+            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein
+
         }); 
     }
 
@@ -1405,9 +1406,11 @@
                 c.history.splice(idx, 1); 
             }); 
             multiDelMode[id] = false; 
-            recalculateCase(c); 
-            saveAndRender(); 
-            showToast("Selected Moved to Recycle Bin! 🗑️"); 
+            recalculateCase(c);
+            if (typeof render === 'function') render(); // 🚀 Force Refresh Pehle!
+            showToast("Selected Moved to Recycle Bin! 🗑️");
+            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein
+
         }); 
     }
 
@@ -2065,7 +2068,19 @@
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
                         if (c.type === 'monthly' || c.type === 'meter') { let isMeter = c.type === 'meter'; let unitInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let unitsPaid = unitInt > 0 ? Math.floor(totalPaidThisCase / unitInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); if (isMeter) { nextDueDate.setDate(nextDueDate.getDate() + unitsPaid); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; } } else { nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); } } }
-            else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
+            else { 
+                let paidToday = c.history ? c.history.some(h => h.date === today) : false; 
+                let isFirstDay = (c.startDate === today); // 🚀 NAYA: Check karo ki kya case aaj hi bana hai?
+                
+                // Agar aaj pay nahi kiya, balance bacha hai, AUR aaj pehla din nahi hai (!isFirstDay) tabhi due dikhao
+                if (!paidToday && c.currentBalance > 0 && !isFirstDay) { 
+                    isPending = true; 
+                    isDueToday = true; 
+                    let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; 
+                    pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); 
+                } 
+            }
+
             if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
             let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
             let histData = c.history ? [...c.history] : [], hideSNo = false;
