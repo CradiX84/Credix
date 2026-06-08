@@ -1154,7 +1154,7 @@
     let c = db.find(x => x.id === id);
 
     // 🔒 ZERO BALANCE LOCK: Agar balance 0 ya minus mein hai, toh modal mat kholo
-    if (c && c.currentBalance <= 0) {
+    if (c && c.type === 'daily' && c.currentBalance <= 0) {
         showToast("Yeh account poora ho chuka hai (Zero Balance)!");
         return; 
     }
