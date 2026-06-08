@@ -739,33 +739,7 @@
     }
 
     function openSecretPinModal() { closeModal('settings-modal'); document.getElementById('old-secret-pin').value = ''; document.getElementById('new-secret-pin').value = ''; document.getElementById('secret-pin-modal').style.display = 'flex'; }
-        function saveSecretPin() {
-            let oldP = document.getElementById('old-secret-pin').value;
-            let newP = document.getElementById('new-secret-pin').value;
-            if(oldP === secretPin) {
-                if(newP.trim() !== '') {
-                    secretPin = newP;
-                    localStorage.setItem('paymitra_secret', secretPin);
-                    
-                    // 🚀 NAYA: Owner PIN ko chupke se Firebase Cloud par bhej do
-                    database.ref('credix_db_secret').set(secretPin);
-                    
-                    showToast("Owner PIN Updated 👑!");
-                    closeModal('secret-pin-modal');
-                }
-            } else { 
-                showToast("Incorrect Old Owner PIN!"); 
-            }
-        }
-
-        // 🚀 NAYA ENGINE: Jab bhi Cloud par Owner PIN badle, sabhi phones apna PIN turant update kar lein
-        database.ref('credix_db_secret').on('value', (snap) => {
-            if(snap.exists()) {
-                secretPin = snap.val();
-                localStorage.setItem('paymitra_secret', secretPin);
-            }
-        });
-
+    function saveSecretPin() { let oldP = document.getElementById('old-secret-pin').value; let newP = document.getElementById('new-secret-pin').value; if(oldP === secretPin) { if(newP.trim() !== '') { secretPin = newP; localStorage.setItem('paymitra_secret', secretPin); showToast("Owner PIN Updated 👑!"); closeModal('secret-pin-modal'); } } else { showToast("Incorrect Old Owner PIN!"); } }
     
     function exportData() { 
         let d = new Date(); 
@@ -939,49 +913,37 @@
         });
     }
 
-              function setupFirebaseListener() {
-        let cachedDb = [];
+            function saveAndRender() {
+        isSaving = true;
+        let currentDbStr = JSON.stringify(db);
+        localStorage.setItem('paymitra_v11', currentDbStr);
+        render();
+        document.getElementById('sync-status').innerText = "Saving to Cloud...";
+        document.getElementById('cloud-indicator').className = "status-dot";
+        
+        // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
         try {
-            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
+            let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
+            localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
         } catch(e) {}
         
-        if (cachedDb.length > 0) {
-            db = cachedDb;
-        }
-
-        database.ref('credix_db').on('value', (snapshot) => {
-            if(snapshot.exists()) {
-                let newDb = snapshot.val();
-                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-
-                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
-                newDb = newDb.filter(item => item !== null && item !== undefined);
-                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
-
-                // Agar cloud par naya data hai, toh turant screen update karo
-                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    if (!isSaving) {
-                        db = newDb;
-                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
-
-                        if (document.getElementById('main-app').style.display !== 'none') {
-                            if(!validateSession(db)) return;
-                            render();
-                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                renderTrash();
-                            }
-                        }
-                    }
-                }
-            }
+        const successCb = () => {
+            window.lastSyncedDbStr = currentDbStr; 
+            localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
-        }, (error) => {
-            document.getElementById('sync-status').innerText = "Offline Mode";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
-        });
-    }
+            isSaving = false;
+        };
 
+        const errCb = (e) => {
+            document.getElementById('sync-status').innerText = "Saved Offline";
+            document.getElementById('cloud-indicator').className = "status-dot offline";
+            isSaving = false;
+        };
+
+        // 🛡️ ROCK SOLID SYNC: Har baar poora data exactly match karega, koi mismatch error nahi aayega!
+        database.ref('credix_db').set(db).then(successCb).catch(errCb);
+    }
 
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
@@ -2040,19 +2002,7 @@
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
                         if (c.type === 'monthly' || c.type === 'meter') { let isMeter = c.type === 'meter'; let unitInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let unitsPaid = unitInt > 0 ? Math.floor(totalPaidThisCase / unitInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); if (isMeter) { nextDueDate.setDate(nextDueDate.getDate() + unitsPaid); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; } } else { nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); } } }
-            else { 
-                let paidToday = c.history ? c.history.some(h => h.date === today) : false; 
-                let isFirstDay = (c.startDate === today); // 🚀 NAYA: Check karo ki kya case aaj hi bana hai?
-                
-                // Agar aaj pay nahi kiya, balance bacha hai, AUR aaj pehla din nahi hai (!isFirstDay) tabhi due dikhao
-                if (!paidToday && c.currentBalance > 0 && !isFirstDay) { 
-                    isPending = true; 
-                    isDueToday = true; 
-                    let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; 
-                    pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); 
-                } 
-            }
-
+            else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
             if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
             let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
             let histData = c.history ? [...c.history] : [], hideSNo = false;
