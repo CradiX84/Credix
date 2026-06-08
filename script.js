@@ -722,21 +722,19 @@
         } else if (window._pendingStaffPhotoRemoval) {
             conf.staffList[idx].photo = "";
         }
-            if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 Pehle UI update karo
-            closeModal('edit-staff-pin-modal');
-            showToast("Staff Profile Updated!");
-            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein bhejo
-}
-
+        saveAndRender(); 
+        renderStaffList(); 
+        closeModal('edit-staff-pin-modal'); 
+        showToast("Staff Profile Updated!"); 
+    }
 
     function deleteStaff(idx) { 
         askConfirm("Delete this staff account? They will be logged out instantly.", () => { 
             let conf = getConfig(); 
             conf.staffList.splice(idx, 1); 
-              if (typeof renderStaffList === 'function') renderStaffList(); // 🚀 Pehle UI update
+            saveAndRender(); 
+            renderStaffList(); 
             showToast("Staff Account Deleted!");
-            try { saveAndRender(); } catch(e) {} 
-
         }); 
     }
 
@@ -1152,15 +1150,8 @@
     }
     function toggleSelectAllHistory(id) { let checks = document.querySelectorAll(`.del-chk-${id}`); let allChecked = Array.from(checks).every(ck => ck.checked); checks.forEach(ck => ck.checked = !allChecked); }
     
- function openPayModal(id, prefillAmt = null) {
-    let c = db.find(x => x.id === id);
-
-    // 🔒 ZERO BALANCE LOCK: Agar balance 0 ya minus mein hai, toh modal mat kholo
-    if (c && c.type === 'daily' && c.currentBalance <= 0) {
-        showToast("Yeh account poora ho chuka hai (Zero Balance)!");
-        return; 
-    }
-
+        function openPayModal(id, prefillAmt = null) { 
+        let c = db.find(x => x.id === id); 
         document.getElementById('pay-id').value = id; 
         document.getElementById('pay-date').value = getISTDate(); 
         let amt = 0;
@@ -1181,23 +1172,10 @@
         if(!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
         if(c.history && c.history.some(h => h.date === dateStr)) { triggerShake('pay-date'); return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); } 
         c.history.push({ date: dateStr, paid: amt }); 
-            recalculateCase(c);
-            
-            // 🚀 FORCE REFRESH: Firebase ka wait kiye bina screen ko turant update karo!
-            if (typeof render === 'function') {
-                render(); 
-            }
-            
-            closeModal('pay-modal'); 
-            showToast("Payment Saved"); 
-            
-            // ☁️ Cloud par data piche background mein bhejo
-            try {
-                saveAndRender(); 
-            } catch(err) {
-                console.log("Cloud sync lag", err);
-            }
-
+        recalculateCase(c); 
+        saveAndRender(); 
+        closeModal('pay-modal'); 
+        showToast("Payment Saved"); 
         
         // 🚀 SMART REFRESH: Agar Report wali screen khuli hai, toh auto-update/adjust ho jayega!
         if (currentTab === 'stats' && document.getElementById('rep-results').style.display === 'block') {
@@ -1381,11 +1359,9 @@
             let deletedEntry = c.history[originalIndex];
             tr.histories.push({ ...deletedEntry, caseId: c.id, caseName: c.name, deletedAt: nowStr, deletedBy: deviceStaffName });
             c.history.splice(originalIndex, 1); 
-            recalculateCase(c);
-            if (typeof render === 'function') render(); // 🚀 Force Refresh pehle!
-            showToast("Entry Moved to Recycle Bin! 🗑️");
-            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein
-
+            recalculateCase(c); 
+            saveAndRender(); 
+            showToast("Entry Moved to Recycle Bin! 🗑️"); 
         }); 
     }
 
@@ -1404,11 +1380,9 @@
                 c.history.splice(idx, 1); 
             }); 
             multiDelMode[id] = false; 
-            recalculateCase(c);
-            if (typeof render === 'function') render(); // 🚀 Force Refresh Pehle!
-            showToast("Selected Moved to Recycle Bin! 🗑️");
-            try { saveAndRender(); } catch(e) {} // ☁️ Cloud background mein
-
+            recalculateCase(c); 
+            saveAndRender(); 
+            showToast("Selected Moved to Recycle Bin! 🗑️"); 
         }); 
     }
 
