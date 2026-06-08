@@ -858,8 +858,8 @@
         render(); checkAutoBackup();
     }
 
-
-    function setupFirebaseListener() {
+        function setupFirebaseListener() {
+        // App khulte hi phone ki memory wala data check karo
         let cachedDb = [];
         try {
             cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
@@ -867,41 +867,63 @@
         
         if (cachedDb.length > 0) {
             db = cachedDb;
+            // VIP FIX 2: App khulte hi Cloud ka aakhiri status load karo, local data ko sync nahi manna!
+            let savedSync = localStorage.getItem('paymitra_last_synced_v11');
+            window.lastSyncedDbStr = savedSync ? savedSync : JSON.stringify(db);
         }
+
 
         database.ref('credix_db').on('value', (snapshot) => {
             if(snapshot.exists()) {
                 let newDb = snapshot.val();
                 if (!Array.isArray(newDb)) newDb = Object.values(newDb);
-
-                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
-                newDb = newDb.filter(item => item !== null && item !== undefined);
-                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
-
-                // Agar cloud par naya data hai, toh turant screen update karo
+                newDb.forEach(item => { if(item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+                
+                // VIP FIX: Agar local aur naya data alag hai, tabhi update karo
                 if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    if (!isSaving) {
-                        db = newDb;
-                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                    
+                    // NAYA SMART CHECK: Kya local data mein offline changes hain jo upload nahi hue?
+                    let hasOfflineChanges = (window.lastSyncedDbStr && window.lastSyncedDbStr !== JSON.stringify(db));
 
-                        if (document.getElementById('main-app').style.display !== 'none') {
-                            if(!validateSession(db)) return;
-                            render();
-                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                renderTrash();
+                    if (hasOfflineChanges) {
+                        // Offline entries ko delete hone se bachaya aur unhe Delta Sync ke zariye cloud par bhej diya
+                        if (!isSaving) {
+                            saveAndRender(); 
+                        }
+                    } else {
+                        // Agar koi offline change nahi hai, toh Firebase ka naya data aaram se local mein save kar lo
+                        if (document.getElementById('main-app').style.display === 'none') {
+                            db = newDb;
+                            localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                            window.lastSyncedDbStr = JSON.stringify(db); 
+                            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
+                        } else {
+                            if (!isSaving) {
+                                if(!validateSession(newDb)) return;
+                                db = newDb;
+                                localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                                window.lastSyncedDbStr = JSON.stringify(db); 
+                                render();
+                                
+                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                    renderTrash();
+                                }
+                                showToast("Data Auto-Updated!");
                             }
                         }
                     }
                 }
+
+                document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
             }
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
         }, (error) => {
             document.getElementById('sync-status').innerText = "Offline Mode";
             document.getElementById('cloud-indicator').className = "status-dot offline";
+            document.getElementById('t-lockSub').innerText = i18n[currentLang].lockSub;
         });
     }
-
 
     function hardRefresh() { 
         document.getElementById('sync-status').innerText = "Syncing...";
@@ -913,7 +935,7 @@
         });
     }
 
-            function saveAndRender() {
+     function saveAndRender() {
         isSaving = true;
         let currentDbStr = JSON.stringify(db);
         localStorage.setItem('paymitra_v11', currentDbStr);
@@ -921,15 +943,20 @@
         document.getElementById('sync-status').innerText = "Saving to Cloud...";
         document.getElementById('cloud-indicator').className = "status-dot";
         
+        let oldDb = [];
+        try { oldDb = JSON.parse(window.lastSyncedDbStr || "[]"); } catch(e) { oldDb = []; }
+        
         // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
         try {
             let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
             localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
         } catch(e) {}
         
-        const successCb = () => {
+              const successCb = () => {
             window.lastSyncedDbStr = currentDbStr; 
+            // VIP FIX 3: Jab Cloud par data successfully chala jaye, tabhi memory card update karo
             localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
+            
             document.getElementById('sync-status').innerText = "Cloud Synced";
             document.getElementById('cloud-indicator').className = "status-dot";
             isSaving = false;
@@ -941,10 +968,46 @@
             isSaving = false;
         };
 
-        // 🛡️ ROCK SOLID SYNC: Har baar poora data exactly match karega, koi mismatch error nahi aayega!
-        database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        if (oldDb.length === 0) {
+            database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        } else {
+            let updates = {};
+            let hasChanges = false;
+            let maxLen = Math.max(oldDb.length, db.length);
+            
+            for (let i = 0; i < maxLen; i++) {
+                let oldItem = oldDb[i];
+                let newItem = db[i];
+                
+                if (!oldItem && newItem) {
+                    updates[i] = newItem; 
+                    hasChanges = true;
+                } else if (oldItem && !newItem) {
+                    updates[i] = null; 
+                    hasChanges = true;
+                } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+                    for (let key in newItem) {
+                        if (JSON.stringify(newItem[key]) !== JSON.stringify(oldItem[key])) {
+                            updates[i + '/' + key] = newItem[key]; 
+                            hasChanges = true;
+                        }
+                    }
+                    for (let key in oldItem) {
+                        if (!(key in newItem)) {
+                            updates[i + '/' + key] = null;
+                            hasChanges = true;
+                        }
+                    }
+                }
+            }
+            
+            if (hasChanges) {
+                database.ref('credix_db').update(updates).then(successCb).catch(errCb);
+            } else {
+                successCb();
+            }
+        }
     }
-
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
