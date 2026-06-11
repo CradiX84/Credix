@@ -2019,9 +2019,9 @@
         let sortType = document.getElementById('sort-box').value;
         let tP = 0, tB = 0, tC = 0;
         let searchCasesCount = 0, searchTotalValue = 0, searchTotalBal = 0, searchTotalRec = 0;
-        let searchTotalKishat = 0, searchTotalProfit = 0;
+        let searchTotalKishat = 0, searchTotalProfit = 0, searchTotalExpectedInterest = 0; 
         let showSearchStat = false;
-        let today = getISTDate(); // IST FIX
+        let today = getISTDate();
         let pureDB = db.filter(x => x.type !== 'config' && x.type !== 'trash');
         let mappedDB = pureDB.map((c, idx) => ({...c, originalSNo: idx + 1}));
         let sortedDB = mappedDB.sort((a, b) => { let getDate = (c) => (c.isArchived && c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; let dateA = getDate(a); let dateB = getDate(b); if (dateA === dateB) return sortType === 'new' ? b.id - a.id : a.id - b.id; return sortType === 'new' ? (dateB > dateA ? 1 : -1) : (dateA > dateB ? 1 : -1); });
@@ -2036,13 +2036,93 @@
             let refMatch = (currentTab === 'dash' && isOwnerMode && sName !== '') && (c.staffRef || '').toLowerCase().includes(sName);
             if(!nameMatch && !refMatch) return;
             if (currentTab === 'dash' && sName === '') return;
-            if (refMatch) { showSearchStat = true; searchCasesCount++; searchTotalValue += c.principal; searchTotalBal += c.currentBalance; let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; searchTotalRec += paid; if (c.type === 'daily') { searchTotalKishat += (c.installment || 0); let totalP = (c.totalPayable || c.principal) - c.principal; let ratio = totalP / (c.totalPayable || c.principal); searchTotalProfit += (c.installment * ratio); } else if (c.type === 'monthly' || c.type === 'meter') { let interest = (c.principal * (c.rate || 0) / 100); searchTotalKishat += interest; searchTotalProfit += interest; } }
+            
+            if (refMatch) { 
+                showSearchStat = true; 
+                searchCasesCount++; 
+                searchTotalValue += c.principal; 
+                searchTotalBal += c.currentBalance; 
+                let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; 
+                searchTotalRec += paid; 
+                if (c.type === 'daily') { 
+                    searchTotalKishat += (c.installment || 0); 
+                    let totalP = (c.totalPayable || c.principal) - c.principal; 
+                    let ratio = totalP / (c.totalPayable || c.principal); 
+                    searchTotalProfit += (c.installment * ratio); 
+                } else if (c.type === 'monthly' || c.type === 'meter') { 
+                    let interest = (c.principal * (c.rate || 0) / 100); 
+                    searchTotalKishat += interest; 
+                    searchTotalProfit += interest; 
+                } 
+            }
+            
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
-                        if (c.type === 'monthly' || c.type === 'meter') { let isMeter = c.type === 'meter'; let unitInt = c.principal * (c.rate || 0) / 100; let totalPaidThisCase = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; let unitsPaid = unitInt > 0 ? Math.floor(totalPaidThisCase / unitInt) : (c.history ? c.history.length : 0); let nextDueDate = new Date(c.startDate); if (isMeter) { nextDueDate.setDate(nextDueDate.getDate() + unitsPaid); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; } } else { nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); } } }
-            else { let paidToday = c.history ? c.history.some(h => h.date === today) : false; if (!paidToday && c.currentBalance > 0) { isPending = true; isDueToday = true; let lastPaymentDate = (c.history && c.history.length > 0) ? c.history.reduce((max, h) => h.date > max ? h.date : max, c.history[0].date) : c.startDate; pendingDays = Math.floor((todayDateObj.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24)); } }
+            let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; 
+
+            if (c.type === 'monthly' || c.type === 'meter') { 
+                let isMeter = c.type === 'meter'; 
+                let unitInt = c.principal * (c.rate || 0) / 100; 
+                let unitsPaid = unitInt > 0 ? Math.floor(totalPaid / unitInt) : (c.history ? c.history.length : 0); 
+                let nextDueDate = new Date(c.startDate); 
+                if (isMeter) { 
+                    nextDueDate.setDate(nextDueDate.getDate() + unitsPaid); 
+                    if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; } 
+                } else { 
+                    nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); 
+                    if (todayDateObj >= nextDueDate && c.currentBalance > 0) { isPending = true; isDueToday = true; pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)); } 
+                } 
+            }
+            else { 
+                // 🔥 SMART DAY 0 FIX: Aaj hi paise diye hain, toh kishat kal se shuru hogi!
+                let elapsedDays = Math.floor((todayDateObj.getTime() - new Date(c.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (elapsedDays <= 0) {
+                    isDueToday = false;
+                    isPending = false;
+                    pendingDays = 0;
+                } else {
+                    let expectedCollection = elapsedDays * (c.installment || 0);
+                    let missingAmount = expectedCollection - totalPaid;
+                    let paidToday = c.history ? c.history.some(h => h.date === today) : false;
+                    
+                    if (c.currentBalance > 0) {
+                        if (!paidToday) isDueToday = true;
+                        if (missingAmount > 0) {
+                            isPending = true;
+                            pendingDays = Math.ceil(missingAmount / (c.installment || 1));
+                        }
+                    }
+                }
+            }
             if (c.isArchived) { isDueToday = false; isPending = false; pendingDays = 0; }
-            let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
+            
+            // 🔥 NAYA: MISSED DATES FINDER (Pichli Bakaaya Kishaton ki tareekhein dhundhega)
+            let missedDatesHtml = '';
+            if (c.type === 'daily' && isPending && c.currentBalance > 0) {
+                let mDates = [];
+                let tempDate = new Date(c.startDate);
+                tempDate.setDate(tempDate.getDate() + 1); // Agle din se check karega
+                
+                while(tempDate <= todayDateObj) {
+                    let y = tempDate.getFullYear();
+                    let m = String(tempDate.getMonth() + 1).padStart(2, '0');
+                    let d = String(tempDate.getDate()).padStart(2, '0');
+                    let chkDate = `${y}-${m}-${d}`;
+                    
+                    let paidOnDate = c.history ? c.history.some(h => h.date === chkDate) : false;
+                    if(!paidOnDate) {
+                        mDates.push(formatDateDisplay(chkDate));
+                    }
+                    tempDate.setDate(tempDate.getDate() + 1);
+                }
+                
+                if(mDates.length > 0) {
+                    let displayDates = mDates.slice(0, 10).join(', '); // Shuru ki 10 pending dates dikhayega
+                    let extraTxt = mDates.length > 10 ? ` ...aur ${mDates.length - 10} din baaki` : '';
+                    missedDatesHtml = `<div style="background:rgba(255, 60, 60, 0.08); border:1px solid rgba(255, 60, 60, 0.3); border-radius:8px; padding:12px; margin-top:15px; font-size:12px; color:var(--danger); line-height:1.6;"><b>⚠️ Missed Dates:</b><br>${displayDates}${extraTxt}</div>`;
+                }
+            }
+
             let histData = c.history ? [...c.history] : [], hideSNo = false;
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
@@ -2074,20 +2154,37 @@
                         <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
                         ` : ''}
 <div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:${c.currentBalance <= 0 ? 'var(--success)' : 'var(--danger)'}">${c.currentBalance <= 0 ? (t.caseClosedText || 'Case Closed ✅') : '₹' + c.currentBalance.toFixed(0)}</b></div></div>
+                    ${missedDatesHtml}
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
                     <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
                 </div>
                 <div class="btn-row" style="margin-top:15px;"><button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button><button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button><button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button></div>
             </div>`);
         });
+        
         let finalHtml = ""; 
-        if (currentTab === 'dash' && sName === '') { finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`; }
-        else {
-            if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') { let collectionLabel = t.refStatCollection; if (fType === 'monthly') collectionLabel = t.refStatInterest; else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily'); finalHtml += `<div class="search-stat-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span><span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span></div><div class="search-stat-grid"><div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div><div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>${fType !== 'all' ? `<div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${collectionLabel}</label><value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div><div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${t.refStatProfit}</label><value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>` : ''}</div></div>`; }
+        if (currentTab === 'dash' && sName === '') { 
+            finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`; 
+        } else {
+            if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') { 
+                let collectionLabel = t.refStatCollection; 
+                if (fType === 'monthly') collectionLabel = t.refStatInterest; 
+                else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily'); 
+                
+                searchTotalExpectedInterest = searchTotalBal + searchTotalRec - searchTotalValue;
+                
+                let interestHtml = searchTotalExpectedInterest > 0 ? `<div class="stat-item" style="grid-column: span 2; background: rgba(255, 215, 0, 0.05); border: 1px dashed rgba(255, 215, 0, 0.2); padding: 8px; border-radius: 8px;"><label style="color:var(--owner-gold);">Total Expected Interest (Vyaj)</label><value style="color:var(--owner-gold);">+ ₹${searchTotalExpectedInterest.toLocaleString()}</value></div>` : '';
+
+                finalHtml += `<div class="search-stat-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span><span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span></div><div class="search-stat-grid"><div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div><div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div>${interestHtml}<div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>${fType !== 'all' ? `<div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${collectionLabel}</label><value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div><div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${t.refStatProfit}</label><value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>` : ''}</div></div>`; 
+            }
             finalHtml += accountsHtmlArray.join('');
         }
-        document.getElementById('dashboard').innerHTML = finalHtml; document.getElementById('sum-cases').innerText = tC; document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
+        document.getElementById('dashboard').innerHTML = finalHtml; 
+        document.getElementById('sum-cases').innerText = tC; 
+        document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); 
+        document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
     }
+
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
