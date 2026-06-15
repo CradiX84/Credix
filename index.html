@@ -148,7 +148,8 @@
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--accent-orange);">Manage Staff IDs</h3>
         <div id="staff-list-container" style="margin-bottom:15px; max-height:200px; overflow-y:auto; padding-right:5px;"></div>
-        <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+<div class="staff-photo-box">
+
             <label class="modal-label" style="margin-top:0;">New Staff Photo</label>
             <div id="new-staff-photo-preview-wrap" class="photo-preview-wrap" style="display:none; margin-bottom:12px;">
                 <img id="new-staff-photo-preview" src="" class="photo-preview-img">
@@ -203,6 +204,16 @@
                     <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
                 </select>
             </div>
+        <div class="input-group" id="owner-theme-wrap" style="display:none; margin-top: 15px;">
+            <span style="font-size: 18px; margin-right: 10px;">🎨</span>
+            <select id="theme-select" class="settings-dropdown" onchange="changeTheme()">
+                <option value="dark">Dark Theme (Standard)</option>
+
+                <option value="matte">Matte Plastic (Premium ✨)</option>
+            </select>
+        </div>
+
+
         </div>
         <div style="margin-top:10px; margin-bottom: 20px;">
             <label class="modal-label" id="t-autoBackupLabel">Auto Backup Data</label>
@@ -252,33 +263,30 @@
             <div class="dot" id="d4"></div>
         </div>
 
-        <div class="calc-keypad">
-            <button class="calc-btn" data-key="1" onclick="press(1)">1</button>
-            <button class="calc-btn" data-key="2" onclick="press(2)">2</button>
-            <button class="calc-btn" data-key="3" onclick="press(3)">3</button>
+            <div class="calc-keypad">
+                <button class="calc-btn" data-key="1" onclick="press(1)">1</button>
+                <button class="calc-btn" data-key="2" onclick="press(2)">2</button>
+                <button class="calc-btn" data-key="3" onclick="press(3)">3</button>
+                <button class="calc-btn" data-key="4" onclick="press(4)">4</button>
+                <button class="calc-btn" data-key="5" onclick="press(5)">5</button>
+                <button class="calc-btn" data-key="6" onclick="press(6)">6</button>
+                <button class="calc-btn" data-key="7" onclick="press(7)">7</button>
+                <button class="calc-btn" data-key="8" onclick="press(8)">8</button>
+                <button class="calc-btn" data-key="9" onclick="press(9)">9</button>
+                
+                <button class="calc-btn calc-delete" data-key="Backspace" onclick="deletePinChar()" style="color: inherit;">
+                    <svg class="delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: currentColor;">
+                        <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-3 12-1.41 1.41L14 14.83l-2.59 2.58L10 16l2.59-2.59L10 10.83l1.41-1.41L14 12.17l2.59-2.58L18 11l-2.59 2.59z"></path>
+                    </svg>
+                </button>
+                
+                <button class="calc-btn" data-key="0" onclick="press(0)">0</button>
+                
+                <button class="calc-btn calc-btn-orange" data-key="Enter" onclick="checkPin()" style="font-size: 16px; font-weight: 900;">Enter</button>
+            </div>
 
-            <button class="calc-btn" data-key="4" onclick="press(4)">4</button>
-            <button class="calc-btn" data-key="5" onclick="press(5)">5</button>
-            <button class="calc-btn" data-key="6" onclick="press(6)">6</button>
-
-            <button class="calc-btn" data-key="7" onclick="press(7)">7</button>
-            <button class="calc-btn" data-key="8" onclick="press(8)">8</button>
-            <button class="calc-btn" data-key="9" onclick="press(9)">9</button>
-
-            <button class="calc-btn" data-key="Backspace" onclick="deletePinChar()">
-                <svg class="delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                    <line x1="18" y1="9" x2="12" y2="15"></line>
-                    <line x1="12" y1="9" x2="18" y2="15"></line>
-                </svg>
-            </button>
-            
-            <button class="calc-btn" data-key="0" onclick="press(0)">0</button>
-            
-            <button class="calc-btn calc-btn-orange" data-key="Enter" onclick="checkPin()">Enter</button>
-        </div>
-    </div>
 </div>
+⁠</div>
 
 <div class="container" id="main-app" style="display:none; max-width:600px; margin:auto;">
     <div class="header-top">
@@ -511,5 +519,32 @@ Boliye, aaj main aapki kya madad karoon?</div>
             });
         }
     </script>
+
+<div id="trash-modal" class="modal" style="display:none;">
+    <div class="modal-cont" style="max-width: 500px;">
+        <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--text-main);">🗑️ Recycle Bin & Log</h3>
+        
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="main-btn" id="tab-trash-cases" style="margin:0; padding:10px; font-size:12px; background:var(--accent-orange);" onclick="switchTrashTab('cases')">Deleted Cases</button>
+            <button class="main-btn" id="tab-trash-entries" style="margin:0; padding:10px; font-size:12px; background:rgba(255,255,255,0.05); color:white;" onclick="switchTrashTab('entries')">Deleted Entries</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <button onclick="toggleTrashMulti()" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:600;" id="btn-trash-multi">MULTI-SELECT</button>
+            
+            <div id="trash-actions" style="display:none; gap:5px;">
+                <button onclick="executeTrashAction('restore')" style="background:var(--success); border:none; color:black; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">RESTORE</button>
+                <button onclick="executeTrashAction('delete')" style="background:var(--danger); border:none; color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">CLEAR PERMANENTLY</button>
+            </div>
+        </div>
+
+        <div id="trash-list-container" style="max-height: 350px; overflow-y: auto; padding-right: 5px;"></div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('trash-modal')">Close Window</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

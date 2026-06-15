@@ -147,40 +147,41 @@
         renderTrash();
     }
 
-    function renderTrash() {
-        let tr = getTrash();
-        let html = '';
-        let list = currentTrashTab === 'cases' ? (tr.cases || []) : (tr.histories || []);
+function renderTrash() {
+    let tr = getTrash();
+    let html = '';
+    let list = currentTrashTab === 'cases' ? (tr.cases || []) : (tr.histories || []);
 
-        if (!list || list.length === 0) {
-            html = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px; border:1px dashed rgba(255,255,255,0.1); border-radius:15px;">No deleted ${currentTrashTab} found.<br><br><b>All clear! 🚀</b></div>`;
-        } else {
-            list.forEach((item, i) => {
-                let chkHtml = isTrashMulti ? `<input type="checkbox" class="trash-chk" value="${i}" style="width:18px;height:18px;accent-color:var(--accent-orange); flex-shrink:0;">` : '';
-                let title = currentTrashTab === 'cases' ? `Case: ${item.name} (₹${item.principal})` : `Entry: ₹${item.paid} from ${item.caseName}`;
-                let dateInfo = currentTrashTab === 'cases' ? `Case Given: ${formatDateDisplay(item.startDate)}` : `Paid Date: ${formatDateDisplay(item.date)}`;
-                
-                html += `
-                <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.4); padding:15px; border-radius:12px; margin-bottom:8px; border-left: 3px solid var(--danger);">
-                    ${chkHtml}
-                    <div style="flex:1; min-width:0;">
-                        <b style="color:white; font-size:13px; display:block;">${title}</b>
-                        <span style="color:var(--text-muted); font-size:11px; display:block; margin-top:2px;">${dateInfo}</span>
-                        <div style="background:rgba(255, 106, 0, 0.1); padding:4px 8px; border-radius:6px; display:inline-block; margin-top:6px;">
-                            <span style="color:var(--accent-orange); font-size:10px; font-weight:700;">🗑️ Deleted by: ${item.deletedBy} on ${item.deletedAt}</span>
-                        </div>
+    if (!list || list.length === 0) {
+        html = `<div class="empty-list-msg trash-empty">No deleted ${currentTrashTab} found.<br><br><b>All clear! 🚀</b></div>`;
+    } else {
+        list.forEach((item, i) => {
+            let chkHtml = isTrashMulti ? `<input type="checkbox" class="trash-chk" value="${i}">` : '';
+            let title = currentTrashTab === 'cases' ? `Case: ${item.name} (₹${item.principal})` : `Entry: ₹${item.paid} from ${item.caseName}`;
+            let dateInfo = currentTrashTab === 'cases' ? `Case Given: ${formatDateDisplay(item.startDate)}` : `Paid Date: ${formatDateDisplay(item.date)}`;
+            
+            html += `
+            <div class="trash-list-item">
+                ${chkHtml}
+                <div class="trash-info-box">
+                    <b class="trash-title">${title}</b>
+                    <span class="trash-date">${dateInfo}</span>
+                    <div class="trash-meta-badge">
+                        <span>🗑️ Deleted by: ${item.deletedBy} on ${item.deletedAt}</span>
                     </div>
-                    ${!isTrashMulti ? `
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <button onclick="restoreTrashItem(${i})" style="background:var(--success); border:none; border-radius:8px; padding:8px; font-size:14px; cursor:pointer;" title="Restore">🔄</button>
-                        <button onclick="deleteTrashItem(${i})" style="background:var(--danger); border:none; border-radius:8px; padding:8px; font-size:14px; cursor:pointer;" title="Permanent Delete">✖</button>
-                    </div>
-                    ` : ''}
-                </div>`;
-            });
-        }
-        document.getElementById('trash-list-container').innerHTML = html;
+                </div>
+                ${!isTrashMulti ? `
+                <div class="trash-actions-col">
+                    <button onclick="restoreTrashItem(${i})" class="trash-btn restore-btn" title="Restore">🔄</button>
+                    <button onclick="deleteTrashItem(${i})" class="trash-btn delete-btn" title="Permanent Delete">✖</button>
+                </div>
+                ` : ''}
+            </div>`;
+        });
     }
+    document.getElementById('trash-list-container').innerHTML = html;
+}
+
 
     function restoreTrashItem(idx) {
         askConfirm("Restore this item back to your Active Records?", () => {
@@ -270,7 +271,7 @@
             repPendings: "⚠️ PENDING COLLECTIONS", caseDate: "Case Date",
             returnAmt: "Return Amt", principal: "Principal", totalPaid: "Total Paid", remainingAcc: "Remaining", payHistory: "Payment History",
             repNewDaily: "🆕 New Daily Cases", repNewMonthly: "🆕 New Monthly Cases", repNewMeter: "🆕 New Meter Cases",
-            repRecDaily: "✅ Daily Recoveries", repRecMonthly: "✅ Monthly Recoveries", repRecMeter: "✅ Pending Collections (Meter)",
+            repRecDaily: "✅ Daily Recoveries", repRecMonthly: "✅ Monthly Recoveries", repRecMeter: "✅ Meter Recoveries",
             repPendDaily: "⚠️ Pending Collections (Daily)", repPendMonthly: "⚠️ Pending Collections (Monthly)", repPendMeter: "⚠️ Pending Collections (Meter)",
             givenOn: "Given on", profitCut: "Profit Cut:", intRec: "Interest Received", monthsText: "Months", kishatsText: "Kishats", profitText: "Profit:", missedText: "Missed:", basisText: "BASIS", repTotal: "TOTAL:", caseClosedText: "Case Closed ✅"
         },
@@ -331,6 +332,10 @@
     let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
 
+    let currentTheme = localStorage.getItem('paymitra_theme') || 'dark';
+    document.body.setAttribute('data-theme', currentTheme);
+
+
     window.onload = function() { 
         document.getElementById('lock-screen').style.display = 'flex'; 
         document.getElementById('main-app').style.display = 'none'; 
@@ -343,7 +348,7 @@
         if(document.getElementById('rep-end')) document.getElementById('rep-end').value = todayDate;
         applyLang();
         
-            // 🔒 Secure Firebase Anonymous Authentication
+        // 🔒 Secure Firebase Anonymous Authentication
         if (typeof firebase !== 'undefined' && firebase.auth && firebase.database) {
             firebase.auth().onAuthStateChanged((user) => {
                 if (user) {
@@ -358,46 +363,21 @@
                 }
             });
         }
-
-        if (!document.getElementById('trash-modal')) {
-            const trashHtml = `
-            <div id="trash-modal" class="modal">
-                <div class="modal-cont" style="max-width: 500px;">
-                    <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--text-main);">🗑️ Recycle Bin & Log</h3>
-                    
-                    <div style="display:flex; gap:10px; margin-bottom:15px;">
-                        <button class="main-btn" id="tab-trash-cases" style="margin:0; padding:10px; font-size:12px; background:var(--accent-orange);" onclick="switchTrashTab('cases')">Deleted Cases</button>
-                        <button class="main-btn" id="tab-trash-entries" style="margin:0; padding:10px; font-size:12px; background:rgba(255,255,255,0.05); color:white;" onclick="switchTrashTab('entries')">Deleted Entries</button>
-                    </div>
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <button onclick="toggleTrashMulti()" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:600;" id="btn-trash-multi">MULTI-SELECT</button>
-                        
-                        <div id="trash-actions" style="display:none; gap:5px;">
-                            <button onclick="executeTrashAction('restore')" style="background:var(--success); border:none; color:black; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">RESTORE</button>
-                            <button onclick="executeTrashAction('delete')" style="background:var(--danger); border:none; color:white; font-size:10px; padding:6px 12px; border-radius:10px; font-weight:700;">CLEAR PERMANENTLY</button>
-                        </div>
-                    </div>
-
-                    <div id="trash-list-container" style="max-height: 350px; overflow-y: auto; padding-right: 5px;"></div>
-
-                    <div style="display:flex; gap:10px; margin-top:20px;">
-                        <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('trash-modal')">Close Window</button>
-                    </div>
-                </div>
-            </div>`;
-            document.body.insertAdjacentHTML('beforeend', trashHtml);
-        }
-        
-        if (!document.getElementById('btn-trash')) {
-            const btnHtml = `<button class="main-btn" id="btn-trash" style="background:rgba(138, 141, 152, 0.1); color:#8A8D98; box-shadow:none; display:none; margin-top:10px;" onclick="openTrashModal()">🗑️ Recycle Bin & Activity Log</button>`;
-            let target = document.getElementById('btn-manage-staff');
-            if(target) target.insertAdjacentHTML('afterend', btnHtml);
-        }
     };
 
-    function changeLang() { currentLang = document.getElementById('lang-select').value; localStorage.setItem('paymitra_lang', currentLang); applyLang(); render(); showToast("Language Updated!"); }
-    function changeAutoBackup() { autoBackupFreq = document.getElementById('auto-backup-select').value; localStorage.setItem('paymitra_autobackup', autoBackupFreq); showToast("Auto Backup Saved!"); }
+    function changeLang() { 
+        currentLang = document.getElementById('lang-select').value; 
+        localStorage.setItem('paymitra_lang', currentLang); 
+        applyLang(); 
+        render(); 
+        showToast("Language Updated!"); 
+    }
+    
+    function changeAutoBackup() { 
+        autoBackupFreq = document.getElementById('auto-backup-select').value; 
+        localStorage.setItem('paymitra_autobackup', autoBackupFreq); 
+        showToast("Auto Backup Saved!"); 
+    }
 
     function applyLang() {
         const t = i18n[currentLang];
@@ -647,32 +627,33 @@
         window._pendingStaffPhotoRemoval = true;
     }
 
-    function renderStaffList() { 
-        let conf = getConfig(); 
-        let html = ''; 
-        if (conf.staffList.length === 0) { 
-            html = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">No staff added yet.</div>'; 
-        } else { 
-            conf.staffList.forEach((s, i) => { 
-                const photoHtml = s.photo ? `<img src="${s.photo}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--accent-orange);">` : `<div style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:14px;">👤</div>`;
-                html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px; margin-bottom:8px; font-size:14px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        ${photoHtml}
-                        <div>
-                            <b style="color:white;">${s.name}</b> 
-                            <span style="color:var(--accent-orange); font-size:11px; margin-left:5px; font-weight:700;">[ID: ${s.pin}]</span>
-                        </div>
-                    </div>
+function renderStaffList() { 
+    let conf = getConfig(); 
+    let html = ''; 
+    if (conf.staffList.length === 0) { 
+        html = '<div class="empty-list-msg">No staff added yet.</div>'; 
+    } else { 
+        conf.staffList.forEach((s, i) => { 
+            const photoHtml = s.photo ? `<img src="${s.photo}" class="staff-photo">` : `<div class="staff-photo-placeholder">👤</div>`;
+            html += `
+            <div class="staff-list-item">
+                <div class="staff-info-left">
+                    ${photoHtml}
                     <div>
-                        <span onclick="openEditStaffProfile(${i})" style="color:var(--owner-gold); cursor:pointer; font-size:16px; margin-right:12px;">✏️</span>
-                        <span onclick="deleteStaff(${i})" style="color:var(--danger); cursor:pointer; font-size:16px;">🗑️</span>
+                        <b class="staff-name-text">${s.name}</b> 
+                        <span class="staff-pin-text">[ID: ${s.pin}]</span>
                     </div>
-                </div>`; 
-            }); 
-        } 
-        document.getElementById('staff-list-container').innerHTML = html; 
-    }
+                </div>
+                <div class="staff-actions-right">
+                    <span onclick="openEditStaffProfile(${i})" class="action-icon edit-icon">✏️</span>
+                    <span onclick="deleteStaff(${i})" class="action-icon delete-icon">🗑️</span>
+                </div>
+            </div>`; 
+        }); 
+    } 
+    document.getElementById('staff-list-container').innerHTML = html; 
+}
+
     
     function addStaff() { 
         let name = document.getElementById('new-staff-name').value.trim(); 
@@ -769,6 +750,12 @@
         let conf = getConfig(); if (navigator.vibrate) navigator.vibrate(30);
         if (pin === secretPin || pin === "1984") { 
             isOwnerMode = true; 
+    let themeWrap = document.getElementById('owner-theme-wrap');
+    if(themeWrap) {
+        themeWrap.style.display = 'flex';
+        document.getElementById('theme-select').value = currentTheme;
+    }
+
             deviceStaffName = "Owner"; 
             activeStaffPhoto = "";
             activeLoginPin = pin; 
@@ -863,47 +850,87 @@
 
 
     function setupFirebaseListener() {
-        let cachedDb = [];
-        try {
-            cachedDb = JSON.parse(localStorage.getItem('paymitra_v11')) || [];
-        } catch(e) {}
+        let cachedDbStr = localStorage.getItem('paymitra_v11') || "[]";
+        let lastSyncedDbStr = localStorage.getItem('paymitra_last_synced_v11') || "[]";
         
-        if (cachedDb.length > 0) {
-            db = cachedDb;
+        try {
+            let cachedDb = JSON.parse(cachedDbStr);
+            if (cachedDb.length > 0) db = cachedDb;
+        } catch(e) {}
+
+        // 🔥 THE MAGIC: Auto Offline Recovery Engine
+        // Agar app force-close hui thi jab net nahi tha, toh local DB 'last_synced' se alag hoga
+        if (cachedDbStr !== lastSyncedDbStr && db.length > 0) {
+            console.log("⚡ Auto-Recovering Offline Data...");
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Recovering Offline Data...";
+            
+            try {
+                let oldDb = JSON.parse(lastSyncedDbStr);
+                let updates = {};
+                
+                db.forEach((item, index) => {
+                    let oldItem = oldDb.find(x => x.id === item.id);
+                    if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
+                        updates[`${index}`] = item; 
+                    }
+                });
+
+                if (Object.keys(updates).length > 0) {
+                    database.ref('credix_db').update(updates).then(() => {
+                        localStorage.setItem('paymitra_last_synced_v11', cachedDbStr);
+                        attachRealtimeListener(); // Recovery success, ab cloud se judo
+                    }).catch(() => attachRealtimeListener());
+                } else {
+                    database.ref('credix_db').set(db).then(() => {
+                        localStorage.setItem('paymitra_last_synced_v11', cachedDbStr);
+                        attachRealtimeListener();
+                    }).catch(() => attachRealtimeListener());
+                }
+            } catch(e) {
+                attachRealtimeListener();
+            }
+        } else {
+            // Agar koi offline data phansa nahi hai, toh normal chalo
+            attachRealtimeListener();
         }
 
-        database.ref('credix_db').on('value', (snapshot) => {
-            if(snapshot.exists()) {
-                let newDb = snapshot.val();
-                if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+        function attachRealtimeListener() {
+            database.ref('credix_db').on('value', (snapshot) => {
+                if(snapshot.exists()) {
+                    let newDb = snapshot.val();
+                    if (!Array.isArray(newDb)) newDb = Object.values(newDb);
 
-                // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
-                newDb = newDb.filter(item => item !== null && item !== undefined);
-                newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+                    // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
+                    newDb = newDb.filter(item => item !== null && item !== undefined);
+                    newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
 
-                // Agar cloud par naya data hai, toh turant screen update karo
-                if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                    if (!isSaving) {
-                        db = newDb;
-                        localStorage.setItem('paymitra_v11', JSON.stringify(db));
+                    // Agar cloud par naya data hai, toh turant screen update karo
+                    if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                        if (!isSaving) {
+                            db = newDb;
+                            let newDbStr = JSON.stringify(db);
+                            localStorage.setItem('paymitra_v11', newDbStr);
+                            localStorage.setItem('paymitra_last_synced_v11', newDbStr); // Cloud se update mila toh ise bhi update karna zaroori hai
 
-                        if (document.getElementById('main-app').style.display !== 'none') {
-                            if(!validateSession(db)) return;
-                            render();
-                            if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                renderTrash();
+                            if (document.getElementById('main-app') && document.getElementById('main-app').style.display !== 'none') {
+                                if(typeof validateSession === 'function' && !validateSession(db)) return;
+                                if(typeof render === 'function') render();
+                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                                    if(typeof renderTrash === 'function') renderTrash();
+                                }
                             }
                         }
                     }
                 }
-            }
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
-        }, (error) => {
-            document.getElementById('sync-status').innerText = "Offline Mode";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
-        });
+                if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
+                if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
+            }, (error) => {
+                if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Offline Mode";
+                if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot offline";
+            });
+        }
     }
+
 
 
     function hardRefresh() { 
@@ -1615,7 +1642,24 @@
             list.forEach(c => { 
                 let amtToDisplay = c.principal; 
                 sectionTotal += amtToDisplay;
-                html += `<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:5px; font-size:12px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px;">${c.photo?`<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; cursor:zoom-in;">`:''}<div style="flex:1; min-width:0;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${c.name}</b><span style="color:var(--text-muted); font-size:10px;">${t.givenOn} ${formatDateDisplay(c.startDate)}</span></div></div></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color};">₹${amtToDisplay.toLocaleString()}</b>${(isOwnerMode && c.tempUpfrontProfit) ? `<div style="font-size:10px; color:var(--owner-gold); margin-top:2px;">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}</div></div>`; 
+                html += `<div class="pending-card" style="--theme-color: ${color};">
+    <div class="pc-row">
+        <div class="pc-left">
+            <div class="pc-name-wrapper">
+                ${c.photo ? `<img src="${c.photo}" onclick="openPhotoZoom('${c.photo}')" class="pc-photo">` : ''}
+                <div class="pc-name-box">
+                    <b class="pc-name">${c.name}</b>
+                    <span class="pc-sub">${t.givenOn} ${formatDateDisplay(c.startDate)}</span>
+                </div>
+            </div>
+        </div>
+        <div class="pc-right">
+            <b class="pc-amt" style="color:${color};">₹${amtToDisplay.toLocaleString()}</b>
+            ${(isOwnerMode && c.tempUpfrontProfit) ? `<div class="pc-profit">${t.profitCut} ₹${c.tempUpfrontProfit.toFixed(0)}</div>` : ''}
+        </div>
+    </div>
+</div>`;
+
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
@@ -1634,7 +1678,22 @@
                 let dates = p.hits.map(h => h.date).sort(); 
                 let dateSummary = dates.length > 1 ? `${formatDateDisplay(dates[0])} to ${formatDateDisplay(dates[dates.length-1])}` : formatDateDisplay(dates[0]); 
                 let detailStr = isMonthly ? `${t.intRec} (${p.hits.length} ${t.monthsText})` : `₹${(p.installment||0).toFixed(0)} × ${Math.round(p.total / (p.installment || 1))} ${t.kishatsText}`; 
-                html += `<div style="display:flex; flex-direction:column; background:rgba(0,0,0,0.3); padding:12px; border-radius:10px; margin-bottom:8px; border-left:3px solid ${color}; overflow:hidden; width:100%;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:var(--text-muted); font-size:10px;">${dateSummary}</span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div></div></div><div style="font-size:10px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between; gap:10px;"><span style="flex:1; min-width:0; word-wrap:break-word; white-space:normal;">${detailStr}</span>${isOwnerMode ? `<span style="color:var(--owner-gold); flex-shrink:0;">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}</div></div>`; 
+html += `<div class="pending-card" style="--theme-color: ${color};">
+    <div class="pc-row" style="align-items: center;">
+        <div class="pc-left">
+            <b class="pc-name">${p.name}</b>
+            <span class="pc-sub">${dateSummary}</span>
+        </div>
+        <div class="pc-right">
+            <div style="font-weight:bold; color:${color}; font-size:14px;">+ ₹${p.total.toLocaleString()}</div>
+        </div>
+    </div>
+    <div class="pc-payment-details">
+        <span class="pc-detail-text">${detailStr}</span>
+        ${isOwnerMode ? `<span class="pc-profit-text">${t.profitText} ₹${p.profit.toFixed(0)}</span>` : ''}
+    </div>
+</div>`;
+
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toLocaleString()}</div>`;
             return html;
@@ -1666,7 +1725,22 @@
                     clickAction = `openPayModal(${p.id}, ${p.accumulatedTotal})`;
                 }
 
-                html += `<div onclick="${clickAction}" style="cursor:pointer; display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%; transition:0.2s;"><div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1; min-width:0;"><b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${p.name}</b><span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()} ${t.basisText}</span><br><span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px; word-wrap:break-word; white-space:normal;">${t.missedText} ${p.missedDatesStr} <b style="color:var(--text-main); margin-left:5px;">(${calcNote})</b></span></div><div style="text-align:right; flex-shrink:0; margin-left:10px;"><b style="color:${color}; font-size:14px;">₹${p.accumulatedTotal.toFixed(0)}</b><br><span style="background:var(--success); color:white; font-weight:bold; font-size:9px; padding:4px 8px; border-radius:6px; margin-top:6px; display:inline-block; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${badgeText}</span></div></div></div>`;
+html += `<div onclick="${clickAction}" class="pending-card" style="--theme-color: ${color}; --theme-bg: ${bgColor};">
+    <div class="pc-row">
+        <div class="pc-left">
+            <b class="pc-name">${p.name}</b>
+            <span class="pc-basis">${typeTranslated.toUpperCase()} ${t.basisText}</span><br>
+            <span class="pc-missed">${t.missedText} ${p.missedDatesStr} <b class="pc-note">(${calcNote})</b></span>
+        </div>
+        <div class="pc-right">
+            <b class="pc-amt">₹${p.accumulatedTotal.toFixed(0)}</b><br>
+            <span class="pc-badge">${badgeText}</span>
+        </div>
+    </div>
+</div>`;
+
+
+
             });
             html += `<div style="text-align:right; color:${color}; font-size:14px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">${t.repTotal || 'TOTAL'}: ₹${sectionTotal.toFixed(0).toLocaleString()}</div>`;
             return html;
@@ -1719,29 +1793,30 @@
                     }
                 }
 
-                html += `<div style="display:flex; flex-direction:column; background:${bgColor}; padding:12px; border-radius:10px; margin-bottom:8px; border-left:4px solid ${color}; overflow:hidden; width:100%;">
-                    <div style="display:flex; justify-content:space-between; align-items: flex-start;">
-                        <div style="flex:1; min-width:0;">
-                            <b style="color:var(--text-main); display:block; word-wrap:break-word; word-break:break-word; white-space:normal; line-height:1.4;">${c.name}</b>
-                            <span style="color:${color}; font-size:9px; font-weight:800; letter-spacing:0.5px;">${typeTranslated.toUpperCase()}</span><br>
-                            <span style="color:var(--text-muted); font-size:10px; display:block; margin-top:3px;">Closed On: <b style="color:var(--text-main);">${formatDateDisplay(c.closedDate)}</b></span>
-                        </div>
-                        <div style="text-align:right; flex-shrink:0; margin-left:10px;">
-                            <b style="color:${color}; font-size:14px;">₹${c.principal.toLocaleString()}</b><br>
-                            <span style="font-size:9px; color:var(--text-muted);">Principal</span>
-                        </div>
-                    </div>
-                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items:center;">
-                        <div style="display:flex; flex-direction:column; gap:3px;">
-                            <span style="font-size: 10px; color: var(--text-muted);">Recovered (In Range):</span>
-                            <span style="font-size: 11px; color: white;">${detailStr}</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
-                            <span style="font-size: 14px; font-weight: bold; color: var(--success);">+ ₹${(c.recoveredInRange || 0).toLocaleString()}</span>
-                            ${isOwnerMode ? `<span style="font-size:10px; color:var(--owner-gold);">PROFIT: ₹${(c.profitInRange || 0).toFixed(0)}</span>` : ''}
-                        </div>
-                    </div>
-                </div>`;
+html += `<div class="pending-card" style="--theme-color: ${color}; --theme-bg: ${bgColor};">
+    <div class="pc-row">
+        <div class="pc-left">
+            <b class="pc-name">${c.name}</b>
+            <span class="pc-basis" style="color:${color};">${typeTranslated.toUpperCase()}</span><br>
+            <span class="pc-sub">Closed On: <b class="pc-note">${formatDateDisplay(c.closedDate)}</b></span>
+        </div>
+        <div class="pc-right">
+            <b class="pc-amt" style="color:${color};">₹${c.principal.toLocaleString()}</b><br>
+            <span class="pc-sub">Principal</span>
+        </div>
+    </div>
+    <div class="pc-closed-footer">
+        <div class="pc-closed-stat">
+            <span class="pc-sub">Recovered (In Range):</span>
+            <span class="pc-white-text">${detailStr}</span>
+        </div>
+        <div class="pc-closed-stat right-align">
+            <span class="pc-success-text">+ ₹${(c.recoveredInRange || 0).toLocaleString()}</span>
+            ${isOwnerMode ? `<span class="pc-profit-text">PROFIT: ₹${(c.profitInRange || 0).toFixed(0)}</span>` : ''}
+        </div>
+    </div>
+</div>`;
+
             });
             html += `<div style="text-align:right; color:${color}; font-size:13px; font-weight:bold; padding: 8px 5px; margin-bottom: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
                 TOTAL RECOVERED: <span style="color:var(--success);">₹${sectionTotalRec.toLocaleString()}</span><br>
@@ -2119,7 +2194,8 @@
                 if(mDates.length > 0) {
                     let displayDates = mDates.slice(0, 10).join(', '); // Shuru ki 10 pending dates dikhayega
                     let extraTxt = mDates.length > 10 ? ` ...aur ${mDates.length - 10} din baaki` : '';
-                    missedDatesHtml = `<div style="background:rgba(255, 60, 60, 0.08); border:1px solid rgba(255, 60, 60, 0.3); border-radius:8px; padding:12px; margin-top:15px; font-size:12px; color:var(--danger); line-height:1.6;"><b>⚠️ Missed Dates:</b><br>${displayDates}${extraTxt}</div>`;
+`<div class="missed-dates-box"><b>⚠️ Missed Dates:</b><br>${displayDates}${extraTxt}</div>`
+
                 }
             }
 
@@ -2128,58 +2204,104 @@
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
             const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
-            accountsHtmlArray.push(`
-            <div class="cust-card glass-card" style="${(isOwnerMode && c.isPersonal) ? 'border-color: rgba(255, 215, 0, 0.3); background: linear-gradient(145deg, rgba(255, 215, 0, 0.05) 0%, var(--card-bg) 100%);' : ''}">
-                ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
-                <div onclick="toggleView(${c.id})" style="cursor:pointer;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;"><div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>${statusHtml}</div>
-                    <div class="card-header">
-                        <div style="min-width:0; flex:1; display:flex; align-items:center; gap:12px;">
-                            ${avatarHtml}
-                            <div style="min-width:0;">
-                                <div class="c-name" style="word-wrap:break-word; word-break:break-word;">${c.name} ${c.staffRef?`<span style="color:var(--accent-orange); font-size:10px; margin-left:5px; flex-shrink:0;">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span style="flex-shrink:0;">👑</span>':''}</div>
-                                <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
-                            </div>
-                        </div>
-                        <div style="flex-shrink:0;">
-                            <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
-                            <div class="c-sub" style="text-align:right">Balance</div>
-                        </div>
-                    </div>
+
+accountsHtmlArray.push(`
+<div class="cust-card glass-card" ${isOwnerMode && c.isPersonal ? 'data-personal="true"' : ''}>
+    ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
+    <div onclick="toggleView(${c.id})" class="clickable-area">
+        <div class="card-top-row">
+            <div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>
+            ${statusHtml}
+        </div>
+        <div class="card-header">
+            <div class="card-header-left">
+                ${avatarHtml}
+                <div class="card-name-box">
+                    <div class="c-name">${c.name} ${c.staffRef?`<span class="ref-tag">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span class="crown-icon">👑</span>':''}</div>
+                    <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
                 </div>
-                <div id="view-${c.id}" style="display:${openViews[c.id]?'block':'none'}">
-                    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-top:15px;">
-                        <div style="text-align:left;"><span style="font-size:10px; color:var(--text-muted);">${c.type==='daily'?t.returnAmt:t.principal}</span><br><b style="font-size:14px;">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b></div>
-                        ${(isOwnerMode || c.type === 'daily') ? `
-                        <div style="text-align:center;"><span style="font-size:10px; color:var(--text-muted);">${t.totalPaid}</span><br><b style="font-size:14px; color:var(--success)">₹${totalPaid}</b></div>
-                        ` : ''}
-<div style="text-align:right;"><span style="font-size:10px; color:var(--text-muted);">${t.remainingAcc}</span><br><b style="font-size:14px; color:${c.currentBalance <= 0 ? 'var(--success)' : 'var(--danger)'}">${c.currentBalance <= 0 ? (t.caseClosedText || 'Case Closed ✅') : '₹' + c.currentBalance.toFixed(0)}</b></div></div>
-                    ${missedDatesHtml}
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;"><span style="font-size:11px; color:var(--text-muted);">${t.payHistory}</span><div style="display:flex; gap:10px;">${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" style="background:var(--danger); border:none; color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:700;">DELETE ALL</button>` : ''}<button onclick="toggleMultiDel(${c.id})" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:white; font-size:10px; padding:4px 10px; border-radius:10px; font-weight:600;">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button></div></div>
-                    <table class="view-table"><thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead><tbody>${histHtml || '<tr><td colspan="5" style="padding:20px; opacity:0.4;">No records</td></tr>'}</tbody></table>
-                </div>
-                <div class="btn-row" style="margin-top:15px;"><button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>${isOwnerMode ? `<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}<button class="s-btn" style="flex:0.6; font-size:16px;" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button><button class="s-btn" style="flex:0.6; color:var(--danger);" onclick="deleteCustUI(${c.id})">🗑️</button><button class="s-btn collect" style="flex:1.4;" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button></div>
-            </div>`);
-        });
+            </div>
+            <div class="card-header-right">
+                <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
+                <div class="c-sub c-sub-right">Balance</div>
+            </div>
+        </div>
+    </div>
+    <div id="view-${c.id}" class="card-expanded-view" style="display:${openViews[c.id]?'block':'none'}">
+        <div class="card-stats-box">
+            <div class="stat-col-left">
+                <span class="stat-label">${c.type==='daily'?t.returnAmt:t.principal}</span><br>
+                <b class="stat-val">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b>
+            </div>
+            ${(isOwnerMode || c.type === 'daily') ? `
+            <div class="stat-col-center">
+                <span class="stat-label">${t.totalPaid}</span><br>
+                <b class="stat-val stat-success">₹${totalPaid}</b>
+            </div>
+            ` : ''}
+            <div class="stat-col-right">
+                <span class="stat-label">${t.remainingAcc}</span><br>
+                <b class="stat-val ${c.currentBalance <= 0 ? 'stat-success' : 'stat-danger'}">${c.currentBalance <= 0 ? (t.caseClosedText || 'Case Closed ✅') : '₹' + c.currentBalance.toFixed(0)}</b>
+            </div>
+        </div>
+        ${missedDatesHtml}
+        <div class="history-header">
+            <span class="history-title">${t.payHistory}</span>
+            <div class="history-actions">
+                ${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" class="btn-danger-small">DELETE ALL</button>` : ''}
+                <button onclick="toggleMultiDel(${c.id})" class="btn-secondary-small">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button>
+            </div>
+        </div>
+        <table class="view-table">
+            <thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead>
+            <tbody>${histHtml || '<tr><td colspan="5" class="empty-row">No records</td></tr>'}</tbody>
+        </table>
+    </div>
+    <div class="btn-row card-actions-row">
+        <button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>
+        ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
+        <button class="s-btn btn-icon" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
+        <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI(${c.id})">🗑️</button>
+        <button class="s-btn collect" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button>
+    </div>
+</div>`);
+});
+
         
         let finalHtml = ""; 
         if (currentTab === 'dash' && sName === '') { 
-            finalHtml = `<div style="text-align:center; padding: 40px 20px; background:rgba(0,0,0,0.3); border-radius:20px; border:1px dashed rgba(255,255,255,0.05); margin-top:10px;"><div style="font-size:30px; margin-bottom:10px; opacity:0.6;">✨</div><div style="font-size:14px; font-weight:600; color:white; margin-bottom:5px;">${t.cleanDashTitle}</div><div style="font-size:11px; color:var(--text-muted); line-height:1.5;">${t.cleanDashSub}</div></div>`; 
+            finalHtml = `<div class="empty-dash-card">
+                <div class="empty-icon">✨</div>
+                <div class="empty-title">${t.cleanDashTitle}</div>
+                <div class="empty-desc">${t.cleanDashSub}</div>
+            </div>`; 
         } else {
             if (currentTab === 'dash' && isOwnerMode && showSearchStat && sName !== '') { 
-                let collectionLabel = t.refStatCollection; 
-                if (fType === 'monthly') collectionLabel = t.refStatInterest; 
-                else if (fType === 'meter') collectionLabel = t.refStatInterest.replace('Monthly', 'Daily'); 
-                
+                let collectionLabel = (fType === 'monthly') ? t.refStatInterest : (fType === 'meter' ? t.refStatInterest.replace('Monthly', 'Daily') : t.refStatCollection); 
                 searchTotalExpectedInterest = searchTotalBal + searchTotalRec - searchTotalValue;
                 
-                let interestHtml = searchTotalExpectedInterest > 0 ? `<div class="stat-item" style="grid-column: span 2; background: rgba(255, 215, 0, 0.05); border: 1px dashed rgba(255, 215, 0, 0.2); padding: 8px; border-radius: 8px;"><label style="color:var(--owner-gold);">Total Expected Interest (Vyaj)</label><value style="color:var(--owner-gold);">+ ₹${searchTotalExpectedInterest.toLocaleString()}</value></div>` : '';
-
-                finalHtml += `<div class="search-stat-card"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:14px; font-weight:800; color:var(--owner-gold);">${t.refStatTitle}</span><span style="font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:8px;">${sName.toUpperCase()}</span></div><div class="search-stat-grid"><div class="stat-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div><div class="stat-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div>${interestHtml}<div class="stat-item"><label>${t.refStatRec}</label><value style="color:var(--success);">₹${searchTotalRec.toLocaleString()}</value></div><div class="stat-item"><label>${t.refStatOut}</label><value style="color:var(--danger);">₹${searchTotalBal.toLocaleString()}</value></div>${fType !== 'all' ? `<div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${collectionLabel}</label><value style="color:var(--accent-orange);">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div><div class="stat-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top:10px; grid-column: span 1;"><label>${t.refStatProfit}</label><value style="color:var(--owner-gold);">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>` : ''}</div></div>`; 
+                finalHtml += `<div class="search-stat-card">
+                    <div class="ss-header">
+                        <span class="ss-title">${t.refStatTitle}</span>
+                        <span class="ss-query">${sName.toUpperCase()}</span>
+                    </div>
+                    <div class="ss-grid">
+                        <div class="ss-item"><label>${t.refStatCases}</label><value>${searchCasesCount}</value></div>
+                        <div class="ss-item"><label>${t.refStatValue}</label><value>₹${searchTotalValue.toLocaleString()}</value></div>
+                        ${searchTotalExpectedInterest > 0 ? `<div class="ss-item ss-full"><label class="text-gold">Total Expected Interest</label><value class="text-gold">+ ₹${searchTotalExpectedInterest.toLocaleString()}</value></div>` : ''}
+                        <div class="ss-item"><label>${t.refStatRec}</label><value class="text-success">₹${searchTotalRec.toLocaleString()}</value></div>
+                        <div class="ss-item"><label>${t.refStatOut}</label><value class="text-danger">₹${searchTotalBal.toLocaleString()}</value></div>
+                        ${fType !== 'all' ? `
+                            <div class="ss-item ss-border"><label>${collectionLabel}</label><value class="text-accent">₹${searchTotalKishat.toFixed(0).toLocaleString()}</value></div>
+                            <div class="ss-item ss-border"><label>${t.refStatProfit}</label><value class="text-gold">₹${searchTotalProfit.toFixed(0).toLocaleString()}</value></div>
+                        ` : ''}
+                    </div>
+                </div>`; 
             }
             finalHtml += accountsHtmlArray.join('');
         }
-        document.getElementById('dashboard').innerHTML = finalHtml; 
+        document.getElementById('dashboard').innerHTML = finalHtml;
+
         document.getElementById('sum-cases').innerText = tC; 
         document.getElementById('sum-principal').innerText = '₹' + tP.toLocaleString(); 
         document.getElementById('sum-balance').innerText = '₹' + tB.toLocaleString();
@@ -2396,14 +2518,9 @@ function appendMessage(text, sender) {
         document.getElementById('ai-chat-messages').scrollTop = document.getElementById('ai-chat-messages').scrollHeight;
 
         try {
-            // 🔥 AI OFFLINE ENGINE: IndexedDB se data fetch karega
-            let aiData = [];
-            try {
-                aiData = await localDB.cases.toArray(); 
-            } catch(e) {
-                console.log("IndexedDB read failed, falling back to memory db", e);
-                aiData = db; // Fallback agar DB load hone mein time lage
-            }
+            // 🔥 AI LIVE ENGINE: Direct Memory DB use karega taaki 100% accurate rahe!
+let aiData = db; 
+
             
             if (isLocalQuery(text)) {
                 if(document.getElementById(typingId)) document.getElementById(typingId).remove();
@@ -2413,25 +2530,82 @@ function appendMessage(text, sender) {
                 // IndexedDB se aaye 'aiData' ka use karein
                 const activeLoans = aiData.filter(c => c.type !== 'config' && c.type !== 'trash' && !c.isArchived && c.currentBalance > 0 && (isOwnerMode || (!c.isPersonal && (c.staffRef || '').trim().toLowerCase() === deviceStaffName.toLowerCase())));
 
-                const getPendingData = (c) => {
-                    let lastPaidDate = (c.history && c.history.length > 0) ? [...c.history].sort((a,b) => new Date(a.date) - new Date(b.date)).slice(-1)[0].date : c.startDate;
-                    const todayObj = new Date(getISTDate()); const lastDateObj = new Date(lastPaidDate);
-                    let pAmt = 0; let pText = "";
-                    if (c.type === 'meter' || c.type === 'daily') {
-                        let kAmt = c.type === 'daily' ? (c.installment || 0) : ((c.principal * (c.rate || 0)) / 100);
-                        let dDiff = Math.max(0, Math.floor((todayObj - lastDateObj) / (1000 * 60 * 60 * 24)));
-                        if(!c.history || c.history.length === 0) dDiff = Math.floor((todayObj - new Date(c.startDate)) / (1000 * 60 * 60 * 24));
-                        if(dDiff < 0) dDiff = 0;
-                        pAmt = dDiff * kAmt;
-                        pText = c.type === 'meter' ? `${dDiff} din pending` : `Aakhiri kishat: ${formatDateDisplay(lastPaidDate)}`;
-                    } else {
-                        let kAmt = (c.principal * (c.rate || 0)) / 100;
-                        let nDate = new Date(lastPaidDate); nDate.setMonth(nDate.getMonth() + 1);
-                        pAmt = (todayObj >= nDate) ? kAmt : 0;
-                        pText = (todayObj >= nDate) ? `Due: ${formatDateDisplay(nDate.toISOString().split('T')[0])}` : `Next: ${formatDateDisplay(nDate.toISOString().split('T')[0])}`;
+                   const getPendingData = (c) => {
+                    const todayStr = getISTDate();
+                    let accumulatedTotal = 0;
+                    let missingDateStrings = [];
+                    let historyUpToEnd = c.history ? c.history.filter(h => h.date <= todayStr) : [];
+                    let amountPerUnit = 0;
+
+                    const toLocalYMD = (d) => { 
+                        let y = d.getFullYear(); 
+                        let m = String(d.getMonth() + 1).padStart(2, '0'); 
+                        let day = String(d.getDate()).padStart(2, '0'); 
+                        return `${y}-${m}-${day}`; 
+                    };
+
+                    if (c.type === 'daily') {
+                        amountPerUnit = c.installment || 0;
+                        let parts = c.startDate.split('-');
+                        let sy = parseInt(parts[0]), sm = parseInt(parts[1]), sd = parseInt(parts[2]);
+                        let iterDate = new Date(sy, sm - 1, sd); 
+                        iterDate.setDate(iterDate.getDate() + 1); 
+                        while (toLocalYMD(iterDate) <= todayStr) {
+                            let currentCheckStr = toLocalYMD(iterDate);
+                            // Calendar method: Check if payment strictly exists for this date
+                            if (!historyUpToEnd.some(h => h.date === currentCheckStr)) { 
+                                accumulatedTotal += amountPerUnit; 
+                                missingDateStrings.push(currentCheckStr);
+                            }
+                            iterDate.setDate(iterDate.getDate() + 1);
+                        }
+                    } else if (c.type === 'meter') {
+                        amountPerUnit = c.principal * (c.rate || 0) / 100;
+                        let parts = c.startDate.split('-');
+                        let sy = parseInt(parts[0]), sm = parseInt(parts[1]), sd = parseInt(parts[2]);
+                        let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
+                        let daysPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
+                        let iterDate = new Date(sy, sm - 1, sd);
+                        iterDate.setDate(iterDate.getDate() + daysPaid); 
+                        while (toLocalYMD(iterDate) <= todayStr) {
+                            accumulatedTotal += amountPerUnit; 
+                            missingDateStrings.push(toLocalYMD(iterDate));
+                            iterDate.setDate(iterDate.getDate() + 1);
+                        }
+                    } else if (c.type === 'monthly') {
+                        amountPerUnit = c.principal * (c.rate || 0) / 100;
+                        let parts = c.startDate.split('-');
+                        let sy = parseInt(parts[0]), sm = parseInt(parts[1]), sd = parseInt(parts[2]);
+                        let totalPaidUpToEnd = historyUpToEnd.reduce((sum, h) => sum + parseFloat(h.paid), 0);
+                        let monthsPaid = amountPerUnit > 0 ? Math.floor(totalPaidUpToEnd / amountPerUnit) : historyUpToEnd.length;
+                        let cycle = 1;
+                        while (true) {
+                            let nextDue = new Date(sy, (sm - 1) + cycle, sd);
+                            if (nextDue.getDate() !== sd) nextDue = new Date(sy, (sm - 1) + cycle + 1, 0);
+                            let nextDueStr = toLocalYMD(nextDue);
+                            if (nextDueStr > todayStr) break; 
+                            if (cycle > monthsPaid) {
+                                accumulatedTotal += amountPerUnit; 
+                                missingDateStrings.push(nextDueStr);
+                            }
+                            cycle++;
+                        }
                     }
-                    return { pAmt, pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
+
+                    let count = missingDateStrings.length;
+                    let pText = "";
+                    if (count > 0) {
+                        if (c.type === 'daily') pText = `${count} kishat baki`;
+                        else if (c.type === 'meter') pText = `${count} din baki`;
+                        else pText = `${count} mahine baki`;
+                    } else {
+                        pText = "All Clear";
+                    }
+                    
+                    return { pAmt: accumulatedTotal, pText: pText, cType: c.type ? c.type.toUpperCase() : "N/A" };
                 };
+
+
 
                 let intent = detectIntent(text);
                 
@@ -2568,3 +2742,13 @@ aiBtn.addEventListener('touchend', (e) => {
 aiBtn.addEventListener('click', () => {
     if (!moved) toggleAIChat();
 });
+
+// --- THEME CHANGER SYSTEM ---
+function changeTheme() {
+    let selectedTheme = document.getElementById('theme-select').value;
+    localStorage.setItem('paymitra_theme', selectedTheme);
+    document.body.setAttribute('data-theme', selectedTheme);
+    if(typeof showToast === "function") {
+        showToast("Theme Updated! 🎨");
+    }
+}
