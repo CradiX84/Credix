@@ -1119,3 +1119,54 @@ body[data-theme="dark"] *[onclick*="deletePinChar"] * {
     fill: #FF6B35 !important; 
     stroke: #FF6B35 !important; 
 }
+
+/* =========================================
+   ✖️ MATTE THEME: CHATBOX CLOSE BUTTON FIX
+   ========================================= */
+
+body[data-theme="matte"] #ai-chat-window [onclick*="toggleAIChat"],
+body[data-theme="matte"] #ai-chat-window .close-btn {
+    color: #ffffff !important; /* Safed rang ka Cross */
+    background: rgba(255, 255, 255, 0.15) !important; /* Halka transparent (Glass) background */
+    border-radius: 50% !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: bold !important;
+    font-size: 12px !important; /* Thoda chhota aur neat */
+    opacity: 0.8 !important; /* Thoda soft look */
+    box-shadow: none !important; /* Faltu glow hata diya */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* Ekdum halki si outline */
+    cursor: pointer !important;
+    backdrop-filter: blur(4px) !important; /* Piche ka background dhundhla karega */
+}
+
+/* Jab ungli rakhenge (Active state) */
+body[data-theme="matte"] #ai-chat-window [onclick*="toggleAIChat"]:active,
+body[data-theme="matte"] #ai-chat-window .close-btn:active {
+    background: rgba(255, 255, 255, 0.3) !important;
+    opacity: 1 !important;
+}
+
+/* =========================================
+   ✨ DASHBOARD TOP STATS COLOR UPGRADE
+   ========================================= */
+
+/* 1. Total Principal Digits -> Signature Teal Green */
+body[data-theme="matte"] #sum-principal {
+    color: #1D827B !important; 
+    text-shadow: 0 2px 8px rgba(29, 130, 123, 0.15) !important; /* Halka sa premium glow */
+}
+
+/* 2. Total Cases Digits -> Premium Copper */
+body[data-theme="matte"] #sum-cases {
+    color: #C07C41 !important; /* Premium Matte Copper */
+    text-shadow: 0 2px 8px rgba(192, 124, 65, 0.15) !important; /* Halka sa premium glow */
+}
+
+/* Outstanding balance ko bhi thoda bold red/grey tone dena ho toh (Optional) */
+body[data-theme="matte"] #sum-balance {
+    color: #D9534F !important; /* Soft Matte Red */
+}

@@ -2744,10 +2744,30 @@ aiBtn.addEventListener('click', () => {
 });
 
 // --- THEME CHANGER SYSTEM ---
+
+// 🔥 NEW: Mobile Status Bar Color Auto-Updater
+function updateStatusBarColor(theme) {
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (!metaTheme) {
+        metaTheme = document.createElement('meta');
+        metaTheme.name = "theme-color";
+        document.head.appendChild(metaTheme);
+    }
+    // Matte theme aate hi bar ko Creamy White karega, warna Default Orange
+    metaTheme.content = (theme === 'matte') ? '#F4F2EE' : '#ff6a00'; 
+}
+
+// App khulte hi turant sahi status bar color set karne ke liye
+updateStatusBarColor(localStorage.getItem('paymitra_theme') || 'dark');
+
 function changeTheme() {
     let selectedTheme = document.getElementById('theme-select').value;
     localStorage.setItem('paymitra_theme', selectedTheme);
     document.body.setAttribute('data-theme', selectedTheme);
+    
+    // 🔥 Status bar ko instantly theme ke hisaab se update karega
+    updateStatusBarColor(selectedTheme);
+    
     if(typeof showToast === "function") {
         showToast("Theme Updated! 🎨");
     }
