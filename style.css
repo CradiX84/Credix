@@ -1251,3 +1251,16 @@ body[data-theme="matte"] .status-closed .status-dot {
     background: #8A8D98 !important;
     box-shadow: none !important;
 }
+
+/* 🔥 SYSTEM NAVIGATION BAR FILL FOR MATTE THEME */
+[data-theme="matte"] {
+    background-color: #F4F2EE !important;
+}
+
+html {
+    background-color: #111111; /* Default Dark background */
+}
+
+html[data-theme="matte"] {
+    background-color: #F4F2EE !important; /* Matte background for system bar */
+}

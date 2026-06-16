@@ -2774,9 +2774,13 @@ function updateStatusBarColor(theme) {
     let newColor = (theme === 'matte') ? '#F4F2EE' : '#ff6a00'; 
     metaTheme.content = newColor;
 
-    // ⚫ Bottom patti ko match karne ke liye: Matte mein Cream, Dark mein ekdum Dark Black
+    // ⚫ BODY ki patti ko match karne ke liye
     document.body.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111'; 
+    
+    // 🚀 NEW MASTERSTROKE: HTML tag ko force karna (Bottom Navigation Bar fix ke liye)
+    document.documentElement.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111';
 }
+
 
 
 // App khulte hi turant sahi status bar color set karne ke liye
