@@ -1267,12 +1267,46 @@ html[data-theme="matte"] {
 }
 
 @media (max-width: 768px) {
+  /* Step 1a: Reduce grid and column margins directly */
+  .col-6.mb-3, .col-lg-12.mb-3 {
+    margin-bottom: 6px !important; /* Gaps minimal kar diye */
+  }
+
+  /* Step 1b: Card structure adjustment */
   .sum-card, .cust-card {
-    width: 92% !important;
-    /* Niche wali line se extra gap khatam ho jayega */
-    margin: 0 auto 12px auto !important; 
-    padding: 12px 15px !important;
-    border-radius: 12px !important;
-    box-shadow: 4px 4px 8px #d1cfcb, -4px -4px 8px #ffffff !important;
+    width: 95% !important; /* Screen ke close kar diya */
+    margin: 0 auto !important; /* No gaps top/bottom */
+    border-radius: 10px !important;
+    
+    /* Matte shadow (black surface par glow karegi abhi) */
+    box-shadow: 3px 3px 6px #d1cfcb, -3px -3px 6px #ffffff !important;
+  }
+
+  /* Step 1c: Reduce inner card padding so they don't look bulky */
+  .sum-card.p-3, .cust-card.p-3 {
+    padding: 10px 12px !important; 
+  }
+}
+@media (max-width: 768px) {
+  /* Gaps aur sizing pehle jaisi hi rakhi hai */
+  .col-6.mb-3, .col-lg-12.mb-3 {
+    margin-bottom: 6px !important; 
+  }
+
+  .sum-card, .cust-card {
+    width: 95% !important; 
+    margin: 0 auto !important; 
+    border-radius: 10px !important;
+    /* Yahan se universal white shadow hata di gayi hai */
+  }
+
+  .sum-card.p-3, .cust-card.p-3 {
+    padding: 10px 12px !important; 
+  }
+
+  /* 🔥 YEH NAYA HAI: White Shadow SIRF Matte Theme par dikhegi */
+  body[data-theme="matte"] .sum-card, 
+  body[data-theme="matte"] .cust-card {
+    box-shadow: 3px 3px 6px #d1cfcb, -3px -3px 6px #ffffff !important;
   }
 }
