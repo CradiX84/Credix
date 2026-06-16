@@ -1266,64 +1266,32 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 
-/* --- MOBILE COMPACT DESIGN (As per New Reference) --- */
 @media (max-width: 768px) {
-
-  /* 1. SECTION GAPS & CARD GAPS (Less gap between items) */
-  .mb-2, .mb-3, .mb-4, .my-2, .my-3, .my-4 {
-    margin-bottom: 12px !important; /* 15px se kam karke 12px kiya */
-    margin-top: 0 !important;
-  }
-  .mt-2, .mt-3, .mt-4 {
-    margin-top: 12px !important;
-  }
-
-  /* 2. DASHBOARD & LIST CARDS (Tighter vertical padding & width) */
-  .sum-card, .cust-card, .card {
-    width: 96% !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding: 12px 14px !important; /* Andar ka space shrink kiya */
-    margin-bottom: 12px !important;
-    border-radius: 12px !important;
-    /* Note: Yahan koi shadow ya border ka code nahi hai, apki theme safe hai */
-  }
-
-  /* 3. SEARCH BAR & INPUTS (Height & Padding reduced) */
-  input[type="text"], input[type="search"], .search-box, .input-group {
-    padding: 8px 12px !important;
-    font-size: 14px !important;
-    min-height: 38px !important; /* Compact search bar */
-  }
-
-  /* 4. AVATARS & ACTION BUTTONS (Smaller sizes) */
-  /* Avatar image ko chota kiya */
-  img.rounded-circle, .avatar {
-    width: 40px !important;
-    height: 40px !important;
+  /* 1. Gaps ko strictly 15px par fix kiya (Double gap banne se roka) */
+  .mb-3, .mb-4, .my-3, .my-4 {
+    margin-bottom: 15px !important;
   }
   
-  /* Edit, Receive wale buttons ko shrink kiya */
-  .btn, button {
-    padding: 6px 12px !important;
-    font-size: 12px !important;
+  /* 2. Half-Cards (Outstanding / Cases) ke beech ka gap thik kiya */
+  .row {
+    margin-left: -7.5px !important;
+    margin-right: -7.5px !important;
   }
-  
-  /* Chote round icon buttons (File, Box, Bin) */
-  .btn-circle, .icon-btn {
-    width: 32px !important;
-    height: 32px !important;
-    padding: 6px !important;
+  .col-6 {
+    padding-left: 7.5px !important;
+    padding-right: 7.5px !important;
   }
 
-  /* 5. BOTTOM NAVIGATION (Reduced top padding & compact height) */
-  #bottom-nav, footer, .bottom-navbar {
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-    height: 60px !important; /* Niche ki patti patli ki */
+  /* 3. Cards ke andar aur bahar ki extra space hatayi */
+  .sum-card, .cust-card {
+    width: 100% !important;
+    /* Agar dabbo ke niche bhi margin hai aur .mb-3 me bhi, toh ek ko zero kar diya taki double space na aaye */
+    margin-bottom: 15px !important; 
   }
-  /* Bottom nav ke text ko thoda chota kiya */
-  #bottom-nav span, footer span {
-    font-size: 10px !important;
+
+  /* 4. Sirf Matte Theme ki Shadow (Dark theme completely safe) */
+  body[data-theme="matte"] .sum-card,
+  body[data-theme="matte"] .cust-card {
+    box-shadow: 4px 4px 10px #d1cfcb, -4px -4px 10px #ffffff !important;
   }
 }
