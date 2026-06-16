@@ -1266,34 +1266,3 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 
-@media (max-width: 768px) {
-  /* 1. Left & Right 15px Gap (List Cards aur Search Bar ke liye) */
-  .cust-card, .sum-card-full, .search-box {
-    width: calc(100% - 30px) !important; /* Screen se 15px left + 15px right jagah chhodega */
-    margin-left: 15px !important;
-    margin-right: 15px !important;
-    margin-bottom: 15px !important; /* Top-Bottom gap */
-  }
-
-  /* 2. Half-Cards (Outstanding / Total Cases) ke beech exact gap */
-  .row {
-    margin-left: 7.5px !important;
-    margin-right: 7.5px !important;
-  }
-  .col-6 {
-    padding-left: 7.5px !important;
-    padding-right: 7.5px !important;
-  }
-  .col-6 .sum-card {
-    width: 100% !important; /* Dabba apne hisse mein full rahega */
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    margin-bottom: 15px !important;
-  }
-
-  /* 3. Matte Theme ke Shadow ko maintain rakhna (Dark theme safe) */
-  body[data-theme="matte"] .sum-card,
-  body[data-theme="matte"] .cust-card {
-    box-shadow: 4px 4px 10px #d1cfcb, -4px -4px 10px #ffffff !important;
-  }
-}
