@@ -2772,7 +2772,17 @@ function updateStatusBarColor(theme) {
 }
 
 // App khulte hi turant sahi status bar color set karne ke liye
-updateStatusBarColor(localStorage.getItem('paymitra_theme') || 'dark');
+let currentSavedTheme = localStorage.getItem('paymitra_theme') || 'dark';
+updateStatusBarColor(currentSavedTheme);
+
+// 🔥 NEW: THEME SYNC FIX (Settings wale dropdown ko theek karna)
+document.addEventListener("DOMContentLoaded", () => {
+    let themeDropdown = document.getElementById('theme-select');
+    if (themeDropdown) {
+        themeDropdown.value = currentSavedTheme; 
+    }
+});
+
 
 function changeTheme() {
     let selectedTheme = document.getElementById('theme-select').value;

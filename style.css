@@ -1172,6 +1172,50 @@ body[data-theme="matte"] #sum-balance {
 }
 
 /* =========================================
+   🟢 DEFAULT/DARK THEME: PENDING/ACTIVE COLORS
+   ========================================= */
+
+/* 1. Pending / Alert Text & Dot (Dark Theme) */
+.status-pending {
+    color: #FF4B4B !important; /* Bright Neon Red */
+    font-weight: bold !important;
+}
+.status-pending .status-dot {
+    background: #FF4B4B !important;
+    box-shadow: 0 0 8px rgba(255, 75, 75, 0.6) !important;
+}
+
+/* 2. Active / Safe Text & Dot (Dark Theme) */
+.status-active {
+    color: #00E676 !important; /* Bright Neon Green */
+    font-weight: bold !important;
+}
+.status-active .status-dot {
+    background: #00E676 !important;
+    box-shadow: 0 0 8px rgba(0, 230, 118, 0.6) !important;
+}
+
+/* 3. Closed / Muted Text & Dot (Dark Theme) */
+.status-closed {
+    color: #8A8D98 !important; /* Grey */
+    font-weight: bold !important;
+}
+.status-closed .status-dot {
+    background: #8A8D98 !important;
+    box-shadow: none !important;
+}
+
+/* 4. ⚪ AMOUNT DIGITS (Strictly White for Dark Theme) */
+.bal-pending, 
+.bal-active, 
+.bal-closed {
+    color: #ffffff !important; 
+    font-weight: bold !important;
+}
+
+
+
+/* =========================================
    🔴 CLEAN ARCHITECTURE: PENDING/ACTIVE COLORS
    ========================================= */
 
