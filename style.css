@@ -1266,47 +1266,33 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 
+/* --- MOBILE FINTECH LAYOUT FIX --- */
 @media (max-width: 768px) {
-  /* Step 1a: Reduce grid and column margins directly */
-  .col-6.mb-3, .col-lg-12.mb-3 {
-    margin-bottom: 6px !important; /* Gaps minimal kar diye */
-  }
+  
+  /* 1. Fix Layout Gaps (Extra margin reset) */
+  .row { margin-bottom: 0 !important; }
+  .mb-3, .mt-3, .mb-4 { margin-bottom: 14px !important; margin-top: 0 !important; }
+  .col-6, .col-lg-12 { padding-bottom: 0 !important; }
 
-  /* Step 1b: Card structure adjustment */
+  /* 2. Standard Mobile Card Size */
   .sum-card, .cust-card {
-    width: 95% !important; /* Screen ke close kar diya */
-    margin: 0 auto !important; /* No gaps top/bottom */
-    border-radius: 10px !important;
-    
-    /* Matte shadow (black surface par glow karegi abhi) */
-    box-shadow: 3px 3px 6px #d1cfcb, -3px -3px 6px #ffffff !important;
+    width: 96% !important; /* Screen par proper fit */
+    margin: 0 auto 14px auto !important; /* Sirf niche 14px ka exact gap, baki zero */
+    padding: 16px !important;
+    border-radius: 16px !important;
   }
 
-  /* Step 1c: Reduce inner card padding so they don't look bulky */
-  .sum-card.p-3, .cust-card.p-3 {
-    padding: 10px 12px !important; 
-  }
-}
-@media (max-width: 768px) {
-  /* Gaps aur sizing pehle jaisi hi rakhi hai */
-  .col-6.mb-3, .col-lg-12.mb-3 {
-    margin-bottom: 6px !important; 
+  /* 3. 🔥 DARK THEME WHITE GLOW KILLER */
+  body:not([data-theme="matte"]) .sum-card,
+  body:not([data-theme="matte"]) .cust-card {
+    box-shadow: none !important; /* Dark mode mein white glow band */
+    border: 1px solid #333333 !important; /* Dark theme ke liye halka sa premium border */
   }
 
-  .sum-card, .cust-card {
-    width: 95% !important; 
-    margin: 0 auto !important; 
-    border-radius: 10px !important;
-    /* Yahan se universal white shadow hata di gayi hai */
-  }
-
-  .sum-card.p-3, .cust-card.p-3 {
-    padding: 10px 12px !important; 
-  }
-
-  /* 🔥 YEH NAYA HAI: White Shadow SIRF Matte Theme par dikhegi */
-  body[data-theme="matte"] .sum-card, 
+  /* 4. ONLY MATTE THEME SHADOW */
+  body[data-theme="matte"] .sum-card,
   body[data-theme="matte"] .cust-card {
-    box-shadow: 3px 3px 6px #d1cfcb, -3px -3px 6px #ffffff !important;
+    box-shadow: 4px 4px 10px #d1cfcb, -4px -4px 10px #ffffff !important;
+    border: none !important;
   }
 }
