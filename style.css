@@ -1266,30 +1266,48 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 
-/* --- MOBILE FINTECH LAYOUT FIX --- */
+/* --- MOBILE PERFECT 15px SPACING FIX --- */
 @media (max-width: 768px) {
   
-  /* 1. Fix Layout Gaps (Extra margin reset) */
-  .row { margin-bottom: 0 !important; }
-  .mb-3, .mt-3, .mb-4 { margin-bottom: 14px !important; margin-top: 0 !important; }
-  .col-6, .col-lg-12 { padding-bottom: 0 !important; }
-
-  /* 2. Standard Mobile Card Size */
-  .sum-card, .cust-card {
-    width: 96% !important; /* Screen par proper fit */
-    margin: 0 auto 14px auto !important; /* Sirf niche 14px ka exact gap, baki zero */
-    padding: 16px !important;
-    border-radius: 16px !important;
+  /* 1. Sabhi extra kachra gaps ko strictly 15px par limit kar diya */
+  .mb-2, .mb-3, .mb-4, .mb-5, .my-2, .my-3, .my-4 {
+    margin-bottom: 15px !important;
+    margin-top: 0 !important; /* Double gap banne se rokega */
+  }
+  .mt-2, .mt-3, .mt-4, .mt-5 {
+    margin-top: 15px !important;
   }
 
-  /* 3. 🔥 DARK THEME WHITE GLOW KILLER */
+  /* 2. Full Width Cards (Right-Left exact 15px space ke liye) */
+  .sum-card-full, .cust-card {
+    width: calc(100% - 30px) !important; /* 100% me se 15px Left + 15px Right minus kiya */
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* 3. Half Width Cards (Outstanding/Cases ke beech exactly 15px gap ke liye) */
+  .row {
+    margin-left: 7.5px !important;
+    margin-right: 7.5px !important;
+  }
+  .col-6 {
+    padding-left: 7.5px !important;
+    padding-right: 7.5px !important;
+  }
+  .col-6 .sum-card {
+    width: 100% !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* 4. Dark Theme White Glow Killer */
   body:not([data-theme="matte"]) .sum-card,
   body:not([data-theme="matte"]) .cust-card {
-    box-shadow: none !important; /* Dark mode mein white glow band */
-    border: 1px solid #333333 !important; /* Dark theme ke liye halka sa premium border */
+    box-shadow: none !important;
+    border: 1px solid #333333 !important;
   }
 
-  /* 4. ONLY MATTE THEME SHADOW */
+  /* 5. Only Matte Theme Soft Shadow */
   body[data-theme="matte"] .sum-card,
   body[data-theme="matte"] .cust-card {
     box-shadow: 4px 4px 10px #d1cfcb, -4px -4px 10px #ffffff !important;
