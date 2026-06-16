@@ -2202,8 +2202,20 @@ html += `<div class="pending-card" style="--theme-color: ${color}; --theme-bg: $
             let histData = c.history ? [...c.history] : [], hideSNo = false;
             if (!isOwnerMode && (c.type === 'monthly' || c.type === 'meter')) { hideSNo = true; if (histData.length > 1) { let currentMonthStr = today.substring(0, 7); let activeMonthRecords = histData.filter(h => h.date.substring(0, 7) === currentMonthStr); histData = activeMonthRecords.length > 0 ? activeMonthRecords : histData.slice(-1); } }
             let histHtml = histData.reverse().map((h) => { let origIdx = c.history.indexOf(h); let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; }).join('');
-            const statusHtml = c.isArchived ? `<span class="status-txt" style="color:var(--text-muted);"><span class="status-dot" style="background:var(--text-muted);box-shadow:none;"></span> Closed</span>` : (isPending && c.currentBalance > 0 ? `<span class="status-txt" style="color:var(--danger);"><span class="status-dot" style="background:var(--danger);box-shadow:none;"></span> Pending ${pendingDays > 0 ? '('+pendingDays+' Days)' : ''}</span>` : `<span class="status-txt" style="color:var(--success);"><span class="status-dot" style="box-shadow:none;"></span> Active</span>`);
+                 // 🔥 SMART PENDING TEXT & CSS CLASS ASSIGNMENT (No Inline CSS)
+            let pendingText = pendingDays > 0 ? ` ${pendingDays} Day${pendingDays > 1 ? 's' : ''}` : '';
+            
+            // Sirf CSS Class decide kar rahe hain
+            let statusClass = c.isArchived ? "status-closed" : (isPending && c.currentBalance > 0 ? "status-pending" : "status-active");
+            let statusLabel = c.isArchived ? "Closed" : (isPending && c.currentBalance > 0 ? `Pending${pendingText}` : "Active");
+            
+            // Clean HTML structure
+            const statusHtml = `<span class="status-txt ${statusClass}"><span class="status-dot"></span> ${statusLabel}</span>`;
+            
             const avatarHtml = c.photo ? `<img src="${c.photo}" class="cust-avatar" onclick="event.stopPropagation(); openPhotoZoom('${c.photo}')">` : `<div class="cust-avatar" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:20px;">👤</div>`;
+
+            // 🟢 DYNAMIC AMOUNT CLASS
+            let balClass = c.isArchived ? "bal-closed" : (isPending && c.currentBalance > 0 ? "bal-pending" : "bal-active");
 
 accountsHtmlArray.push(`
 <div class="cust-card glass-card" ${isOwnerMode && c.isPersonal ? 'data-personal="true"' : ''}>
@@ -2222,9 +2234,11 @@ accountsHtmlArray.push(`
                 </div>
             </div>
             <div class="card-header-right">
-                <div class="c-bal">₹${c.currentBalance.toFixed(0)}</div>
+                <!-- CSS CLASS APPLIED HERE -->
+                <div class="c-bal ${balClass}">₹${c.currentBalance.toFixed(0)}</div>
                 <div class="c-sub c-sub-right">Balance</div>
             </div>
+
         </div>
     </div>
     <div id="view-${c.id}" class="card-expanded-view" style="display:${openViews[c.id]?'block':'none'}">

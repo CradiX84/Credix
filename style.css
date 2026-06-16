@@ -1170,3 +1170,40 @@ body[data-theme="matte"] #sum-cases {
 body[data-theme="matte"] #sum-balance {
     color: #D9534F !important; /* Soft Matte Red */
 }
+
+/* =========================================
+   🔴 CLEAN ARCHITECTURE: PENDING/ACTIVE COLORS
+   ========================================= */
+
+/* 1. Pending / Alert Classes */
+body[data-theme="matte"] .status-pending, 
+body[data-theme="matte"] .bal-pending {
+    color: #E63946 !important; /* Premium Alert Red */
+    font-weight: bold !important;
+}
+body[data-theme="matte"] .status-pending .status-dot {
+    background: #E63946 !important;
+    box-shadow: 0 0 6px rgba(230, 57, 70, 0.5) !important;
+}
+
+/* 2. Active / Safe Classes */
+body[data-theme="matte"] .status-active, 
+body[data-theme="matte"] .bal-active {
+    color: #1D827B !important; /* Signature Teal Green */
+    font-weight: bold !important;
+}
+body[data-theme="matte"] .status-active .status-dot {
+    background: #1D827B !important;
+    box-shadow: 0 0 6px rgba(29, 130, 123, 0.4) !important;
+}
+
+/* 3. Closed / Muted Classes */
+body[data-theme="matte"] .status-closed, 
+body[data-theme="matte"] .bal-closed {
+    color: #8A8D98 !important; /* Matte Grey */
+    font-weight: bold !important;
+}
+body[data-theme="matte"] .status-closed .status-dot {
+    background: #8A8D98 !important;
+    box-shadow: none !important;
+}
