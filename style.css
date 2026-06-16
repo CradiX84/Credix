@@ -1266,3 +1266,15 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 
+@media (max-width: 768px) {  .sum-card, .cust-card {
+    width: 92% !important;
+    margin: 10px auto !important;
+    padding: 15px !important;
+    border-radius: 12px !important;
+    box-shadow: 4px 4px 8px #d1cfcb, -4px -4px 8px #ffffff !important;
+
+
+  }
+
+
+}
