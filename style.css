@@ -1263,4 +1263,6 @@ html {
 
 html[data-theme="matte"] {
     background-color: #F4F2EE !important; /* Matte background for system bar */
+    color-scheme: light;
 }
+

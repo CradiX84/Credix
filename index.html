@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
+<script>
+    // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
+    let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
+    
+    // Body se pehle hi HTML ko theme bata do
+    if(fastTheme === 'matte') {
+        document.documentElement.style.backgroundColor = '#F4F2EE';
+    } else {
+        document.documentElement.style.backgroundColor = '#111111';
+    }
+</script>
+
     <title>Credix - Abstract Premium</title>
     
     <link rel="manifest" href="manifest.json">

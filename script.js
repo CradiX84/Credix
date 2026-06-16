@@ -2781,20 +2781,18 @@ function updateStatusBarColor(theme) {
     document.documentElement.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111';
 }
 
-
-
-// App khulte hi turant sahi status bar color set karne ke liye
-let currentSavedTheme = localStorage.getItem('paymitra_theme') || 'dark';
-updateStatusBarColor(currentSavedTheme);
-
-// 🔥 NEW: THEME SYNC FIX (Settings wale dropdown ko theek karna)
+// ⚡ SUPER-FAST THEME APPLY & SYNC
 document.addEventListener("DOMContentLoaded", () => {
+    let currentSavedTheme = localStorage.getItem('paymitra_theme') || 'dark';
+    
+    // UI elements aur theme CSS ko turant apply karo bina load time badhaye
+    document.body.setAttribute('data-theme', currentSavedTheme);
+    updateStatusBarColor(currentSavedTheme);
+    
+    // Settings dropdown ko sync karo
     let themeDropdown = document.getElementById('theme-select');
-    if (themeDropdown) {
-        themeDropdown.value = currentSavedTheme; 
-    }
+    if (themeDropdown) themeDropdown.value = currentSavedTheme;
 });
-
 
 function changeTheme() {
     let selectedTheme = document.getElementById('theme-select').value;
