@@ -2759,17 +2759,25 @@ aiBtn.addEventListener('click', () => {
 
 // --- THEME CHANGER SYSTEM ---
 
-// 🔥 NEW: Mobile Status Bar Color Auto-Updater
+// 🔥 UPGRADED: Mobile Status Bar & Navigation Bar Color Auto-Updater
 function updateStatusBarColor(theme) {
     let metaTheme = document.querySelector('meta[name="theme-color"]');
+    
+    // Agar meta tag nahi hai toh naya bana lo
     if (!metaTheme) {
         metaTheme = document.createElement('meta');
         metaTheme.name = "theme-color";
         document.head.appendChild(metaTheme);
     }
-    // Matte theme aate hi bar ko Creamy White karega, warna Default Orange
-    metaTheme.content = (theme === 'matte') ? '#F4F2EE' : '#ff6a00'; 
+    
+    // 🟠 Matte theme aate hi Creamy White (#F4F2EE), warna Default Theme mein ORANGE (#ff6a00) karega
+    let newColor = (theme === 'matte') ? '#F4F2EE' : '#ff6a00'; 
+    metaTheme.content = newColor;
+
+    // ⚫ Bottom patti ko match karne ke liye: Matte mein Cream, Dark mein ekdum Dark Black
+    document.body.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111'; 
 }
+
 
 // App khulte hi turant sahi status bar color set karne ke liye
 let currentSavedTheme = localStorage.getItem('paymitra_theme') || 'dark';
