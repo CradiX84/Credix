@@ -2327,12 +2327,34 @@ accountsHtmlArray.push(`
 
     function renderStats() {
         let mPrin = 0, dPrin = 0, meterPrin = 0, totalPrin = 0, totalBal = 0, totalRecovered = 0, globalInvested = 0, globalProfit = 0; 
+        
         db.filter(x => x.type !== 'config' && x.type !== 'trash').forEach(c => {
             if(!isOwnerMode && (c.isPersonal || (c.staffRef || '').trim().toLowerCase() !== deviceStaffName.toLowerCase())) return;
-            if (!c.isArchived) { totalPrin += c.principal; totalBal += c.currentBalance; if(c.type === 'monthly') mPrin += c.principal; else if(c.type === 'meter') meterPrin += c.principal; else dPrin += c.principal; }
+            
+            // 🔥 VIP FIX: Active Principal (Market mein fasa hua asli paisa)
+            let activePrin = c.principal;
+            if (c.type === 'monthly' || c.type === 'meter') {
+                activePrin = c.currentBalance; // Monthly/Meter ka current balance hi Mool hota hai
+            } else if (c.type === 'daily') {
+                // Daily kishat ke andar Mool aur Vyaj dono hote hain, toh mool ka hissa alag karenge
+                let totalPaid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0;
+                let prinRatio = c.principal / (c.totalPayable || c.principal || 1);
+                activePrin = c.principal - (totalPaid * prinRatio);
+                if (activePrin < 0) activePrin = 0;
+            }
+
+            if (!c.isArchived) { 
+                totalPrin += activePrin; 
+                totalBal += c.currentBalance; 
+                if(c.type === 'monthly') mPrin += activePrin; 
+                else if(c.type === 'meter') meterPrin += activePrin; 
+                else dPrin += activePrin; 
+            }
+            
             if(c.history) c.history.forEach(h => { totalRecovered += parseFloat(h.paid); });
+            
             if(isOwnerMode) { 
-                globalInvested += c.principal; 
+                globalInvested += activePrin; 
                 let tBal = (c.type === 'monthly' || c.type === 'meter') ? c.principal : (c.totalPayable || c.principal); 
                 let cRatio = (c.type === 'daily') ? Math.max(0, ((c.totalPayable || c.principal) - c.principal) / (c.totalPayable || c.principal)) : 0; 
                 if (c.type === 'monthly') globalProfit += (c.principal * (c.rate || 0) / 100); 
@@ -2345,9 +2367,24 @@ accountsHtmlArray.push(`
                 } 
             }
         });
-        if(isOwnerMode) { document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); }
-        document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString()}`; document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString()}`; document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString()}`; document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString()}`; document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString()}`;
+
+        if(isOwnerMode) { 
+            document.getElementById('owner-invested').innerText = '₹' + globalInvested.toLocaleString(undefined, {maximumFractionDigits:0}); 
+            document.getElementById('owner-profit').innerText = '₹' + globalProfit.toLocaleString(undefined, {maximumFractionDigits:0}); 
+        }
+        
+        document.getElementById('bar-m-prin').style.width = (totalPrin ? (mPrin/totalPrin)*100 : 33) + '%'; 
+        document.getElementById('bar-d-prin').style.width = (totalPrin ? (dPrin/totalPrin)*100 : 33) + '%'; 
+        document.getElementById('bar-meter-prin').style.width = (totalPrin ? (meterPrin/totalPrin)*100 : 34) + '%'; 
+        
+        document.getElementById('txt-m-prin').innerText = `${i18n[currentLang].monthly}: ₹${mPrin.toLocaleString(undefined, {maximumFractionDigits:0})}`; 
+        document.getElementById('txt-d-prin').innerText = `${i18n[currentLang].daily}: ₹${dPrin.toLocaleString(undefined, {maximumFractionDigits:0})}`; 
+        document.getElementById('txt-meter-prin').innerText = `${i18n[currentLang].meter}: ₹${meterPrin.toLocaleString(undefined, {maximumFractionDigits:0})}`; 
+        
+        document.getElementById('txt-recovered').innerText = `${i18n[currentLang].recovered}: ₹${totalRecovered.toLocaleString(undefined, {maximumFractionDigits:0})}`; 
+        document.getElementById('txt-remaining').innerText = `${i18n[currentLang].remaining}: ₹${totalBal.toLocaleString(undefined, {maximumFractionDigits:0})}`;
     }
+
 
     // --- APP VISIBILITY & BACKGROUND HANDLING ---
     document.addEventListener("visibilitychange", function() {
