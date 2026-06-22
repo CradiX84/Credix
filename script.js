@@ -1022,36 +1022,38 @@ function renderStaffList() {
             // Expected Interest (Monthly ke liye 1 Month ka, Meter ke liye 1 Day ka)
             let expectedInterest = (currentPrincipal * (c.rate || 0)) / 100;
 
+            // 🔥 NAYA: ADVANCE VYAJ WALA JADOOI MATH (Multiple-Interest bug removed)
             if (c.type === 'monthly') { 
-                let daysSinceLastInt = Math.round((hDate.getTime() - lastInterestPaidDate.getTime()) / (1000 * 60 * 60 * 24));
-                
-                // Rule 1: Full Settlement (Agar Naginder poora 5000 wapis de kar case close kare)
+                let rateFraction = (c.rate || 0) / 100;
+                let expectedInterest = currentPrincipal * rateFraction;
+
+                // Rule 1: Full Settlement (Poore paise wapis, e.g. 9000 dekar khata band)
                 if (paidAmt >= currentPrincipal && currentPrincipal > 0) {
                     currentPrincipal = 0;
                     lastInterestPaidDate = hDate;
                 }
-                // Rule 2: Exact Interest Payment (Sirf vyaj aaya - jaise Sumit ka exact 1000₹ aaya)
+                // Rule 2: Exact Interest Payment (Sirf aage ka advance vyaj diya, e.g. 900)
                 else if (Math.abs(paidAmt - expectedInterest) < 5) {
                     lastInterestPaidDate = hDate; 
                 }
-                // Rule 3: Multiple of Interest (Jaise 2 mahine ka ikattha interest aaya)
-                else if (expectedInterest > 0 && paidAmt > expectedInterest && Math.abs(paidAmt % expectedInterest) < 5) {
+                // Rule 3: Principal Reduction + Naye Balance Ka Advance Vyaj (The 5400 Scenario)
+                else if (paidAmt > expectedInterest) {
+                    // Jadooi Formula: Kitna principal kam hua
+                    let principalReduction = (paidAmt - expectedInterest) / (1 - rateFraction);
+                    
+                    if (principalReduction > 0 && principalReduction <= currentPrincipal) {
+                        currentPrincipal -= principalReduction;
+                    } else {
+                        currentPrincipal -= (paidAmt - expectedInterest); // Fallback
+                    }
                     lastInterestPaidDate = hDate;
                 }
-                // Rule 4: Advance Principal (Interest + Advance Principal ya direct Advance)
-                else if (paidAmt > expectedInterest) {
-                    // Check ki kya interest pichle 20 din mein ALREADY de chuka hai?
-                    if (daysSinceLastInt < 20) {
-                        currentPrincipal -= paidAmt; // Interest pehle aa chuka tha, toh poora paisa Principal hai
-                    } else {
-                        currentPrincipal -= (paidAmt - expectedInterest); // Pehle 1 mahine ka vyaj kaato, baaki principal se minus
-                        lastInterestPaidDate = hDate; 
-                    }
-                }
-                // Rule 5: Partial Payment (Interest se kam paise diye)
+                // Rule 4: Kam paise aaye
                 else {
                     currentPrincipal -= paidAmt;
                 }
+         
+
             } else if (c.type === 'meter') { 
                 // METER KA PURANA WAIS-A-HI PERFECT CODE
                 if (paidAmt >= currentPrincipal && currentPrincipal > 0) {
@@ -2244,7 +2246,8 @@ accountsHtmlArray.push(`
     <div id="view-${c.id}" class="card-expanded-view" style="display:${openViews[c.id]?'block':'none'}">
         <div class="card-stats-box">
             <div class="stat-col-left">
-                <span class="stat-label">${c.type==='daily'?t.returnAmt:t.principal}</span><br>
+<span class="stat-label">${c.type==='daily' ? t.returnAmt : 'Original (Mool)'}</span><br>
+
                 <b class="stat-val">₹${c.type==='daily'?(c.totalPayable||c.principal):c.principal}</b>
             </div>
             ${(isOwnerMode || c.type === 'daily') ? `
