@@ -1265,4 +1265,45 @@ html[data-theme="matte"] {
     background-color: #F4F2EE !important; /* Matte background for system bar */
     color-scheme: light;
 }
+/* =========================================
+   RECYCLE BIN: PERFECT THEME SWITCHER
+   ========================================= */
 
+/* 1. TEXT COLOR (Dono themes mein) */
+.trash-list-item *, #trash-modal * {
+    color: var(--text-main) !important;
+}
+.restore-btn { 
+    color: #ffffff !important; 
+}
+
+/* -----------------------------------------
+   🔥 BLACK ORANGE THEME (DEFAULT)
+   ----------------------------------------- */
+.trash-list-item {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--accent-orange) !important;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.25) !important;
+}
+
+#tab-trash-cases, 
+#tab-trash-entries, 
+#trash-modal .main-btn {
+    border: 1px solid var(--accent-orange) !important;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.3) !important;
+}
+
+/* -----------------------------------------
+   ☁️ MATTE PLASTIC THEME (Asli Secret Word)
+   ----------------------------------------- */
+[data-theme="matte"] .trash-list-item {
+    border: 1px solid var(--card-border) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important; 
+}
+
+[data-theme="matte"] #tab-trash-cases, 
+[data-theme="matte"] #tab-trash-entries, 
+[data-theme="matte"] #trash-modal .main-btn {
+    border: 1px solid transparent !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important; 
+}

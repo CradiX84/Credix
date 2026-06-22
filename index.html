@@ -241,6 +241,10 @@
         <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="exportData()" id="t-setBackup">Backup Data (JSON)</button>
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="importData()" id="t-setRestore">Restore Data</button>
+
+<button class="main-btn" id="btn-recycle-bin" style="display:none; background:rgba(255, 59, 59, 0.1); color:var(--danger);" onclick="closeModal('settings-modal'); document.getElementById('trash-modal').style.display='flex';">🗑️ Recycle Bin</button>
+
+
             <button class="main-btn" id="btn-manage-staff" style="background:rgba(255, 107, 53, 0.1); color:var(--accent-orange); box-shadow:none; display:none;" onclick="openStaffModal()">👥 Manage Staff Accounts (IDs)</button>
             <button class="main-btn" id="btn-owner-pin" style="background:rgba(255, 215, 0, 0.1); color:var(--owner-gold); box-shadow:none; display:none;" onclick="openSecretPinModal()">Change Owner PIN 👑</button>
             <button class="main-btn" style="background:rgba(255, 59, 107, 0.1); color:var(--danger); box-shadow:none;" onclick="logout()" id="t-setLogout">Logout</button>

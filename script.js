@@ -820,6 +820,9 @@ function renderStaffList() {
             document.getElementById('personal-wrap').style.display = 'flex';
             document.getElementById('btn-owner-pin').style.display = 'block';
             document.getElementById('btn-manage-staff').style.display = 'block';
+
+document.getElementById('btn-recycle-bin').style.display = 'block';
+
             document.getElementById('owner-analytics').style.display = 'block';
             document.getElementById('wrap-staff-ref').style.display = 'flex'; 
             document.getElementById('rep-search-wrap').style.display = 'flex'; 
@@ -831,7 +834,10 @@ function renderStaffList() {
             document.getElementById('personal-wrap').style.display = 'none';
             document.getElementById('btn-owner-pin').style.display = 'none';
             document.getElementById('btn-manage-staff').style.display = 'none';
-            document.getElementById('owner-analytics').style.display = 'none';
+
+document.getElementById('btn-recycle-bin').style.display = 'none';
+
+document.getElementById('owner-analytics').style.display = 'none';
             document.getElementById('is-personal').checked = false;
             document.getElementById('wrap-staff-ref').style.display = 'none'; 
             document.getElementById('rep-search-wrap').style.display = 'none'; 
@@ -2117,7 +2123,11 @@ html += `<div class="pending-card" style="--theme-color: ${color}; --theme-bg: $
             if (refMatch) { 
                 showSearchStat = true; 
                 searchCasesCount++; 
-                searchTotalValue += c.principal; 
+                
+                // 🔥 SMART FIX: Monthly aur Meter mein 'Current Balance' hi Asli Value aur Vyaj ka base hai
+                let activePrin = (c.type === 'monthly' || c.type === 'meter') ? c.currentBalance : c.principal;
+                searchTotalValue += activePrin; 
+                
                 searchTotalBal += c.currentBalance; 
                 let paid = c.history ? c.history.reduce((sum, h) => sum + parseFloat(h.paid), 0) : 0; 
                 searchTotalRec += paid; 
@@ -2127,11 +2137,13 @@ html += `<div class="pending-card" style="--theme-color: ${color}; --theme-bg: $
                     let ratio = totalP / (c.totalPayable || c.principal); 
                     searchTotalProfit += (c.installment * ratio); 
                 } else if (c.type === 'monthly' || c.type === 'meter') { 
-                    let interest = (c.principal * (c.rate || 0) / 100); 
+                    let interest = (activePrin * (c.rate || 0) / 100); 
                     searchTotalKishat += interest; 
                     searchTotalProfit += interest; 
                 } 
             }
+
+           
             
             let isDueToday = false, isPending = false, pendingDays = 0;
             let todayDateObj = new Date(today);
