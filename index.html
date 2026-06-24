@@ -345,7 +345,8 @@
         </div>
 
         <!-- 🚀 NEW PREMIUM CLICKABLE BUTTON -->
-        <div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05);">
+<div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-top:-15px; margin-bottom:5px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05); border-radius: 15px;">
+
             <div style="font-size:16px; font-weight:bold; color: var(--success); display:flex; align-items:center; gap:8px;">
                 <span style="font-size:18px;">➕</span> Add New Record
             </div>
@@ -392,7 +393,8 @@
         </div>
 
 
-        <div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px;">
+<div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 2px; margin-bottom: 8px;">
+
             <div class="input-group" style="flex: 2; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px;">
                 <span class="input-icon" style="margin-right: 8px;">🔍</span>
                 <input type="text" id="search-box" placeholder="Search..." onkeyup="render()" style="flex: 1; border: none; background: transparent; outline: none; color: white; padding: 16px 0; font-size: 16px;">
@@ -410,7 +412,8 @@
             </div>
         </div>
         
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;" id="section-sort">
+<div id="section-sort" style="display: flex; justify-content: flex-end; width: 100%; margin-top: -2px; margin-bottom: 12px;">
+
             <select id="sort-box" onchange="render()" style="background:transparent; border:none; color:var(--text-muted); font-size:13px; outline:none; -webkit-appearance:none;">
                 <option value="new" id="s-opt-new">Latest First ▼</option>
                 <option value="old" id="s-opt-old">Oldest First ▲</option>
