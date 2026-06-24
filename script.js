@@ -1758,9 +1758,11 @@ html += `<div onclick="${clickAction}" class="pending-card" style="--theme-color
             let pendingDaily = pendingsInRange.filter(p => p.type === 'daily');
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
             let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
-            reportHtml += renderPendings(pendingDaily, t.repPendDaily, "var(--danger)", "rgba(255, 59, 107, 0.05)");
-            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#3da9fc", "rgba(61, 169, 252, 0.05)");
-            reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#c084fc", "rgba(192, 132, 252, 0.05)"); 
+        reportHtml += renderPendings(pendingDaily, t.repPendDaily, "#DC3545", "rgba(220, 53, 69, 0.05)");
+        reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#DC3545", "rgba(220, 53, 69, 0.05)");
+        reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#DC3545", "rgba(220, 53, 69, 0.05)");
+
+
         }
 
         const renderClosed = (list, title, color, bgColor) => {
@@ -2704,9 +2706,10 @@ let aiData = db;
                 } else if (intent === 'daily_list' || intent === 'monthly_list' || intent === 'meter_list') {
                     let targetType = intent.split('_')[0]; 
                     let filtered = activeLoans.filter(c => c.type === targetType);
-                    if (filtered.length > 0) {
-                        let totalVal = filtered.reduce((sum, c) => sum + c.principal, 0);
-                        localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n➖➖➖➖➖➖\n` + filtered.map((c, i) => `${i + 1}. **${c.name}**\n   Date: ${formatDateDisplay(c.startDate)} | Amt: ₹${c.principal.toFixed(0)}`).join('\n\n');
+            if (filtered.length > 0) {
+                let totalVal = filtered.reduce((sum, c) => sum + c.currentBalance, 0);
+                localReply = `🟢 **${targetType.toUpperCase()} CASES** (Total: ₹${totalVal.toFixed(0)})\n▬▬▬\n` + filtered.map((c, i) => `${i + 1}. **${c.name}**\n Date: ${formatDateDisplay(c.startDate)} | Bal: ₹${c.currentBalance.toFixed(0)}`).join('\n\n');
+
                     } else localReply = `🟢 Abhi koi ${targetType.toUpperCase()} case nahi hai.`;
                 } else {
                     let matched = activeLoans.filter(c => c.name.toLowerCase().split(/\s+/).some(part => part.length > 2 && query.includes(part)));

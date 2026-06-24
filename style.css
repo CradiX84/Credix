@@ -12,11 +12,20 @@
     --success: #00E676;
     --danger: #FF3B6B;
     --owner-gold: #FFD700;
+    --rb-border: var(--accent-orange);
+    --rb-card-shadow: 0 0 10px rgba(255, 102, 0, 0.25);
+    --rb-btn-shadow: 0 0 10px rgba(255, 102, 0, 0.3);
+
 }
 
-[data-theme="light"] {
+[data-theme="light"], [data-theme="matte"], html[data-theme="matte"] {
     color-scheme: light;
+    --rb-border: transparent;
+    --rb-card-shadow: 6px 6px 12px rgba(0, 0, 0, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.8);
+    --rb-btn-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
+
+
 
 /* Essential Reset */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
@@ -1266,44 +1275,48 @@ html[data-theme="matte"] {
     color-scheme: light;
 }
 /* =========================================
-   RECYCLE BIN: PERFECT THEME SWITCHER
+   RECYCLE BIN: VARIABLE BASED FIX
    ========================================= */
 
-/* 1. TEXT COLOR (Dono themes mein) */
-.trash-list-item *, #trash-modal * {
-    color: var(--text-main) !important;
-}
-.restore-btn { 
-    color: #ffffff !important; 
-}
-
-/* -----------------------------------------
-   🔥 BLACK ORANGE THEME (DEFAULT)
-   ----------------------------------------- */
+/* Cards par Shadow aur Border */
 .trash-list-item {
     background: var(--bg-card) !important;
-    border: 1px solid var(--accent-orange) !important;
-    box-shadow: 0 0 10px rgba(255, 102, 0, 0.25) !important;
+    border: 1px solid var(--rb-border) !important;
+    box-shadow: var(--rb-card-shadow) !important;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
 }
 
+/* Buttons par Shadow aur Border */
 #tab-trash-cases, 
 #tab-trash-entries, 
 #trash-modal .main-btn {
-    border: 1px solid var(--accent-orange) !important;
-    box-shadow: 0 0 10px rgba(255, 102, 0, 0.3) !important;
+    border: 1px solid var(--rb-border) !important;
+    box-shadow: var(--rb-btn-shadow) !important;
 }
 
-/* -----------------------------------------
-   ☁️ MATTE PLASTIC THEME (Asli Secret Word)
-   ----------------------------------------- */
-[data-theme="matte"] .trash-list-item {
-    border: 1px solid var(--card-border) !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important; 
+/* Text Colors */
+.trash-list-item *, #trash-modal * { color: var(--text-main) !important; }
+.restore-btn { color: #ffffff !important; }
+
+/* =========================================
+   🟢 CUSTOMER PROFILE PHOTO GREEN OUTLINE
+   ========================================= */
+.card-header-left img,
+.card-header-left [class*="avatar"] {
+    border: 2px solid #198075 !important; /* Theme wala Green/Teal Color */
+    padding: 0px !important; /* WhatsApp status jaisa gap */
+    border-radius: 50% !important; /* Ekdum Gol (Circle) */
+    object-fit: cover !important;
 }
 
-[data-theme="matte"] #tab-trash-cases, 
-[data-theme="matte"] #tab-trash-entries, 
-[data-theme="matte"] #trash-modal .main-btn {
-    border: 1px solid transparent !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important; 
+/* =========================================
+   🟢 EMPTY DASHBOARD STAR TEAL GREEN (FILTER FIX)
+   ========================================= */
+.empty-icon {
+    color: initial !important; 
+    text-shadow: none !important;
+    /* 🔥 Yeh camera filter pehle star ko black karega, phir usko exact Teal Green mein badal dega */
+    filter: brightness(0) saturate(100%) invert(42%) sepia(29%) saturate(1450%) hue-rotate(130deg) brightness(96%) contrast(86%) !important;
 }
