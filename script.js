@@ -1709,7 +1709,9 @@ html += `<div class="pending-card" style="--theme-color: ${color};">
         
         reportHtml += renderPayments(paymentsDaily, t.repRecDaily, "var(--success)", false);
         reportHtml += renderPayments(paymentsMonthly, t.repRecMonthly, "var(--owner-gold)", true);
-        reportHtml += renderPayments(paymentsMeter, t.repRecMeter, "#a855f7", false);
+        reportHtml += renderPayments(paymentsMeter, t.repRecMeter, document.querySelector('[data-theme="matte"]') ? "#D4A017" : "#a855f7", false);
+
+
         
         const renderPendings = (list, title, color, bgColor) => {
             if (list.length === 0) return "";
@@ -1741,7 +1743,8 @@ html += `<div onclick="${clickAction}" class="pending-card" style="--theme-color
             <span class="pc-missed">${t.missedText} ${p.missedDatesStr} <b class="pc-note">(${calcNote})</b></span>
         </div>
         <div class="pc-right">
-            <b class="pc-amt">₹${p.accumulatedTotal.toFixed(0)}</b><br>
+    <b class="pc-amt" style="color: ${color};">₹${p.accumulatedTotal.toFixed(0)}</b><br>
+
             <span class="pc-badge">${badgeText}</span>
         </div>
     </div>
@@ -1758,11 +1761,18 @@ html += `<div onclick="${clickAction}" class="pending-card" style="--theme-color
             let pendingDaily = pendingsInRange.filter(p => p.type === 'daily');
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
             let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
-        reportHtml += renderPendings(pendingDaily, t.repPendDaily, "#DC3545", "rgba(220, 53, 69, 0.05)");
-        reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, "#DC3545", "rgba(220, 53, 69, 0.05)");
-        reportHtml += renderPendings(pendingMeter, t.repPendMeter, "#DC3545", "rgba(220, 53, 69, 0.05)");
 
+            // 100% Bulletproof Theme Checker
+            var isMatte = document.querySelector('[data-theme="matte"]') !== null;
+            
+            // Smart Colors: Matte mein RED, Default mein Business Portfolio wale colors
+            var cDaily = isMatte ? "#DC3545" : "#3da9fc";   // Default: Blue
+            var cMonthly = isMatte ? "#DC3545" : "#ff6a00"; // Default: Orange
+            var cMeter = isMatte ? "#DC3545" : "#a855f7";   // Default: Purple
 
+            reportHtml += renderPendings(pendingDaily, t.repPendDaily, cDaily, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(61, 169, 252, 0.05)");
+            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, cMonthly, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(255, 106, 0, 0.05)");
+            reportHtml += renderPendings(pendingMeter, t.repPendMeter, cMeter, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(168, 85, 247, 0.05)");
         }
 
         const renderClosed = (list, title, color, bgColor) => {
