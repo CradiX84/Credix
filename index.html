@@ -340,10 +340,22 @@
 
         <div id="section-add" style="margin-bottom: 25px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0; font-size:16px; font-weight:600;" id="t-addTitle">Create Record</h3>
+         <!-- Purane title ko chupa diya taaki app ka system crash na ho -->
+        <h3 style="display:none;" id="t-addTitle">Create Record</h3>
+        </div>
+
+        <!-- 🚀 NEW PREMIUM CLICKABLE BUTTON -->
+        <div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05);">
+            <div style="font-size:16px; font-weight:bold; color: var(--success); display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">➕</span> Add New Record
             </div>
-            <div class="cust-card" style="padding: 25px 20px;">
-                
+            <div id="addFormIcon" style="font-size: 13px; font-weight: bold; color: var(--success); background: var(--card-bg); padding: 5px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">▼ Open</div>
+        </div>
+
+        <!-- 📦 FORM WRAPPER (Isko default hide kar diya hai) -->
+        <div id="addFormContent" style="display: none;">
+            <div class="cust-card" style="padding: 25px 20px; margin-bottom: 20px;">
+
                 <div class="input-group">
                     <span class="input-icon">📷</span>
                     <input type="file" id="cust-photo" accept="image/*" onchange="handleImageSelect(this, 'add')">
@@ -375,6 +387,10 @@
                 <button class="main-btn" onclick="addCustomer()" id="t-addBtn">Add Record</button>
             </div>
         </div>
+
+        <!-- END FORM WRAPPER -->
+        </div>
+
 
         <div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px;">
             <div class="input-group" style="flex: 2; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px;">

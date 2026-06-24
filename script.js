@@ -447,7 +447,17 @@ function renderTrash() {
     function showToast(msg) { let t = document.getElementById('toast-box'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
     function askConfirm(msg, callback) { document.getElementById('confirm-text').innerText = msg; confirmActionCallback = callback; document.getElementById('confirm-modal').style.display = 'flex'; }
     function executeConfirm() { if(confirmActionCallback) confirmActionCallback(); closeModal('confirm-modal'); confirmActionCallback = null; }
-    function switchTab(tab) { currentTab = tab; openViews = {}; multiDelMode = {}; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + tab).classList.add('active'); document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none'; document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none'; document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none'; document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block'; if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; if(tab === 'stats') { let todayDate = getISTDate(); // IST FIX
+    function switchTab(tab) { 
+    // 🚀 SMART AUTO-CLOSE ADD FORM
+    let addForm = document.getElementById('addFormContent');
+    let addIcon = document.getElementById('addFormIcon');
+    if(addForm && addIcon) { 
+        addForm.style.display = 'none'; 
+        addIcon.innerHTML = '▼ Open'; 
+    }
+
+    currentTab = tab; openViews = {}; multiDelMode = {};
+document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById('nav-' + tab).classList.add('active'); document.getElementById('section-summary').style.display = (tab === 'dash') ? 'grid' : 'none'; document.getElementById('section-add').style.display = (tab === 'dash') ? 'block' : 'none'; document.getElementById('section-stats').style.display = (tab === 'stats') ? 'block' : 'none'; document.getElementById('section-search').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('section-sort').style.display = (tab === 'stats') ? 'none' : 'flex'; document.getElementById('dashboard').style.display = (tab === 'stats') ? 'none' : 'block'; if(document.getElementById('filter-box')) document.getElementById('filter-box').value = 'all'; if(document.getElementById('search-box')) document.getElementById('search-box').value = ''; if(document.getElementById('sort-box')) document.getElementById('sort-box').value = 'new'; if(tab === 'stats') { let todayDate = getISTDate(); // IST FIX
         document.getElementById('rep-start').value = todayDate; document.getElementById('rep-end').value = todayDate; if(document.getElementById('rep-type')) document.getElementById('rep-type').value = 'all'; if(document.getElementById('rep-search')) document.getElementById('rep-search').value = ''; document.getElementById('rep-results').style.display = 'none'; document.getElementById('rep-list').scrollTop = 0; window.scrollTo(0, 0); } render(); }
     function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -1135,18 +1145,30 @@ document.getElementById('owner-analytics').style.display = 'none';
         showToast("Record Created!");
     }
 
-    function toggleView(id) { 
-        const viewEl = document.getElementById('view-' + id);
-        if (!viewEl) return;
-        if (openViews[id]) { 
-            delete openViews[id]; 
-            multiDelMode[id] = false; 
-            viewEl.style.display = 'none';
-        } else { 
-            openViews[id] = true; 
-            viewEl.style.display = 'block';
-        } 
+function toggleView(id) {
+    const viewEl = document.getElementById('view-' + id);
+    if (!viewEl) return;
+
+    // Check karein ki kya ye card pehle se khula hai?
+    const isAlreadyOpen = (viewEl.style.display === 'block');
+
+    // 1. Sabhi cards ko band kar do (Reset)
+    document.querySelectorAll('[id^="view-"]').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    // 2. Global state ko bhi saaf kar do
+    for (let key in openViews) delete openViews[key];
+
+    // 3. Agar card pehle se khula nahi tha, toh abhi ise khol do
+    if (!isAlreadyOpen) {
+        viewEl.style.display = 'block';
+        openViews[id] = true;
     }
+    // Agar pehle se khula tha, toh humne upar step 1 mein use band kar hi diya hai
+}
+
+
 
         function toggleMultiDel(id) { 
         multiDelMode[id] = !multiDelMode[id]; 
@@ -2861,5 +2883,29 @@ function changeTheme() {
     
     if(typeof showToast === "function") {
         showToast("Theme Updated! 🎨");
+    }
+}
+
+// Recycle Bin ke liye Range Select Variable
+var lastSelectedRecycleIndex = null;
+
+function handleRecycleBinMultiSelect(event) {
+    let clickedCheckbox = event.target;
+    // Yeh "recycle-chk" class hum Recycle Bin ki checkboxes mein daalenge
+    let allCheckboxes = Array.from(document.querySelectorAll('.recycle-chk'));
+    let currentIndex = allCheckboxes.findIndex(chk => chk === clickedCheckbox);
+
+    if (clickedCheckbox.checked) {
+        if (lastSelectedRecycleIndex !== null && lastSelectedRecycleIndex !== currentIndex) {
+            let start = Math.min(lastSelectedRecycleIndex, currentIndex);
+            let end = Math.max(lastSelectedRecycleIndex, currentIndex);
+            for (let i = start; i <= end; i++) {
+                allCheckboxes[i].checked = true;
+            }
+        }
+        lastSelectedRecycleIndex = currentIndex;
+    } else {
+        // Agar uncheck kiya toh last selection reset
+        lastSelectedRecycleIndex = null;
     }
 }
