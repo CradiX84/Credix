@@ -31,7 +31,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
 
 html {
-    background-color: #111111; 
+    background-color: var(--bg-deep);
     height: 100%;
 }
 

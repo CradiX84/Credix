@@ -332,8 +332,10 @@ function renderTrash() {
     let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
 
-    let currentTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    document.body.setAttribute('data-theme', currentTheme);
+let currentTheme = localStorage.getItem('paymitra_theme') || 'dark';
+document.body.setAttribute('data-theme', currentTheme);
+document.documentElement.setAttribute('data-theme', currentTheme); // 🚀 Sirf yeh line add karni hai
+
 
     window.onload = function() { 
         document.getElementById('lock-screen').style.display = 'flex'; 
