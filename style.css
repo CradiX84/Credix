@@ -79,7 +79,7 @@ body::before {
 .status-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
 
 /* --- SUMMARY CARDS --- */
-.summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+.summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 .sum-card { 
     padding: 16px 12px; background: #1e1e22; 
     border: 1px solid rgba(255, 106, 0, 0.4); 
