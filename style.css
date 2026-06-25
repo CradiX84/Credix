@@ -30,16 +30,23 @@
 /* Essential Reset */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
 
+html {
+    background-color: #111111; 
+    height: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-deep);
-    color: var(--text-main); 
+    color: var(--text-main);
     margin: 0; padding: 20px 12px;
-    padding-bottom: 140px; 
+    padding-bottom: 140px;
     min-height: 100vh;
+    min-height: 100dvh; /* 🔥 ASLI JADOO: Yeh phone ki bottom patti ko poora cover kar lega */
     overflow-x: hidden;
     position: relative;
 }
+
 
 body::before {
     content: "";
