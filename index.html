@@ -8,20 +8,28 @@
     // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
     let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
     
-    // Body se pehle hi HTML ko theme bata do
+    // Meta tag turant banakar head mein dalne ke liye
+    let meta = document.createElement('meta');
+    meta.name = "theme-color";
+    
+    // Body se pehle hi HTML aur Meta Tag ko theme bata do
     if(fastTheme === 'matte') {
         document.documentElement.style.backgroundColor = '#F4F2EE';
+        meta.content = '#F4F2EE'; // Matte ke liye Cream Patti
     } else {
         document.documentElement.style.backgroundColor = '#111111';
+        meta.content = '#ff6a00'; // Default ke liye Orange Patti
     }
+    document.head.appendChild(meta);
 </script>
+
 
     <title>Credix - Abstract Premium</title>
     
     <link rel="manifest" href="manifest.json">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#ff6a00">
+
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Credix">
     <link rel="apple-touch-icon" href="logo.png">
