@@ -334,7 +334,7 @@ function renderTrash() {
 
     let currentTheme = localStorage.getItem('paymitra_theme') || 'dark';
     document.body.setAttribute('data-theme', currentTheme);
-
+document.documentElement.setAttribute('data-theme', currentTheme);
 
     window.onload = function() { 
         document.getElementById('lock-screen').style.display = 'flex'; 

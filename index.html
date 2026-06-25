@@ -4,25 +4,29 @@
     <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-<script>
-    // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
-    let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    
-    // Meta tag turant banakar head mein dalne ke liye
-    let meta = document.createElement('meta');
-    meta.name = "theme-color";
-    
-    // Body se pehle hi HTML aur Meta Tag ko theme bata do
-    if(fastTheme === 'matte') {
-        document.documentElement.style.backgroundColor = '#F4F2EE';
-        meta.content = '#F4F2EE'; // Matte ke liye Cream Patti
-    } else {
-        document.documentElement.style.backgroundColor = '#111111';
-        meta.content = '#ff6a00'; // Default ke liye Orange Patti
-    }
-    document.head.appendChild(meta);
-</script>
+    <!-- 🚀 PHONE KE SYSTEM KO BATANA KI LIGHT MODE ALLOWED HAI -->
+    <meta name="color-scheme" content="light dark">
 
+    <script>
+        // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
+        let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
+        
+        // Meta tag turant banakar head mein dalne ke liye
+        let meta = document.createElement('meta');
+        meta.name = "theme-color";
+        
+        // 🔥 ASLI JADOO: <html> (documentElement) ko bhi theme batana!
+        if(fastTheme === 'matte') {
+            document.documentElement.setAttribute('data-theme', 'matte');
+            document.documentElement.style.backgroundColor = '#F4F2EE';
+            meta.content = '#F4F2EE'; // Matte ke liye Cream Patti
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.backgroundColor = '#111111';
+            meta.content = '#ff6a00'; // Default ke liye Orange Patti
+        }
+        document.head.appendChild(meta);
+    </script>
 
     <title>Credix - Abstract Premium</title>
     
