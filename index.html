@@ -338,18 +338,17 @@
             </div>
         </div>
 
-        <div id="section-add" style="margin-bottom: 5px;">
+        <div id="section-add" style="margin-bottom: 0px;">
             <div style="display:none;">
                 <h3 id="t-addTitle">Create Record</h3>
             </div>
 
-            <div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05); border-radius: 15px;">
+            <div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05); border-radius: 15px;">
                 <div style="font-size:16px; font-weight:bold; color: var(--success); display:flex; align-items:center; gap:8px;">
                     <span style="font-size:18px;">➕</span> Add New Record
                 </div>
                 <div id="addFormIcon" style="font-size: 13px; font-weight: bold; color: var(--success); background: var(--card-bg); padding: 5px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">▼ Open</div>
             </div>
-
 
         <!-- 📦 FORM WRAPPER (Isko default hide kar diya hai) -->
         <div id="addFormContent" style="display: none;">
@@ -391,7 +390,8 @@
         </div>
 
 
-<div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 2px; margin-bottom: 8px;">
+<div id="section-search" style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px;">
+
 
             <div class="input-group" style="flex: 2; margin-bottom: 0; display: flex; align-items: center; padding: 0 10px;">
                 <span class="input-icon" style="margin-right: 8px;">🔍</span>
@@ -410,7 +410,8 @@
             </div>
         </div>
         
-<div id="section-sort" style="display: flex; justify-content: flex-end; width: 100%; margin-top: -2px; margin-bottom: 12px;">
+<div id="section-sort" style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+
 
             <select id="sort-box" onchange="render()" style="background:transparent; border:none; color:var(--text-muted); font-size:13px; outline:none; -webkit-appearance:none;">
                 <option value="new" id="s-opt-new">Latest First ▼</option>
