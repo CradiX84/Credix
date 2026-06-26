@@ -4,23 +4,16 @@
     <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-    <!-- 🚀 PHONE KE SYSTEM KO BATANA KI LIGHT MODE ALLOWED HAI -->
-    <meta name="color-scheme" content="light dark">
-
 <script>
-    // 🚀 SUPER-FAST THEME SYSTEM (No Lag)
+    // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
     let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    let meta = document.createElement('meta');
-    meta.name = "theme-color";
     
+    // Body se pehle hi HTML ko theme bata do
     if(fastTheme === 'matte') {
-        document.documentElement.setAttribute('data-theme', 'matte');
-        meta.content = '#F4F2EE'; // Matte ke liye Cream Patti
+        document.documentElement.style.backgroundColor = '#F4F2EE';
     } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        meta.content = '#ff6a00'; // Default ke liye Orange Patti
+        document.documentElement.style.backgroundColor = '#111111';
     }
-    document.head.appendChild(meta);
 </script>
 
     <title>Credix - Abstract Premium</title>
@@ -28,7 +21,7 @@
     <link rel="manifest" href="manifest.json">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-
+    <meta name="theme-color" content="#ff6a00">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Credix">
     <link rel="apple-touch-icon" href="logo.png">
@@ -352,7 +345,7 @@
 
             <div onclick="var f=document.getElementById('addFormContent'); var i=document.getElementById('addFormIcon'); if(f.style.display==='none'){f.style.display='block'; i.innerHTML='▲ Close';}else{f.style.display='none'; i.innerHTML='▼ Open';}" class="cust-card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 15px 20px; cursor: pointer; border: 1.5px dashed var(--success); background: rgba(0, 230, 118, 0.05); border-radius: 15px;">
                 <div style="font-size:16px; font-weight:bold; color: var(--success); display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:18px;">👤+ </span> Add New Record
+                    <span style="font-size:18px;">➕</span> Add New Record
                 </div>
                 <div id="addFormIcon" style="font-size: 13px; font-weight: bold; color: var(--success); background: var(--card-bg); padding: 5px 12px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">▼ Open</div>
             </div>
