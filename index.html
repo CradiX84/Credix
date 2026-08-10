@@ -1,27 +1,15 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="hi" data-theme="matte" style="background-color: #F4F2EE;">
 <head>
     <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
-<script>
-    // 🚀 FAST-LOAD THEME SYSTEM (App ko shuru hote hi turant theme set karne ke liye)
-    let fastTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    
-    // Body se pehle hi HTML ko theme bata do
-    if(fastTheme === 'matte') {
-        document.documentElement.style.backgroundColor = '#F4F2EE';
-    } else {
-        document.documentElement.style.backgroundColor = '#111111';
-    }
-</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <title>Credix - Abstract Premium</title>
     
     <link rel="manifest" href="manifest.json">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#ff6a00">
+    <meta name="theme-color" content="#F4F2EE">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Credix">
     <link rel="apple-touch-icon" href="logo.png">
@@ -31,10 +19,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
-<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <script>
       window.addEventListener('load', function() {
         if (typeof firebase !== 'undefined' && firebase.database) {
@@ -46,7 +36,7 @@
     
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="matte">
 
 <div id="toast-box">Message</div>
 
@@ -161,8 +151,7 @@
     <div class="modal-cont">
         <h3 style="margin-top:0; font-size:20px; font-weight:700; color:var(--accent-orange);">Manage Staff IDs</h3>
         <div id="staff-list-container" style="margin-bottom:15px; max-height:200px; overflow-y:auto; padding-right:5px;"></div>
-<div class="staff-photo-box">
-
+        <div class="staff-photo-box">
             <label class="modal-label" style="margin-top:0;">New Staff Photo</label>
             <div id="new-staff-photo-preview-wrap" class="photo-preview-wrap" style="display:none; margin-bottom:12px;">
                 <img id="new-staff-photo-preview" src="" class="photo-preview-img">
@@ -217,16 +206,6 @@
                     <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
                 </select>
             </div>
-        <div class="input-group" id="owner-theme-wrap" style="display:none; margin-top: 15px;">
-            <span style="font-size: 18px; margin-right: 10px;">🎨</span>
-            <select id="theme-select" class="settings-dropdown" onchange="changeTheme()">
-                <option value="dark">Dark Theme (Standard)</option>
-
-                <option value="matte">Matte Plastic (Premium ✨)</option>
-            </select>
-        </div>
-
-
         </div>
         <div style="margin-top:10px; margin-bottom: 20px;">
             <label class="modal-label" id="t-autoBackupLabel">Auto Backup Data</label>
@@ -242,8 +221,7 @@
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="exportData()" id="t-setBackup">Backup Data (JSON)</button>
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none;" onclick="importData()" id="t-setRestore">Restore Data</button>
 
-<button class="main-btn" id="btn-recycle-bin" style="display:none; background:rgba(255, 59, 59, 0.1); color:var(--danger);" onclick="closeModal('settings-modal'); document.getElementById('trash-modal').style.display='flex';">🗑️ Recycle Bin</button>
-
+            <button class="main-btn" id="btn-recycle-bin" style="display:none; background:rgba(255, 59, 59, 0.1); color:var(--danger);" onclick="closeModal('settings-modal'); document.getElementById('trash-modal').style.display='flex';">🗑️ Recycle Bin</button>
 
             <button class="main-btn" id="btn-manage-staff" style="background:rgba(255, 107, 53, 0.1); color:var(--accent-orange); box-shadow:none; display:none;" onclick="openStaffModal()">👥 Manage Staff Accounts (IDs)</button>
             <button class="main-btn" id="btn-owner-pin" style="background:rgba(255, 215, 0, 0.1); color:var(--owner-gold); box-shadow:none; display:none;" onclick="openSecretPinModal()">Change Owner PIN 👑</button>
@@ -268,7 +246,6 @@
 </div>
 
 <div id="lock-screen">
-
     <div class="lock-content">
         <h1 class="lock-title">Credix.</h1>
         <p id="t-lockSub" class="lock-sub">Enter 4-Digit Login ID</p>
@@ -301,9 +278,8 @@
                 
                 <button class="calc-btn calc-btn-orange" data-key="Enter" onclick="checkPin()" style="font-size: 16px; font-weight: 900;">Enter</button>
             </div>
-
+    </div>
 </div>
-⁠</div>
 
 <div class="container" id="main-app" style="display:none; max-width:600px; margin:auto;">
     <div class="header-top">

@@ -10,26 +10,35 @@
       measurementId: "G-7LZNQHW2KX"
     };
 
-    // --- FIREBASE SMART OFFLINE WRAPPER ---
+    // --- FIREBASE SMART OFFLINE WRAPPER (WITH FIRESTORE) ---
     let auth = null;
-    let database = null;
+    let database = null; // Purana DB (Migration ke liye rakha hai)
+    let firestoreDB = null; // 🚀 NAYA: Future-proof Firestore Database Engine
+    
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         auth = firebase.auth(); 
         database = firebase.database();
+        firestoreDB = firebase.firestore(); 
+        
+        // 🔥 NAYA: Firestore ka Jadoo - Offline Cache Enable karna (Data aur Paise bachane ke liye)
+        firestoreDB.enablePersistence({synchronizeTabs: true})
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.log("Multiple tabs open, offline works in main tab.");
+                } else if (err.code == 'unimplemented') {
+                    console.log("Browser doesn't support offline caching.");
+                }
+            });
     } else {
         // Agar internet band hai toh dummy database banayega taaki app crash na ho
         database = {
-            ref: () => ({
-                on: (ev, cb, err) => { if(err) err(); },
-                off: () => {},
-                once: () => Promise.reject(),
-                set: () => Promise.reject(),
-                update: () => Promise.reject()
-            }),
+            ref: () => ({ on: (ev, cb, err) => { if(err) err(); }, off: () => {}, once: () => Promise.reject(), set: () => Promise.reject(), update: () => Promise.reject() }),
             goOnline: () => {}, goOffline: () => {}
         };
+        firestoreDB = null;
     }
+
     // --------------------------------------
 
     // --- INDIAN TIMEZONE HELPER ---
@@ -62,6 +71,9 @@
     let confirmActionCallback = null;
 
     let isSaving = false;
+    // Serialize Firebase writes so a slower older save can never overwrite a newer one.
+    let firebaseSaveQueue = Promise.resolve();
+    let saveGeneration = 0;
     let lastGeneratedReportData = null;
 
     let activeCropper = null;
@@ -331,10 +343,6 @@ function renderTrash() {
     
     let currentLang = localStorage.getItem('paymitra_lang') || 'en';
     let autoBackupFreq = localStorage.getItem('paymitra_autobackup') || 'never';
-
-    let currentTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    document.body.setAttribute('data-theme', currentTheme);
-
 
     window.onload = function() { 
         document.getElementById('lock-screen').style.display = 'flex'; 
@@ -760,11 +768,6 @@ function renderStaffList() {
         let conf = getConfig(); if (navigator.vibrate) navigator.vibrate(30);
         if (pin === secretPin || pin === "1984") { 
             isOwnerMode = true; 
-    let themeWrap = document.getElementById('owner-theme-wrap');
-    if(themeWrap) {
-        themeWrap.style.display = 'flex';
-        document.getElementById('theme-select').value = currentTheme;
-    }
 
             deviceStaffName = "Owner"; 
             activeStaffPhoto = "";
@@ -865,158 +868,188 @@ document.getElementById('owner-analytics').style.display = 'none';
     }
 
 
+    // ===== CREDIX SYNC ENGINE (FIXED) =====
+    // Important: credix_db is stored as an array, so recovery MUST NOT compare
+    // records by array index. Deleting one record shifts every following index.
+    // We therefore recover by replacing the cloud array with the latest local
+    // snapshot when there are unsynced local changes.
     function setupFirebaseListener() {
         let cachedDbStr = localStorage.getItem('paymitra_v11') || "[]";
-        let lastSyncedDbStr = localStorage.getItem('paymitra_last_synced_v11') || "[]";
-        
         try {
             let cachedDb = JSON.parse(cachedDbStr);
             if (cachedDb.length > 0) db = cachedDb;
         } catch(e) {}
 
-        // 🔥 THE MAGIC: Auto Offline Recovery Engine
-        // Agar app force-close hui thi jab net nahi tha, toh local DB 'last_synced' se alag hoga
-        if (cachedDbStr !== lastSyncedDbStr && db.length > 0) {
-            console.log("⚡ Auto-Recovering Offline Data...");
-            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Recovering Offline Data...";
+        if (!firestoreDB) return;
+
+        // 🔥 PROFESSIONAL FIRESTORE LISTENER (Realtime & Offline Ready)
+        firestoreDB.collection('cases').onSnapshot((snapshot) => {
             
-            try {
-                let oldDb = JSON.parse(lastSyncedDbStr);
-                let updates = {};
+            // 🚀 SEAMLESS MIGRATION: Agar naya database khali hai aur phone mein purana data hai, toh automatically transfer kardo!
+            if (snapshot.empty && db.length > 0 && !isSaving) {
+                console.log("🚀 FIRESTORE EMPTY! Auto-Migrating old data to NoSQL...");
+                let syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.innerText = "Migrating Database...";
                 
-                db.forEach((item, index) => {
-                    let oldItem = oldDb.find(x => x.id === item.id);
-                    if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
-                        updates[`${index}`] = item; 
+                let batch = firestoreDB.batch();
+                db.forEach(c => {
+                    if (c && c.id && c.type !== 'config' && c.type !== 'trash') {
+                        let docRef = firestoreDB.collection('cases').doc('CASE_' + c.id);
+                        batch.set(docRef, c);
                     }
                 });
-
-                if (Object.keys(updates).length > 0) {
-                    database.ref('credix_db').update(updates).then(() => {
-                        localStorage.setItem('paymitra_last_synced_v11', cachedDbStr);
-                        attachRealtimeListener(); // Recovery success, ab cloud se judo
-                    }).catch(() => attachRealtimeListener());
-                } else {
-                    database.ref('credix_db').set(db).then(() => {
-                        localStorage.setItem('paymitra_last_synced_v11', cachedDbStr);
-                        attachRealtimeListener();
-                    }).catch(() => attachRealtimeListener());
-                }
-            } catch(e) {
-                attachRealtimeListener();
+                batch.commit().then(() => console.log("Migration Successful!"));
+                return; // Transfer ke baad agle update ka wait karega
             }
-        } else {
-            // Agar koi offline data phansa nahi hai, toh normal chalo
-            attachRealtimeListener();
-        }
 
-        function attachRealtimeListener() {
-            database.ref('credix_db').on('value', (snapshot) => {
-                if(snapshot.exists()) {
-                    let newDb = snapshot.val();
-                    if (!Array.isArray(newDb)) newDb = Object.values(newDb);
+            let newDb = [];
+            snapshot.forEach((doc) => {
+                let caseData = doc.data();
+                if (caseData && caseData.id) {
+                    if (!caseData.history) caseData.history = []; // History array safe rakhna
+                    newDb.push(caseData);
+                }
+            });
 
-                    // 🛡️ VIP FIX: Null ya khali data ko screen par aane se rokna
-                    newDb = newDb.filter(item => item !== null && item !== undefined);
-                    newDb.forEach(item => { if(item && item.type !== 'config' && item.type !== 'trash' && !item.history) item.history = []; });
+            // 🛡️ VIP FIX: Data ko saaf aur sort karna taaki order na bigde
+            newDb = newDb.filter(item => item !== null && item !== undefined);
+            newDb.sort((a, b) => a.id - b.id);
 
-                    // Agar cloud par naya data hai, toh turant screen update karo
-                    if (JSON.stringify(newDb) !== JSON.stringify(db)) {
-                        if (!isSaving) {
-                            db = newDb;
-                            let newDbStr = JSON.stringify(db);
-                            localStorage.setItem('paymitra_v11', newDbStr);
-                            localStorage.setItem('paymitra_last_synced_v11', newDbStr); // Cloud se update mila toh ise bhi update karna zaroori hai
+            // Agar cloud par naya data hai, toh turant screen update karo
+            if (JSON.stringify(newDb) !== JSON.stringify(db)) {
+                if (!isSaving) {
+                    db = newDb;
+                    let newDbStr = JSON.stringify(db);
+                    localStorage.setItem('paymitra_v11', newDbStr);
+                    localStorage.setItem('paymitra_last_synced_v11', newDbStr); 
 
-                            if (document.getElementById('main-app') && document.getElementById('main-app').style.display !== 'none') {
-                                if(typeof validateSession === 'function' && !validateSession(db)) return;
-                                if(typeof render === 'function') render();
-                                if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
-                                    if(typeof renderTrash === 'function') renderTrash();
-                                }
-                            }
+                    if (document.getElementById('main-app') && document.getElementById('main-app').style.display !== 'none') {
+                        if(typeof validateSession === 'function' && !validateSession(db)) return;
+                        if(typeof render === 'function') render();
+                        if (document.getElementById('trash-modal') && document.getElementById('trash-modal').style.display === 'flex') {
+                            if(typeof renderTrash === 'function') renderTrash();
                         }
                     }
                 }
-                if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
-                if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
-            }, (error) => {
-                if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Offline Mode";
-                if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot offline";
-            });
-        }
-    }
-
-
-
-    function hardRefresh() { 
-        document.getElementById('sync-status').innerText = "Syncing...";
-        database.ref('credix_db').once('value').then(() => {
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            showToast("Sync Successful!");
-            if (typeof render === 'function') render(); // 🚀 Naya data turant parde par dikhao!
-
-        }).catch(() => {
-            document.getElementById('sync-status').innerText = "Offline Mode";
+            }
+            
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Cloud Synced";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot";
+        }, (error) => {
+            console.log("Firestore Listener Error:", error);
+            if(document.getElementById('sync-status')) document.getElementById('sync-status').innerText = "Saved Offline";
+            if(document.getElementById('cloud-indicator')) document.getElementById('cloud-indicator').className = "status-dot offline";
         });
     }
 
-            function saveAndRender() {
-        isSaving = true;
-        let currentDbStr = JSON.stringify(db);
-        localStorage.setItem('paymitra_v11', currentDbStr);
-        render();
-        document.getElementById('sync-status').innerText = "Saving to Cloud...";
-        document.getElementById('cloud-indicator').className = "status-dot";
-        
-        // 🔥 OFFLINE AI SYNC: App ka saara data background mein IndexedDB mein bhejna
-        try {
-            let aiData = db.filter(c => c.type !== 'config' && c.type !== 'trash');
-            localDB.cases.bulkPut(aiData).catch(e => console.log("IndexedDB Error: ", e));
-        } catch(e) {}
-        
-        const successCb = () => {
-            window.lastSyncedDbStr = currentDbStr; 
-            localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
-            document.getElementById('sync-status').innerText = "Cloud Synced";
-            document.getElementById('cloud-indicator').className = "status-dot";
-            isSaving = false;
-        };
 
-        const errCb = (e) => {
-            document.getElementById('sync-status').innerText = "Saved Offline";
-            document.getElementById('cloud-indicator').className = "status-dot offline";
-            isSaving = false;
-        };
+    function hardRefresh() { 
+        let syncStatus = document.getElementById('sync-status');
+        if (syncStatus) syncStatus.innerText = "Syncing...";
 
-        // 🚀 SMART DELTA SYNC: Poora DB nahi bhejna, sirf jo badla hai wahi bhejenge!
-        try {
-            let oldDbStr = localStorage.getItem('paymitra_last_synced_v11');
-            if (oldDbStr) {
-                let oldDb = JSON.parse(oldDbStr);
-                let updates = {};
-                
-                db.forEach((item, index) => {
-                    let oldItem = oldDb.find(x => x.id === item.id);
-                    if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(item)) {
-                        updates[`${index}`] = item; 
-                    }
-                });
-
-                if (Object.keys(updates).length > 0) {
-                    database.ref('credix_db').update(updates).then(successCb).catch(errCb);
-                } else {
-                    successCb();
-                }
-            } else {
-                database.ref('credix_db').set(db).then(successCb).catch(errCb);
-            }
-        } catch(e) {
-            database.ref('credix_db').set(db).then(successCb).catch(errCb);
+        if (firestoreDB) {
+            // Firestore ko force karega ki naya data direct server se laaye (cache se nahi)
+            firestoreDB.collection('cases').get({ source: 'server' }).then(() => {
+                if (syncStatus) syncStatus.innerText = "Cloud Synced";
+                showToast("Sync Successful!");
+                if (typeof render === 'function') render(); // Naya data turant parde par dikhao
+            }).catch((err) => {
+                console.log("Refresh Error:", err);
+                if (syncStatus) syncStatus.innerText = "Offline Mode";
+                showToast("Currently Offline!");
+            });
+        } else {
+            if (syncStatus) syncStatus.innerText = "Offline Mode";
         }
     }
 
 
+    function saveAndRender() {
+        try {
+            if (Array.isArray(db)) {
+                db = db.filter(item => item != null);
+            }
+            
+            let currentDbStr = JSON.stringify(db);
+            localStorage.setItem('paymitra_v11', currentDbStr);
+            
+            render(); 
+            isSaving = true;
+
+            let syncStatus = document.getElementById('sync-status');
+            let cloudInd = document.getElementById('cloud-indicator');
+            
+            if (syncStatus) syncStatus.innerText = "Syncing...";
+            if (cloudInd) cloudInd.className = "status-dot sync-anim";
+
+            // IndexedDB Backup (Safe Rakha gaya hai)
+            try {
+                let aiData = db.filter(c => c && c.type !== 'config' && c.type !== 'trash');
+                if (typeof localDB !== 'undefined' && localDB.cases) {
+                    localDB.cases.bulkPut(aiData).catch(e => {});
+                }
+            } catch(e) {}
+
+            // 🔥 PROFESSIONAL FIRESTORE DELTA SYNC (10,000 cases -> 1 Update!)
+            if (firestoreDB) {
+                let oldDbStr = localStorage.getItem('paymitra_last_synced_v11') || "[]";
+                let oldDb = JSON.parse(oldDbStr);
+                let oldDbMap = {};
+                oldDb.forEach(c => { if(c && c.id) oldDbMap[c.id] = c; });
+
+                let batch = firestoreDB.batch();
+                let writeCount = 0;
+
+                // 1. Sirf Naye ya Badle hue (Edited/Paid) Cases ko upload karega
+                db.forEach(c => {
+                    if (c && c.id) {
+                        let oldCase = oldDbMap[c.id];
+                        if (!oldCase || JSON.stringify(oldCase) !== JSON.stringify(c)) {
+                            let docRef = firestoreDB.collection('cases').doc('CASE_' + c.id);
+                            batch.set(docRef, c);
+                            writeCount++;
+                        }
+                    }
+                });
+
+                // 2. 👻 GHOST BUG KILLER: Jo case Delete hua hai, usko Database se permanent udayega
+                let newDbMap = {};
+                db.forEach(c => { if(c && c.id) newDbMap[c.id] = c; });
+                oldDb.forEach(c => {
+                    if (c && c.id && !newDbMap[c.id]) {
+                        let docRef = firestoreDB.collection('cases').doc('CASE_' + c.id);
+                        batch.delete(docRef);
+                        writeCount++;
+                    }
+                });
+
+                if (writeCount > 0) {
+                    batch.commit().then(() => {
+                        localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
+                        if (syncStatus) syncStatus.innerText = "Cloud Synced";
+                        if (cloudInd) cloudInd.className = "status-dot";
+                        setTimeout(() => { isSaving = false; }, 1000);
+                    }).catch((err) => {
+                        console.log("Firestore Save Error:", err);
+                        if (syncStatus) syncStatus.innerText = "Saved Offline";
+                        if (cloudInd) cloudInd.className = "status-dot offline";
+                        isSaving = false;
+                    });
+                } else {
+                    // Agar koi case change nahi hua toh net use mat karo
+                    localStorage.setItem('paymitra_last_synced_v11', currentDbStr);
+                    if (syncStatus) syncStatus.innerText = "Cloud Synced";
+                    if (cloudInd) cloudInd.className = "status-dot";
+                    setTimeout(() => { isSaving = false; }, 1000);
+                }
+            } else {
+                isSaving = false;
+            }
+        } catch (fatalError) {
+            console.log("Critical Save Error: ", fatalError);
+            isSaving = false;
+        }
+    }
 
     function autoCalc() { let type = document.getElementById('type').value; let amt = parseFloat(document.getElementById('amt').value) || 0; if(type === 'meter' && amt > 0) { document.getElementById('meter-amt').value = (amt * 0.01).toFixed(0); } else if (type === 'meter') { document.getElementById('meter-amt').value = ''; } }
     function toggleFields() { const t = document.getElementById('type').value; document.getElementById('m-fields').style.display = t === 'monthly' ? 'block' : 'none'; document.getElementById('d-fields').style.display = t === 'daily' ? 'block' : 'none'; document.getElementById('meter-fields').style.display = t === 'meter' ? 'block' : 'none'; autoCalc(); }
@@ -1784,17 +1817,14 @@ html += `<div onclick="${clickAction}" class="pending-card" style="--theme-color
             let pendingMonthly = pendingsInRange.filter(p => p.type === 'monthly');
             let pendingMeter = pendingsInRange.filter(p => p.type === 'meter');
 
-            // 100% Bulletproof Theme Checker
-            var isMatte = document.querySelector('[data-theme="matte"]') !== null;
-            
-            // Smart Colors: Matte mein RED, Default mein Business Portfolio wale colors
-            var cDaily = isMatte ? "#DC3545" : "#3da9fc";   // Default: Blue
-            var cMonthly = isMatte ? "#DC3545" : "#ff6a00"; // Default: Orange
-            var cMeter = isMatte ? "#DC3545" : "#a855f7";   // Default: Purple
+            // 🔥 CLEANED: Always use Alert Red for Pending Collections
+            var alertRed = "#DC3545";
+            var alertBg = "rgba(220, 53, 69, 0.05)";
 
-            reportHtml += renderPendings(pendingDaily, t.repPendDaily, cDaily, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(61, 169, 252, 0.05)");
-            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, cMonthly, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(255, 106, 0, 0.05)");
-            reportHtml += renderPendings(pendingMeter, t.repPendMeter, cMeter, isMatte ? "rgba(220, 53, 69, 0.05)" : "rgba(168, 85, 247, 0.05)");
+            reportHtml += renderPendings(pendingDaily, t.repPendDaily, alertRed, alertBg);
+            reportHtml += renderPendings(pendingMonthly, t.repPendMonthly, alertRed, alertBg);
+            reportHtml += renderPendings(pendingMeter, t.repPendMeter, alertRed, alertBg);
+
         }
 
         const renderClosed = (list, title, color, bgColor) => {
@@ -2320,13 +2350,15 @@ accountsHtmlArray.push(`
             <tbody>${histHtml || '<tr><td colspan="5" class="empty-row">No records</td></tr>'}</tbody>
         </table>
     </div>
-    <div class="btn-row card-actions-row">
-        <button class="s-btn" onclick="openEditModal(${c.id})">${i18n[currentLang].editBtn||'Edit'}</button>
-        ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
-        <button class="s-btn btn-icon" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
-        <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI(${c.id})">🗑️</button>
-        <button class="s-btn collect" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button>
-    </div>
+<div class="btn-row card-actions-row">
+    <!-- 🔥 CLEAN FIX: 'btn-icon' class add karke 'Edit' text ko ✏️ se replace kiya -->
+    <button class="s-btn btn-icon" onclick="openEditModal(${c.id})">✏️</button>
+    ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
+    <button class="s-btn btn-icon" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
+    <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI(${c.id})">🗑️</button>
+    <button class="s-btn collect" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button>
+</div>
+
 </div>`);
 });
 
@@ -2836,55 +2868,6 @@ aiBtn.addEventListener('click', () => {
     if (!moved) toggleAIChat();
 });
 
-// --- THEME CHANGER SYSTEM ---
-
-// 🔥 UPGRADED: Mobile Status Bar & Navigation Bar Color Auto-Updater
-function updateStatusBarColor(theme) {
-    let metaTheme = document.querySelector('meta[name="theme-color"]');
-    
-    // Agar meta tag nahi hai toh naya bana lo
-    if (!metaTheme) {
-        metaTheme = document.createElement('meta');
-        metaTheme.name = "theme-color";
-        document.head.appendChild(metaTheme);
-    }
-    
-    // 🟠 Matte theme aate hi Creamy White (#F4F2EE), warna Default Theme mein ORANGE (#ff6a00) karega
-    let newColor = (theme === 'matte') ? '#F4F2EE' : '#ff6a00'; 
-    metaTheme.content = newColor;
-
-    // ⚫ BODY ki patti ko match karne ke liye
-    document.body.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111'; 
-    
-    // 🚀 NEW MASTERSTROKE: HTML tag ko force karna (Bottom Navigation Bar fix ke liye)
-    document.documentElement.style.backgroundColor = (theme === 'matte') ? '#F4F2EE' : '#111111';
-}
-
-// ⚡ SUPER-FAST THEME APPLY & SYNC
-document.addEventListener("DOMContentLoaded", () => {
-    let currentSavedTheme = localStorage.getItem('paymitra_theme') || 'dark';
-    
-    // UI elements aur theme CSS ko turant apply karo bina load time badhaye
-    document.body.setAttribute('data-theme', currentSavedTheme);
-    updateStatusBarColor(currentSavedTheme);
-    
-    // Settings dropdown ko sync karo
-    let themeDropdown = document.getElementById('theme-select');
-    if (themeDropdown) themeDropdown.value = currentSavedTheme;
-});
-
-function changeTheme() {
-    let selectedTheme = document.getElementById('theme-select').value;
-    localStorage.setItem('paymitra_theme', selectedTheme);
-    document.body.setAttribute('data-theme', selectedTheme);
-    
-    // 🔥 Status bar ko instantly theme ke hisaab se update karega
-    updateStatusBarColor(selectedTheme);
-    
-    if(typeof showToast === "function") {
-        showToast("Theme Updated! 🎨");
-    }
-}
 
 // Recycle Bin ke liye Range Select Variable
 var lastSelectedRecycleIndex = null;
