@@ -652,3 +652,53 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
         white-space: nowrap !important;
     }
 }
+/* ========================================================================= */
+/* 📱 IPAD & SAFARI BUTTON TOUCH & CLICK RESTORATION ENGINE                  */
+/* ========================================================================= */
+
+/* 1. Card Scale ko sirf Header Clickable Area par shift karein (Buttons safe rahenge) */
+.cust-card:active {
+    transform: none !important; /* Card ko hilne se rokega taaki child buttons click ho sakein */
+}
+
+.clickable-area:active {
+    transform: scale(0.98); /* Sirf header tap karne par 3D press effect aayega */
+    transition: transform 0.05s ease;
+}
+
+/* 2. Action Buttons ko Top Layer (High Z-Index) par lock karein */
+.card-actions-row,
+.btn-row,
+.card-actions-row button,
+.btn-row button,
+.btn-icon,
+.s-btn {
+    position: relative !important;
+    z-index: 10 !important;
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
+/* 3. Modal Popup Buttons Click Fix (iPad Safari Stacking Fix) */
+.modal {
+    pointer-events: auto !important;
+}
+
+.modal-cont {
+    position: relative !important;
+    z-index: 999999 !important;
+    pointer-events: auto !important;
+    transform: none !important; /* Modal ke andar click cancel hone se bachayega */
+}
+
+.modal button,
+.modal .main-btn,
+.modal .s-btn,
+#confirm-modal button {
+    position: relative !important;
+    z-index: 9999999 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}

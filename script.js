@@ -187,12 +187,14 @@ window.addEventListener('offline', () => {
 // 4. UTILITY & LOCALIZATION HELPERS
 // ==========================================
 function getISTDate() {
-    return new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).format(new Date());
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000; // Exact IST (+5:30)
+    const istDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+    
+    const y = istDate.getFullYear();
+    const m = String(istDate.getMonth() + 1).padStart(2, '0');
+    const d = String(istDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 function formatDateDisplay(dateStr) {
@@ -465,7 +467,13 @@ function askConfirm(msg, callback) {
 }
 
 function executeConfirm() {
-    if (confirmActionCallback) confirmActionCallback();
+    if (confirmActionCallback) {
+        try {
+            confirmActionCallback();
+        } catch (e) {
+            console.error("Confirm action error:", e);
+        }
+    }
     closeModal('confirm-modal');
     confirmActionCallback = null;
 }
@@ -1486,9 +1494,13 @@ function recalculateCase(c) {
 async function addCustomer() {
     const tLang = i18n[currentLang];
     const type = document.getElementById('type').value;
-    const name = document.getElementById('name').value;
+    const name = document.getElementById('name').value.trim();
     const amt = parseFloat(document.getElementById('amt').value);
-    const date = document.getElementById('date').value;
+    const rawDate = document.getElementById('date').value;
+    
+    // iPadOS / Safari hidden characters cleanup
+    const date = (rawDate || getISTDate()).replace(/[^\d-]/g, '').trim();
+    
     const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
     const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
     
@@ -1500,7 +1512,7 @@ async function addCustomer() {
         photoBase64 = lastCroppedBase64;
     } else {
         const fileInput = document.getElementById('cust-photo');
-        if (fileInput.files && fileInput.files[0]) {
+        if (fileInput && fileInput.files && fileInput.files[0]) {
             photoBase64 = await toSquareBase64(fileInput.files[0]);
         }
     }
@@ -1547,7 +1559,8 @@ async function addCustomer() {
     document.getElementById('name').value = ''; 
     document.getElementById('amt').value = ''; 
     document.getElementById('staff-ref').value = '';
-    document.getElementById('cust-photo').value = '';
+    const custPhoto = document.getElementById('cust-photo');
+    if (custPhoto) custPhoto.value = '';
     lastCroppedBase64 = ''; 
     if (document.getElementById('total_ret')) document.getElementById('total_ret').value = '';
     if (document.getElementById('days')) document.getElementById('days').value = '';
@@ -1621,13 +1634,24 @@ function openPayModal(id, prefillAmt = null) {
 function savePayment() { 
     let id = parseInt(document.getElementById('pay-id').value); 
     let c = db.find(x => x.id === id); 
+    if (!c) return showToast("Customer account not found!");
+
     let amt = parseFloat(document.getElementById('pay-amt').value); 
-    let dateStr = document.getElementById('pay-date').value; 
-    if (!amt || !dateStr) { triggerShake('pay-amt'); return showToast("Valid data required"); } 
+    let rawDateStr = document.getElementById('pay-date').value; 
+    
+    // iPadOS / Safari hidden characters cleanup
+    let dateStr = (rawDateStr || '').replace(/[^\d-]/g, '').trim();
+
+    if (!amt || !dateStr) { 
+        triggerShake('pay-amt'); 
+        return showToast("Valid data required"); 
+    } 
+    
     if (c.history && c.history.some(h => h.date === dateStr)) { 
         triggerShake('pay-date'); 
         return showToast(i18n[currentLang].dupEntry || "Payment already added for this date!"); 
     } 
+    
     c.history.push({ date: dateStr, paid: amt }); 
     recalculateCase(c); 
     
