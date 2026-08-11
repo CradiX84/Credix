@@ -86,24 +86,42 @@ let isTrashMulti = false;
 const EnterpriseSyncEngine = {
     isOnline: navigator.onLine,
     
-    async enqueue(task) {
-        try {
-            await localDB.syncQueue.add({
-                action: task.action,
-                caseId: task.caseId || null,
-                collection: task.collection || null,
-                payload: task.payload || null,
-                tombstone: task.tombstone || null,
-                trashPayload: task.trashPayload || null,
-                deletedBy: task.deletedBy || null,
-                timestamp: Date.now(),
-                retryCount: 0
-            });
-            this.processQueue();
-        } catch (e) {
-            console.error("[SyncQueue] Enqueue Error:", e);
-        }
-    },
+        async enqueue(taskOrAction, collection, caseId, payload = null, tombstone = null, trashPayload = null) {
+            try {
+                let taskObj;
+                if (typeof taskOrAction === 'object' && taskOrAction !== null) {
+                    taskObj = {
+                        action: taskOrAction.action,
+                        caseId: taskOrAction.caseId || null,
+                        collection: taskOrAction.collection || null,
+                        payload: taskOrAction.payload || null,
+                        tombstone: taskOrAction.tombstone || null,
+                        trashPayload: taskOrAction.trashPayload || null,
+                        deletedBy: taskOrAction.deletedBy || null,
+                        timestamp: taskOrAction.timestamp || Date.now(),
+                        retryCount: taskOrAction.retryCount || 0
+                    };
+                } else {
+                    taskObj = {
+                        action: taskOrAction,
+                        collection: collection || null,
+                        caseId: caseId || null,
+                        payload: payload,
+                        tombstone: tombstone,
+                        trashPayload: trashPayload,
+                        timestamp: Date.now(),
+                        retryCount: 0
+                    };
+                }
+
+                if (typeof localDB !== 'undefined' && localDB.syncQueue) {
+                    await localDB.syncQueue.add(taskObj);
+                }
+                this.processQueue();
+            } catch (e) {
+                console.error("[SyncQueue] Enqueue Error:", e);
+            }
+        },
 
     async processQueue() {
         if (!navigator.onLine || isSyncingQueue || !database) return;
@@ -196,6 +214,31 @@ function getISTDate() {
     const d = String(istDate.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+
+// Safe Month Addition for Monthly Cases (Prevents 31 Jan -> 3 Mar jump)
+function addMonthsSafe(dateStr, monthsToAdd) {
+    if (!dateStr) return dateStr;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    
+    let d = new Date(parts[0], parts[1] - 1, parts[2]);
+    let expectedMonth = (d.getMonth() + monthsToAdd) % 12;
+    if (expectedMonth < 0) expectedMonth += 12;
+    
+    d.setMonth(d.getMonth() + monthsToAdd);
+    
+    // Agar date jump hoke agle mahine chali gayi (jaise Feb mein 31 nahi hota)
+    // To usko expected mahine ke aakhri din par set kar do
+    if (d.getMonth() !== expectedMonth) {
+        d.setDate(0); 
+    }
+    
+    const ny = d.getFullYear();
+    const nm = String(d.getMonth() + 1).padStart(2, '0');
+    const nd = String(d.getDate()).padStart(2, '0');
+    return `${ny}-${nm}-${nd}`;
+}
+
 
 function formatDateDisplay(dateStr) {
     if (!dateStr || typeof dateStr !== 'string') return dateStr;
@@ -1676,19 +1719,21 @@ function openBulkModal(id, startOverride = null, endOverride = null) {
     } else {
         if (c.history && c.history.length > 0) {
             let sortedHist = [...c.history].sort((a, b) => a.date > b.date ? 1 : -1);
-            let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
-            let nextDate = new Date(lastPaidDateStr);
-            
-            if (c.type === 'monthly') {
-                nextDate.setMonth(nextDate.getMonth() + 1);
-            } else {
-                nextDate.setDate(nextDate.getDate() + 1);
-            }
-            
-            let y = nextDate.getFullYear();
-            let m = String(nextDate.getMonth() + 1).padStart(2, '0');
-            let d = String(nextDate.getDate()).padStart(2, '0');
-            calculatedStartDate = `${y}-${m}-${d}`;
+                    let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
+                    
+                    if (c.type === 'monthly') {
+                        // Monthly cases ke liye naya safe function use karein
+                        calculatedStartDate = addMonthsSafe(lastPaidDateStr, 1);
+                    } else {
+                        // Daily/Meter cases ke liye purana logic (sirf din add karna)
+                        let nextDate = new Date(lastPaidDateStr);
+                        nextDate.setDate(nextDate.getDate() + 1);
+                        let y = nextDate.getFullYear();
+                        let m = String(nextDate.getMonth() + 1).padStart(2, '0');
+                        let d = String(nextDate.getDate()).padStart(2, '0');
+                        calculatedStartDate = `${y}-${m}-${d}`;
+                    }
+
             
             if (calculatedStartDate > todayStr) {
                 calculatedStartDate = todayStr;
@@ -2168,7 +2213,14 @@ function render() {
                     pendingDays = Math.floor((todayDateObj.getTime() - nextDueDate.getTime()) / (1000 * 60 * 60 * 24)) + 1; 
                 } 
             } else { 
-                nextDueDate.setMonth(nextDueDate.getMonth() + unitsPaid + 1); 
+                                    // Monthly pending calculation ke liye safe date logic
+                    let monthsToAdd = unitsPaid + 1;
+                    let expectedMonth = (nextDueDate.getMonth() + monthsToAdd) % 12;
+                    nextDueDate.setMonth(nextDueDate.getMonth() + monthsToAdd);
+                    if (nextDueDate.getMonth() !== expectedMonth) {
+                        nextDueDate.setDate(0);
+                    }
+
                 if (todayDateObj >= nextDueDate && c.currentBalance > 0) { 
                     isPending = true; 
                     isDueToday = true; 
