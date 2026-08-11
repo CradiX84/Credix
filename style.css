@@ -641,3 +641,92 @@ div:has(> #search-box),
         white-space: nowrap !important;
     }
 }
+
+/* ========================================================================= */
+/* 🔍 SEARCH BAR & FILTER ROW - PERFECT NO-OVERFLOW MOBILE FIX              */
+/* ========================================================================= */
+
+/* 1. Search & Filter Container (Dono ek line mein screen ke andar rahenge) */
+#section-search {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin-bottom: 2px !important;
+}
+
+/* 2. Search Input Box (Bachi hui 70% jagah lega, flex auto-fit) */
+#section-search .input-group {
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 52px !important;
+    margin-bottom: 0 !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+}
+
+#section-search .input-group input#search-box,
+#section-search #search-box {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 6px !important;
+    font-size: 14px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* 3. Filter Dropdown ("All Types" Box - Fixed 95px, Screen se bahar nahi jayega) */
+#section-search .filter-dropdown,
+#filter-box {
+    flex: 0 0 95px !important;
+    width: 95px !important;
+    min-width: 95px !important;
+    max-width: 95px !important;
+    height: 52px !important;
+    padding: 0 4px !important;
+    margin-bottom: 0 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* 4. Sort Box ("Latest First ▼" - Bilkul right-aligned aur clean) */
+#section-sort {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+    margin-bottom: 12px !important;
+    padding-right: 6px !important;
+}
+
+#sort-box {
+    width: auto !important;
+    height: auto !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+}
