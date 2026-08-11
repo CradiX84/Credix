@@ -500,14 +500,22 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
 
 /* 1. Main Search Row Container */
 #section-search {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 10px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    margin-bottom: 6px !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+}
+
+/* 2. Review Tab / Hidden state par pakka hide hoga */
+#section-search[style*="display: none"],
+#section-search[style*="display:none"],
+#section-sort[style*="display: none"],
+#section-sort[style*="display:none"] {
+    display: none !important;
 }
 
 /* 2. Search Box (Auto-adjusts to ~65% width, never pushes filter out) */
