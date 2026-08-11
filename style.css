@@ -495,81 +495,130 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
     contain-intrinsic-size: 140px;
 }
 /* ========================================================================= */
-/* 📱💻 ADAPTIVE RESPONSIVE ENGINE (IPAD & MOBILE AUTO-FIT)                 */
+/* 🔍 SEARCH BAR & FILTER ROW - PERFECT HORIZONTAL ALIGNMENT FIX            */
 /* ========================================================================= */
 
-/* --------------------------------------------------
-   1. MOBILE PHONES ONLY (Screens below 600px)
-   -------------------------------------------------- */
+/* 1. Search Box Container (Strict Horizontal Row - 🔍, Input, 🎤 ek sath) */
+.input-group, 
+div:has(> #search-box),
+.input-group:has(#search-box) {
+    display: flex !important;
+    flex-direction: row !important; /* Text aur emoji ko ek hi line mein rakhega */
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 54px !important;
+    padding: 0 15px !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+    margin-bottom: 12px !important;
+}
+
+/* 2. Text Field Alignment (Box ke andar perfectly center fit) */
+.input-group input#search-box,
+#search-box {
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    font-size: 15px !important;
+    line-height: 54px !important;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* 3. Search Lens & Mic Icons */
+.input-group .input-icon,
+.input-group span[onclick*="startVoiceSearch"],
+.input-group .mic-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+    width: 24px !important;
+    height: 24px !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+}
+
+/* 4. Search & Filter Layout (Mobile Auto-Fit) */
 @media screen and (max-width: 600px) {
-
-    /* (A) Search & Filter Controls: Auto-stacking */
-    .search-filter-wrapper,
-    div:has(> #search-box) {
+    #section-search {
         display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        align-items: center !important;
         width: 100% !important;
     }
 
-    #search-box {
-        width: 100% !important;
+    #section-search .input-group {
+        flex: 1 1 auto !important;
+        margin-bottom: 0 !important;
     }
 
-    .filter-dropdown {
-        width: 100% !important;
-        max-width: 100% !important;
-        text-align: left !important;
+    #section-search .filter-dropdown,
+    #filter-box {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 105px !important;
+        height: 54px !important;
+        padding: 0 12px !important;
+        font-size: 13px !important;
+        margin-bottom: 0 !important;
+        text-align: center !important;
     }
 
-    /* (B) Customer Card 5 Action Buttons: Balanced Flex */
-    .card-actions-row, 
-    .btn-row {
+    #section-sort {
+        display: flex !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+        margin-top: 6px !important;
+        margin-bottom: 12px !important;
+    }
+
+    #sort-box {
+        width: auto !important;
+        font-size: 12px !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    /* Action Buttons (Cards) */
+    .card-actions-row, .btn-row {
         display: flex !important;
         align-items: center !important;
-        justify-content: space-between !important;
         gap: 6px !important;
         width: 100% !important;
         margin-top: 12px !important;
     }
 
-    /* 4 Icons (✏️ 📄 📦 🗑️) */
-    .btn-row .s-btn.btn-icon,
-    .card-actions-row .s-btn.btn-icon {
+    .btn-row .s-btn.btn-icon {
         flex: 0 0 38px !important;
         width: 38px !important;
         height: 38px !important;
-        min-width: 38px !important;
-        padding: 0 !important;
         border-radius: 50% !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 15px !important;
     }
 
-    /* Bada 'Receive' Button */
-    .btn-row .s-btn.collect,
-    .card-actions-row .s-btn.collect {
+    .btn-row .s-btn.collect {
         flex: 1 1 auto !important;
         height: 38px !important;
-        padding: 0 10px !important;
-        font-size: 13px !important;
-        font-weight: 800 !important;
         border-radius: 20px !important;
+        font-size: 13px !important;
         margin-top: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
         white-space: nowrap !important;
     }
 
-    /* (C) Review Section: 3 Summary Boxes (No Text Overflow) */
+    /* Review 3-Summary Boxes */
     #rep-results > div:first-child {
         display: flex !important;
         flex-direction: row !important;
         gap: 6px !important;
-        width: 100% !important;
     }
 
     #rep-results > div:first-child > div {
@@ -583,54 +632,12 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
     #rep-results > div:first-child > div span {
         font-size: 9px !important;
         line-height: 1.2 !important;
-        letter-spacing: 0px !important;
-        white-space: normal !important;
-        word-break: break-word !important;
         display: block !important;
         height: 22px !important;
     }
 
     #rep-results > div:first-child > div b {
         font-size: 15px !important;
-        margin-top: 2px !important;
         white-space: nowrap !important;
-    }
-}
-
-/* --------------------------------------------------
-   2. TABLETS & IPAD VIEW (Screens 601px and above)
-   -------------------------------------------------- */
-@media screen and (min-width: 601px) {
-
-    /* iPad par spacious side-by-side view */
-    .search-filter-wrapper,
-    div:has(> #search-box) {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 12px !important;
-    }
-
-    #rep-results > div:first-child {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 12px !important;
-    }
-
-    #rep-results > div:first-child > div {
-        padding: 16px !important;
-    }
-
-    #rep-results > div:first-child > div span {
-        font-size: 12px !important;
-    }
-
-    #rep-results > div:first-child > div b {
-        font-size: 22px !important;
-    }
-
-    .btn-row .s-btn.collect,
-    .card-actions-row .s-btn.collect {
-        padding: 12px 24px !important;
-        font-size: 14px !important;
     }
 }
