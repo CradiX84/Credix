@@ -495,97 +495,108 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
     contain-intrinsic-size: 140px;
 }
 /* ========================================================================= */
-/* 🔍 SEARCH BAR & FILTER ROW - PERFECT HORIZONTAL ALIGNMENT FIX            */
+/* 🔍 SEARCH & FILTER ROW (ORIGINAL RATIO - 65% SEARCH / 35% FILTER)        */
 /* ========================================================================= */
 
-/* 1. Search Box Container (Strict Horizontal Row - 🔍, Input, 🎤 ek sath) */
-.input-group, 
-div:has(> #search-box),
-.input-group:has(#search-box) {
+/* 1. Main Search Row Container */
+#section-search {
     display: flex !important;
-    flex-direction: row !important; /* Text aur emoji ko ek hi line mein rakhega */
+    flex-direction: row !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    height: 54px !important;
-    padding: 0 15px !important;
-    position: relative !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
-    margin-bottom: 12px !important;
+    margin-bottom: 6px !important;
 }
 
-/* 2. Text Field Alignment (Box ke andar perfectly center fit) */
-.input-group input#search-box,
-#search-box {
+/* 2. Search Box (Auto-adjusts to ~65% width, never pushes filter out) */
+#section-search .input-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important; /* Fixed 100% width hataya */
+    height: 54px !important;
+    padding: 0 14px !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#section-search .input-group input#search-box,
+#section-search #search-box {
     flex: 1 !important;
     min-width: 0 !important;
+    width: 100% !important;
     height: 100% !important;
-    padding: 0 8px !important;
-    margin: 0 !important;
-    font-size: 15px !important;
-    line-height: 54px !important;
+    padding: 0 6px !important;
+    font-size: 14px !important;
+    background: transparent !important;
     border: none !important;
     outline: none !important;
-    background: transparent !important;
     box-shadow: none !important;
 }
 
-/* 3. Search Lens & Mic Icons */
-.input-group .input-icon,
-.input-group span[onclick*="startVoiceSearch"],
-.input-group .mic-icon {
+/* 3. Search Lens & Mic Icons (Inside Search Box) */
+#section-search .input-icon,
+#section-search span[onclick*="startVoiceSearch"] {
+    font-size: 16px !important;
+    width: 20px !important;
+    height: 20px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 16px !important;
-    width: 24px !important;
-    height: 24px !important;
     flex-shrink: 0 !important;
     cursor: pointer !important;
-    margin: 0 !important;
 }
 
-/* 4. Search & Filter Layout (Mobile Auto-Fit) */
+/* 4. "All Types" Dropdown (Strict 35% Ratio, Fits Inside Screen) */
+#section-search .filter-dropdown,
+#section-search #filter-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 35% !important;
+    width: 35% !important;
+    max-width: 120px !important;
+    min-width: 95px !important;
+    height: 54px !important;
+    margin-bottom: 0 !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+}
+
+/* 5. "Latest First ▼" Sort Link (Clean Right Alignment) */
+#section-sort {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+    margin-bottom: 12px !important;
+    padding-right: 4px !important;
+}
+
+#sort-box {
+    width: auto !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+}
+
+/* ========================================================================= */
+/* 📱 CARD ACTION BUTTONS & REVIEW BOXES (RESPONSIVE AUTO-FIT)              */
+/* ========================================================================= */
 @media screen and (max-width: 600px) {
-    #section-search {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 8px !important;
-        align-items: center !important;
-        width: 100% !important;
-    }
-
-    #section-search .input-group {
-        flex: 1 1 auto !important;
-        margin-bottom: 0 !important;
-    }
-
-    #section-search .filter-dropdown,
-    #filter-box {
-        flex: 0 0 auto !important;
-        width: auto !important;
-        min-width: 105px !important;
-        height: 54px !important;
-        padding: 0 12px !important;
-        font-size: 13px !important;
-        margin-bottom: 0 !important;
-        text-align: center !important;
-    }
-
-    #section-sort {
-        display: flex !important;
-        justify-content: flex-end !important;
-        width: 100% !important;
-        margin-top: 6px !important;
-        margin-bottom: 12px !important;
-    }
-
-    #sort-box {
-        width: auto !important;
-        font-size: 12px !important;
-        border: none !important;
-        background: transparent !important;
-    }
-
     /* Action Buttons (Cards) */
     .card-actions-row, .btn-row {
         display: flex !important;
@@ -614,7 +625,7 @@ div:has(> #search-box),
         white-space: nowrap !important;
     }
 
-    /* Review 3-Summary Boxes */
+    /* Review 3 Summary Boxes */
     #rep-results > div:first-child {
         display: flex !important;
         flex-direction: row !important;
@@ -640,93 +651,4 @@ div:has(> #search-box),
         font-size: 15px !important;
         white-space: nowrap !important;
     }
-}
-
-/* ========================================================================= */
-/* 🔍 SEARCH BAR & FILTER ROW - PERFECT NO-OVERFLOW MOBILE FIX              */
-/* ========================================================================= */
-
-/* 1. Search & Filter Container (Dono ek line mein screen ke andar rahenge) */
-#section-search {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    margin-bottom: 2px !important;
-}
-
-/* 2. Search Input Box (Bachi hui 70% jagah lega, flex auto-fit) */
-#section-search .input-group {
-    flex: 1 1 0% !important;
-    width: auto !important;
-    min-width: 0 !important;
-    height: 52px !important;
-    margin-bottom: 0 !important;
-    padding: 0 12px !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    box-sizing: border-box !important;
-}
-
-#section-search .input-group input#search-box,
-#section-search #search-box {
-    flex: 1 1 0% !important;
-    min-width: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    padding: 0 6px !important;
-    font-size: 14px !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-/* 3. Filter Dropdown ("All Types" Box - Fixed 95px, Screen se bahar nahi jayega) */
-#section-search .filter-dropdown,
-#filter-box {
-    flex: 0 0 95px !important;
-    width: 95px !important;
-    min-width: 95px !important;
-    max-width: 95px !important;
-    height: 52px !important;
-    padding: 0 4px !important;
-    margin-bottom: 0 !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    text-align: center !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-/* 4. Sort Box ("Latest First ▼" - Bilkul right-aligned aur clean) */
-#section-sort {
-    display: flex !important;
-    justify-content: flex-end !important;
-    align-items: center !important;
-    width: 100% !important;
-    margin-top: 4px !important;
-    margin-bottom: 12px !important;
-    padding-right: 6px !important;
-}
-
-#sort-box {
-    width: auto !important;
-    height: auto !important;
-    font-size: 11px !important;
-    font-weight: 800 !important;
-    color: var(--text-muted) !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    cursor: pointer !important;
 }
