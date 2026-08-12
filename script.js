@@ -204,14 +204,6 @@ window.addEventListener('offline', () => {
 // ==========================================
 // 4. UTILITY & LOCALIZATION HELPERS
 // ==========================================
-function sameId(a, b) {
-    return String(a) === String(b);
-}
-
-function generateUniqueId() {
-    return Date.now() + "_" + Math.random().toString(36).substring(2, 9);
-}
-
 function getISTDate() {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000; // Exact IST (+5:30)
@@ -1669,7 +1661,7 @@ function toggleSelectAllHistory(id) {
 }
 
 function openPayModal(id, prefillAmt = null) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('pay-id').value = id; 
     document.getElementById('pay-date').value = getISTDate(); 
     let amt = 0;
@@ -1684,7 +1676,7 @@ let c = db.find(x => sameId(x.id, id));
 
 function savePayment() { 
     let id = parseInt(document.getElementById('pay-id').value); 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     if (!c) return showToast("Customer account not found!");
 
     let amt = parseFloat(document.getElementById('pay-amt').value); 
@@ -1717,7 +1709,7 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function openBulkModal(id, startOverride = null, endOverride = null) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('bulk-id').value = id; 
     let todayStr = getISTDate(); 
     
@@ -1765,7 +1757,7 @@ let c = db.find(x => sameId(x.id, id));
 
 function saveBulkPayment() { 
     let id = parseInt(document.getElementById('bulk-id').value); 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     if (!c) return showToast("Customer account not found!");
 
     let amt = parseFloat(document.getElementById('bulk-amt').value); 
@@ -1839,7 +1831,7 @@ let c = db.find(x => sameId(x.id, id));
 function openEditModal(id) { 
     window._pendingPhotoRemoval = false;
     lastCroppedBase64 = ''; 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('edit-id').value = id; 
     document.getElementById('edit-name').value = c.name; 
     document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
@@ -1881,7 +1873,7 @@ let c = db.find(x => sameId(x.id, id));
 
 async function saveEdit() { 
     let id = parseInt(document.getElementById('edit-id').value); 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     let oldRate = c.rate; 
     let oldInstallment = c.installment; 
     let oldTotalPayable = c.totalPayable; 
@@ -1928,7 +1920,7 @@ let c = db.find(x => sameId(x.id, id));
 
 function deleteCustUI(id) { 
     askConfirm("Move this entire account to Recycle Bin?", () => { 
-let cIndex = db.findIndex(x => sameId(x.id, id));
+        let cIndex = db.findIndex(x => x.id === id);
         if (cIndex > -1) {
             let c = db[cIndex];
             let tr = getTrash();
@@ -1944,7 +1936,7 @@ let cIndex = db.findIndex(x => sameId(x.id, id));
                 deletedBy: deviceStaffName
             };
             
-try { deleteCaseDelta(id, tombstone, tr); } catch(e) { console.log("Sync Error", e); }
+            deleteCaseDelta(id, tombstone, tr);
             if (typeof render === 'function') render();
             showToast("Account Moved to Recycle Bin! 🗑️"); 
         }
@@ -1953,7 +1945,7 @@ try { deleteCaseDelta(id, tombstone, tr); } catch(e) { console.log("Sync Error",
 
 function deleteHistoryUI(custId, originalIndex) { 
     askConfirm("Move this entry to Recycle Bin?", () => { 
-let c = db.find(x => sameId(x.id, custId));
+        let c = db.find(x => x.id === custId); 
         let tr = getTrash();
         if (!tr.histories) tr.histories = []; 
         let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
@@ -1973,7 +1965,7 @@ function deleteSelectedHistoryUI(id) {
     let checks = document.querySelectorAll(`.del-chk-${id}:checked`); 
     if (checks.length === 0) return toggleMultiDel(id); 
     askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
-let c = db.find(x => sameId(x.id, id));
+        let c = db.find(x => x.id === id); 
         let tr = getTrash();
         if (!tr.histories) tr.histories = []; 
         let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
@@ -1994,7 +1986,7 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function toggleArchiveUI(id) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     let isArchiving = !c.isArchived; 
     let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; 
     askConfirm(msg, () => { 
@@ -2005,6 +1997,7 @@ let c = db.find(x => sameId(x.id, id));
     }); 
 }
 
+// ==========================================
 // ==========================================
 // 13. RECYCLE BIN / TRASH MANAGEMENT
 // ==========================================
@@ -2104,9 +2097,8 @@ function processTrashAction(action, indices) {
             let item = tr.histories[idx];
             if (!item) return;
 
-        if (action === 'restore') {
-            let targetCase = db.find(x => sameId(x.id, item.caseId) && x.type !== 'config' && x.type !== 'trash');
-
+            if (action === 'restore') {
+                let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash');
                 if (targetCase) {
                     delete item.deletedAt;
                     delete item.deletedBy;
@@ -2525,7 +2517,7 @@ function renderStats() {
 
 function generateCustomerPDF(id) {
     const { jsPDF } = window.jspdf;
-const c = db.find(x => sameId(x.id, id));
+    const c = db.find(x => x.id === id);
     if (!c) return;
     const doc = new jsPDF();
     doc.setFontSize(22); doc.setTextColor(255, 107, 53); doc.text("Credix.", 14, 20);
@@ -3271,7 +3263,6 @@ document.addEventListener("visibilitychange", function() {
 // ==========================================
 // 20. AI SMART ASSISTANT & CHAT ENGINE
 // ==========================================
-
 const COMMAND_INTENTS = {
     pending: ["pending", "due", "baki", "overdue", "unpaid", "late", "/pending", "/due", "पेंडिंग", "बाकी", "डियू", "kis kis", "leni"],
     collection: ["collection", "recovery", "payment", "jama", "received", "/collection", "कलेक्शन", "जमा", "रिकवरी", "पेमेंट", "ayi"],
