@@ -1,23 +1,712 @@
-{
-  "name": "Credix Premium",
-  "short_name": "Credix",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#F4F2EE",
-  "theme_color": "#F4F2EE",
-  "description": "Credix Finance Management App",
-  "icons": [
-    {
-      "src": "logo.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap');
+
+:root {
+    color-scheme: light;
+    --bg-deep: #F1EDE7;
+    --card-bg: #F1EDE7;
+    --card-border: transparent;
+    --accent-orange: #C77B63;
+    --accent-glow: rgba(199, 123, 99, 0.4);
+    --text-main: #3A3B3C;
+    --text-muted: #8B8C8D;
+    --success: #1D827B;
+    --danger: #D9534F;
+    --owner-gold: #C77B63;
+
+    /* PREMIUM 3D SHADOW ENGINE */
+    --shadow-out: 8px 8px 16px #d1ccc5, -8px -8px 16px #ffffff;
+    --shadow-in: inset 6px 6px 12px #d1ccc5, inset -6px -6px 12px #ffffff;
+    --edge-shine: inset 2px 2px 4px #ffffff, inset -2px -2px 4px rgba(0,0,0,0.03);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; touch-action: manipulation; }
+
+html { background-color: var(--bg-deep); }
+
+body {
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-deep) !important;
+    color: var(--text-main) !important; 
+    margin: 0; padding: 20px 12px;
+    padding-bottom: 140px; 
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+.container { position: relative; z-index: 10; }
+.resp-row { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 600px) { .resp-row { flex-direction: row; } }
+
+/* --- HEADER & TOP BAR --- */
+.header-top { display:flex; justify-content:space-between; align-items:center; padding-bottom: 25px; }
+.app-title { margin:0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: var(--text-main); display:flex; align-items:center; gap:8px;}
+.sub-title { font-size: 12px; color: var(--text-muted); font-weight: 800; letter-spacing: 0.5px; margin-top: 4px;}
+
+.profile-btn { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; cursor: pointer; position: relative; background: var(--bg-deep); color: var(--accent-orange); border: 2px solid #ffffff; box-shadow: var(--shadow-out); transition: 0.1s ease;}
+.profile-btn:active { box-shadow: var(--shadow-in); border-color: transparent; transform: scale(0.96); }
+
+#profile-icon-area { display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border-radius: 50%; overflow: hidden; border: none; box-shadow: 0 0 0 2px #1D827B; background: transparent; aspect-ratio: 1 / 1; transform: translateZ(0); }
+#profile-icon-area img { display: block; width: 102%; height: 102%; object-fit: cover; object-position: center; border: none; border-radius: 0; margin: -1%; padding: 0; background: transparent; }
+
+.owner-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-orange); color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; font-weight: 800; display: none; box-shadow: 4px 6px 12px var(--accent-glow), inset 2px 2px 4px rgba(255,255,255,0.3); z-index: 2;}
+
+/* --- TOAST --- */
+#toast-box { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--success); color: #fff; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 13px; z-index: 9999999; box-shadow: 6px 8px 16px rgba(29, 130, 123, 0.3); transition: top 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+#toast-box.show { top: 30px; }
+
+/* --- SYNC BAR --- */
+.sync-bar { display:flex; justify-content:space-between; align-items:center; background: transparent; margin-bottom:20px; font-size:12px; font-weight: 800; }
+.status-indicator { display: flex; align-items: center; gap: 8px; color: var(--text-muted);}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px rgba(29, 130, 123, 0.4);}
+.status-dot.offline { background: var(--danger); box-shadow: 0 0 6px rgba(217, 83, 79, 0.5); }
+.sync-btn { background: var(--bg-deep); color: var(--text-main); border-radius: 50px; border: 2px solid #ffffff; box-shadow: var(--shadow-out); font-weight: 800; padding: 6px 12px; cursor: pointer; transition: 0.1s ease;}
+.sync-btn:active { box-shadow: var(--shadow-in); transform: scale(0.96); border-color: transparent;}
+
+/* --- 3D MATTE CARDS (FIXED BACKGROUND BLEED) --- */
+.sum-card, .search-stat-card, .cust-card, .pending-card, .glass-card, .modal-cont, .empty-dash-card, .view-table, #ai-chat-window, .trash-list-item, .staff-list-item {
+    background: var(--bg-deep) !important; /* !important lagaya taaki HTML wala dark color hat jaye */
+    border-radius: 28px !important;
+    box-shadow: var(--shadow-out), var(--edge-shine) !important;
+    border: 2px solid #ffffff !important;
+    padding: 20px;
+    margin-bottom: 15px;
+    color: var(--text-main) !important;
+}
+.cust-card { transition: transform 0.05s ease; padding: 20px; }
+.cust-card:active { transform: scale(0.98); }
+.clickable-area { cursor: pointer; }
+
+/* --- SUMMARY ROW & WATERMARKS --- */
+.summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.sum-card { padding: 16px 12px; }
+.sum-card span { font-size: 9px; color: var(--text-muted) !important; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;}
+.sum-card b { font-size: clamp(19px, 5.5vw, 24px); font-weight: 700; color: var(--text-main) !important; display: block; white-space: nowrap; letter-spacing: -0.5px; font-family: 'Quicksand', sans-serif;}
+.sum-card-full { grid-column: span 2; padding: 20px 18px;}
+.sum-card-full b { font-size: clamp(26px, 8vw, 32px); }
+
+div:has(> #sum-principal), div:has(> #sum-cases), div:has(> #sum-balance) { position: relative; overflow: hidden; z-index: 1; }
+div:has(> #sum-principal)::after { content: "₹"; position: absolute; right: 10px; bottom: -30px; font-size: 130px; font-weight: 900; color: #C5724B; opacity: 0.12; z-index: -1; line-height: 1; transform: rotate(-15deg); pointer-events: none; font-family: Arial, sans-serif; }
+div:has(> #sum-balance)::after { content: "₹"; position: absolute; right: 0px; bottom: -15px; font-size: 85px; font-weight: 900; color: #C5724B; opacity: 0.12; z-index: -1; line-height: 1; transform: rotate(-15deg); pointer-events: none; font-family: Arial, sans-serif; }
+div:has(> #sum-cases)::after { content: ""; position: absolute; right: -10px; bottom: -15px; width: 80px; height: 80px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231D827B"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>'); background-repeat: no-repeat; background-size: contain; opacity: 0.08; z-index: -1; transform: rotate(-15deg); pointer-events: none; }
+
+#sum-principal { color: #1D827B !important; text-shadow: 0 2px 8px rgba(29, 130, 123, 0.15); }
+#sum-cases { color: #C07C41 !important; text-shadow: 0 2px 8px rgba(192, 124, 65, 0.15); }
+#sum-balance { color: #D9534F !important; }
+#owner-invested { color: var(--success) !important; text-shadow: none; }
+
+/* --- RECESSED INPUT WELLS (FIXED PILL TAG BUG) --- */
+.input-group, .filter-dropdown, #ai-chat-input {
+    background: transparent;
+    box-shadow: var(--shadow-in);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    color: var(--text-main);
+    display: flex; align-items: center; margin-bottom: 12px; padding: 0 15px;
+    height: 54px; width: 100%; box-sizing: border-box;
+}
+.input-group:focus-within, .filter-dropdown:focus { box-shadow: inset 8px 8px 16px #d1ccc5, inset -8px -8px 16px #ffffff; }
+.input-group input, .input-group select, .filter-dropdown { color: var(--text-main) !important; font-weight: 800; background: transparent; border: none; outline: none; box-shadow: none; -webkit-appearance: none; appearance: none; flex: 1; padding: 16px 0; font-size: 16px; }
+.input-group input:focus, .input-group select:focus { background: transparent; border: none; outline: none; box-shadow: none; }
+.input-icon { font-size: 16px; color: var(--accent-orange); opacity: 0.8; margin-right: 12px; width: 20px; text-align: center; }
+.settings-dropdown { width: 100%; padding: 16px 0; background-color: transparent; color: var(--text-main); border: none; font-size: 16px; outline: none; -webkit-appearance: none; appearance: none; }
+select option { background: var(--bg-deep); color: var(--text-main); }
+input[type="file"] { background: transparent; border: none; box-shadow: none; border-radius: 0; appearance: none; }
+
+/* 🚀 PILL TAG FIX (Isse DAILY/S.NO chhota aur sundar ho jayega) */
+.pill-tag {
+    background: transparent !important;
+    box-shadow: var(--shadow-in) !important;
+    padding: 4px 10px !important; 
+    border-radius: 20px !important; 
+    font-size: 10px !important; 
+    color: var(--text-main) !important; 
+    font-weight: 800 !important; 
+    display: inline-block !important; 
+    margin-bottom: 12px !important;
+    border: 1px solid transparent !important;
+}
+
+/* --- 3D BUTTONS (PRIMARY TEAL) --- */
+.main-btn, .s-btn.collect, #t-addBtn, #t-bulkSubmit, #t-repBtn, .calc-btn-orange, #ai-send-btn, #btn-rep-pdf, #btn-staff-pdf {
+    background: var(--success) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50px !important;
+    box-shadow: 6px 8px 16px rgba(29, 130, 123, 0.3), inset 3px 3px 6px rgba(255,255,255,0.3), inset -3px -3px 6px rgba(0,0,0,0.15) !important;
+    font-weight: 800 !important;
+    padding: 16px; cursor: pointer; width: 100%; font-size: 15px; margin-top: 10px; transition: 0.1s ease;
+    -webkit-appearance: none; appearance: none; outline: none;
+}
+.main-btn:active, .s-btn.collect:active, .calc-btn-orange:active, #btn-rep-pdf:active, #btn-staff-pdf:active, #ai-send-btn:active {
+    box-shadow: inset 5px 5px 12px rgba(0,0,0,0.2), inset -5px -5px 12px rgba(255,255,255,0.1) !important;
+    transform: scale(0.96) !important;
+}
+
+/* --- 3D BUTTONS (SECONDARY CREAM) --- */
+.s-btn, #btn-trash-multi, .settings-btn, .modal button {
+    background: var(--bg-deep) !important;
+    color: var(--text-main) !important;
+    border-radius: 50px !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: var(--shadow-out) !important;
+    font-weight: 800 !important; font-family: 'Outfit', sans-serif;
+    padding: 10px 0; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; outline: none; transition: 0.1s ease;
+}
+
+/* 🔥 PIN KEYPAD DIGITS FIX (Big & Bold) */
+.calc-btn:not(.calc-btn-orange) {
+    background: var(--bg-deep) !important;
+    color: var(--text-main) !important;
+    border-radius: 50% !important; /* Isse button 100% gol rahega */
+    border: 2px solid #ffffff !important;
+    box-shadow: var(--shadow-out) !important;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; outline: none; transition: 0.1s ease;
+    font-size: 28px !important; /* Bade Digits */
+    font-weight: 900 !important; /* Extra Bold */
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.s-btn:active, .calc-btn:not(.calc-btn-orange):active, .modal button:active {
+    box-shadow: var(--shadow-in) !important;
+    border-color: transparent !important;
+    transform: scale(0.96) !important;
+}
+
+
+/* Button Layouts */
+.btn-row { display: flex; gap: 8px; width: 100%; margin-top: 15px; }
+.s-btn { flex: 1; }
+.btn-icon { flex: 0.55; font-size: 18px; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
+.btn-danger-txt { color: var(--danger) !important; }
+.btn-danger-small { background: var(--danger); border: none; color: white; font-size: 10px; padding: 4px 10px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.btn-secondary-small { background: var(--bg-deep); border: 2px solid #ffffff; box-shadow: var(--shadow-out); color: var(--text-main); font-size: 10px; padding: 4px 10px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.btn-secondary-small:active { box-shadow: var(--shadow-in); transform: scale(0.96); }
+
+/* --- LOCK SCREEN --- */
+#lock-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-deep) !important; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lock-content { width: 100%; max-width: 384px; padding: 0 24px; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+.lock-title { font-size: 54px !important; font-weight: 900 !important; font-family: 'Outfit', sans-serif !important; color: var(--text-main) !important; letter-spacing: 1px; margin-bottom: 12px; margin-top: 0; text-shadow: none !important;}
+
+.lock-sub { color: var(--text-muted) !important; font-size: 14px; font-weight: 800; margin-bottom: 48px; letter-spacing: 1px; text-align: center; text-transform: uppercase; margin-top: 0; }
+.pin-dots { display: flex; gap: 22px; height: 20px; align-items: center; justify-content: center; width: 100%; margin-bottom: 40px;}
+.dot { width: 16px; height: 16px; border-radius: 50%; background: transparent !important; border: 2px solid transparent !important; box-shadow: var(--shadow-in) !important; transition: all 0.2s ease; }
+.dot.active { background: var(--success) !important; box-shadow: 4px 6px 12px rgba(29, 130, 123, 0.4), inset 2px 2px 4px rgba(255,255,255,0.3) !important; transform: scale(1.1); border: none !important; }
+.calc-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 300px; place-items: center; }
+.calc-btn { width: 100%; max-width: 76px; aspect-ratio: 1 / 1; border-radius: 50%; font-size: clamp(24px, 6vw, 32px); font-weight: 800; }
+.calc-btn-orange { font-size: 18px; }
+.calc-delete, .calc-delete svg, .delete-icon { color: var(--text-main) !important; fill: var(--text-main) !important; stroke: none; border: none; background: transparent; box-shadow: none; }
+.calc-delete:active { box-shadow: none !important; border: none !important; background: transparent !important; transform: scale(0.9) !important;}
+
+/* --- CUSTOMER CARDS & LISTS --- */
+.card-top-row { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
+.status-txt { float: right; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 5px;}
+
+.status-pending, .bal-pending { color: #E63946 !important; font-weight: bold !important; }
+.status-pending .status-dot { background: #E63946 !important; box-shadow: 0 0 6px rgba(230, 57, 70, 0.5) !important; }
+.status-active, .bal-active { color: #1D827B !important; font-weight: bold !important; }
+.status-active .status-dot { background: #1D827B !important; box-shadow: 0 0 6px rgba(29, 130, 123, 0.4) !important; }
+.status-closed, .bal-closed { color: #8A8D98 !important; font-weight: bold !important; }
+.status-closed .status-dot { background: #8A8D98 !important; box-shadow: none !important; }
+
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 10px; border-bottom: none; }
+.card-header-left { min-width: 0; flex: 1; display: flex; align-items: center; gap: 12px; }
+.card-header-right { flex-shrink: 0; }
+.c-sub-right { text-align: right; }
+
+.c-name { font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; word-break: break-word; flex: 1; min-width: 0; }
+.cust-avatar, .pc-photo, .staff-photo { width: 44px; height: 44px; border-radius: 50% !important; object-fit: cover !important; border: 2px solid #198075 !important; padding: 0 !important; background: var(--bg-deep); flex-shrink: 0; cursor: zoom-in; }
+.c-sub { font-size: 11px; color: var(--text-muted); font-weight: 800;}
+.c-bal { font-size: 19px; font-weight: 800; font-family: 'Quicksand', sans-serif; text-align: right; margin-bottom: 4px; flex-shrink: 0;}
+
+.ref-tag { color: var(--accent-orange); font-size: 10px; margin-left: 5px; flex-shrink: 0; }
+.crown-icon { flex-shrink: 0; }
+.due-indicator, .owner-badge { background: var(--accent-orange) !important; color: white !important; padding: 4px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; display: inline-block; margin-bottom: 10px; box-shadow: 4px 6px 12px var(--accent-glow), inset 2px 2px 4px rgba(255,255,255,0.3) !important; border: none; }
+
+/* Expanded Views */
+.card-stats-box { display: flex; justify-content: space-between; background: var(--bg-deep) !important; border: 2px solid #ffffff !important; box-shadow: 5px 5px 15px rgba(0,0,0,0.05), -5px -5px 15px #ffffff !important; padding: 15px; border-radius: 12px; margin-top: 15px; outline: none; }
+.stat-col-left { text-align: left; }
+.stat-col-center { text-align: center; }
+.stat-col-right { text-align: right; }
+.stat-label { font-size: 10px; color: var(--text-muted) !important; font-weight: 800;}
+.stat-val { font-size: 14px; font-weight: 800; color: var(--text-main) !important;}
+.stat-success { color: var(--success) !important; }
+.stat-danger { color: var(--danger) !important; }
+
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 2px dashed rgba(0,0,0,0.05); padding-top: 10px; }
+.history-title { font-size: 11px; color: var(--text-muted); font-weight: 800; }
+.history-actions { display: flex; gap: 10px; }
+
+.view-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; overflow: hidden; padding: 0;}
+.view-table th { background: transparent; color: var(--text-muted); padding: 12px 8px; font-weight: 800; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.view-table td { padding: 12px 8px; border-bottom: 1px solid rgba(0,0,0,0.05); text-align: center; color: var(--text-main); font-weight: 800;}
+.empty-row { padding: 20px; opacity: 0.6; text-align: center; color: var(--text-main); }
+.missed-dates-box { background: var(--bg-deep) !important; border: 2px solid var(--danger) !important; border-radius: 8px; padding: 12px; color: var(--danger) !important; margin-top: 15px; font-weight: 800;}
+
+/* --- PENDING CARDS & REPORTS --- */
+.pending-card { cursor: pointer; transition: all 0.3s ease; }
+.pc-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.pc-left { flex: 1; min-width: 0; }
+.pc-right { text-align: right; flex-shrink: 0; margin-left: 10px; }
+.pc-name { color: var(--text-main) !important; font-weight: 800; display: block; word-break: break-word; }
+.pc-basis { color: var(--theme-color) !important; font-size: 9px; font-weight: 800; letter-spacing: 0.5px; }
+.pc-missed { color: var(--text-muted) !important; font-size: 10px; font-weight: 800; display: block; margin-top: 3px; }
+.pc-note { color: var(--text-main) !important; margin-left: 5px; }
+.pc-amt { color: var(--theme-color) !important; font-size: 14px; font-weight: 800; }
+.pc-badge { background: var(--success) !important; color: white !important; font-weight: 800; font-size: 9px; padding: 4px 8px; border-radius: 6px; margin-top: 6px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.pc-name-wrapper { display: flex; align-items: center; gap: 10px; }
+.pc-photo { width: 30px; height: 30px; }
+.pc-sub { font-size: 10px; color: var(--text-muted) !important; display: block; margin-top: 2px; font-weight: 800; }
+.pc-profit, .pc-profit-text { font-size: 10px; color: var(--owner-gold) !important; margin-top: 2px; font-weight: 800; }
+.pc-payment-details { font-size: 10px; color: var(--text-muted) !important; margin-top: 6px; display: flex; justify-content: space-between; gap: 10px; font-weight: 800; }
+.pc-closed-footer { margin-top: 8px; padding-top: 8px; border-top: 2px dashed rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+.pc-closed-stat { display: flex; flex-direction: column; gap: 3px; }
+.right-align { align-items: flex-end; }
+.pc-white-text { font-size: 11px; color: var(--text-main) !important; font-weight: 800; }
+.pc-success-text { font-size: 14px; font-weight: 800; color: var(--success) !important; }
+
+/* Report Specific Colors */
+#rep-results > div:first-child > div { flex: 1; text-align: center; padding: 12px 5px; background: var(--bg-deep) !important; border: 2px solid #ffffff !important; box-shadow: var(--shadow-out) !important; border-radius: 20px !important;}
+#rep-results > div:first-child > div span { color: var(--text-muted) !important; font-weight: 800; font-size: 12px;}
+#rep-results > div:first-child > div b { font-size: 20px; font-weight: 800; margin-top: 5px; display: block; }
+#rep-given { color: var(--accent-orange) !important; }
+#rep-ret { color: var(--success) !important; }
+#rep-profit { color: var(--owner-gold) !important; }
+
+#rep-list div[style*="c084fc" i], #rep-list span[style*="c084fc" i], #rep-list b[style*="c084fc" i] { color: #D4A017 !important; }
+.pending-card[style*="c084fc" i] { --theme-color: #D4A017 !important; }
+#rep-list div[style*="var(--danger)"], #rep-list span[style*="var(--danger)"], #rep-list b[style*="var(--danger)"] { color: #1D827B !important; }
+.pending-card[style*="var(--danger)"] { --theme-color: #1D827B !important; }
+#rep-list div[style*="3da9fc" i], #rep-list span[style*="3da9fc" i], #rep-list b[style*="3da9fc" i] { color: #C5724B !important; }
+.pending-card[style*="3da9fc" i] { --theme-color: #C5724B !important; }
+
+/* --- MODALS, ALERTS & EMPTY STATES --- */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 242, 238, 0.85) !important; z-index: 900000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px);}
+
+/* 🔥 FIXED: Modal Size & Width restored to perfect dimensions */
+.modal-cont { 
+    background: var(--bg-deep) !important; 
+    border: 2px solid #ffffff !important;
+    border-radius: 30px !important; 
+    width: 100% !important; /* Isse dabba wapas chauda ho jayega */
+    max-width: 360px !important; 
+    box-shadow: var(--shadow-out), var(--edge-shine) !important; 
+    max-height: 90vh; overflow-y: auto; 
+    padding: 30px 25px !important; /* Perfect spacing */
+    color: var(--text-main) !important;
+}
+
+.modal-label { font-size: 11px; color: var(--text-muted); margin-top: 15px; display: block; margin-bottom: 8px; font-weight:800; letter-spacing: 0.5px;}
+
+/* 🔥 FIXED: Settings modal buttons back to Cream (Matte) 3D Look */
+.modal .main-btn {
+    background: var(--bg-deep) !important;
+    color: var(--text-main) !important;
+    border-radius: 50px !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: var(--shadow-out) !important;
+    font-weight: 800 !important; font-family: 'Outfit', sans-serif !important;
+    padding: 16px; cursor: pointer; width: 100%; font-size: 15px; margin-top: 10px; transition: 0.1s ease;
+}
+.modal .main-btn:active {
+    box-shadow: var(--shadow-in) !important;
+    border-color: transparent !important;
+    transform: scale(0.96) !important;
+}
+
+.modal-cont { max-width: 360px; max-height: 90vh; overflow-y: auto; }
+.modal-label { font-size: 11px; color: var(--text-muted); margin-top: 15px; display: block; margin-bottom: 8px; font-weight:800; letter-spacing: 0.5px;}
+.photo-preview-wrap { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; background: transparent; padding: 10px; border-radius: 15px; border: 2px dashed rgba(0,0,0,0.1); }
+.crop-area-wrap { width: 100%; height: 300px; background: #e0dcd3; margin-top: 15px; border-radius: 15px; overflow: hidden; position: relative; box-shadow: var(--shadow-in);}
+.crop-area-wrap img { max-width: 100%; display: block; }
+
+.empty-list-msg { color: var(--text-muted); font-size: 12px; text-align: center; font-weight: 800;}
+.staff-list-item, .trash-list-item { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.staff-name-text, .trash-title { color: var(--text-main) !important; font-weight: 800; font-size: 14px;}
+.staff-pin-text { color: var(--text-main) !important; font-size: 11px; margin-left: 5px; font-weight: 800; }
+.trash-date { color: var(--text-muted) !important; font-size: 11px; font-weight: 800;}
+.action-icon { cursor: pointer; font-size: 16px; }
+.trash-chk { width: 18px; height: 18px; accent-color: var(--accent-orange); flex-shrink: 0; }
+.trash-actions-col { display: flex; flex-direction: column; gap: 8px; }
+.trash-btn { border: none; border-radius: 8px; padding: 8px; font-size: 14px; cursor: pointer; }
+
+.empty-dash-card { text-align: center; margin-top: 15px; padding: 35px 20px;}
+.empty-icon { color: #D4A017 !important; font-size: 38px !important; margin-bottom: 10px !important; opacity: 1 !important; text-shadow: 2px 4px 6px rgba(0,0,0,0.15) !important; filter: brightness(0) saturate(100%) invert(42%) sepia(29%) saturate(1450%) hue-rotate(130deg) brightness(96%) contrast(86%) !important; }
+.empty-title { color: var(--text-main) !important; font-weight: 800 !important; font-size: 20px !important; letter-spacing: 0.5px !important; margin-bottom: 5px !important; }
+.empty-desc { color: var(--text-muted) !important; font-weight: 600 !important; font-size: 13px !important; line-height: 1.6 !important; margin-top: 8px !important; }
+.empty-desc b { color: var(--text-main) !important; font-weight: 800 !important; }
+
+.search-stat-card { padding: 22px 20px; margin-bottom: 25px; }
+.ss-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+.ss-title { font-size:14px; font-weight:800; color:var(--owner-gold); }
+.ss-query { font-size:11px; color: var(--text-main); background: var(--bg-deep); box-shadow: var(--shadow-in); padding:3px 8px; border-radius:8px; font-weight: 800;}
+.ss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ss-item { display: flex; flex-direction: column; gap: 2px; }
+.ss-item label { font-size: 10px; color: var(--text-muted) !important; font-weight: 800;}
+.ss-item value { font-size: 13px; font-weight: 800; color: var(--text-main) !important; }
+.ss-full { grid-column: span 2; background: transparent; border: 2px dashed rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; }
+.ss-border { border-top: 2px dashed rgba(0,0,0,0.1); padding-top:10px; }
+
+#photo-zoom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(241, 237, 231, 0.95); z-index: 1000000; align-items: center; justify-content: center; cursor: zoom-out; backdrop-filter: blur(5px); }
+#zoomed-img { max-width: 90%; max-height: 80vh; border-radius: 20px; box-shadow: var(--shadow-out); border: 4px solid #ffffff; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+#photo-zoom-modal.active { display: flex; }
+#photo-zoom-modal.active #zoomed-img { transform: scale(1); }
+
+/* --- PROGRESS BARS --- */
+#bar-m-prin { background: var(--accent-orange); }
+#bar-d-prin { background: #1D827B; }
+#bar-meter-prin { background: #D4A017; }
+#txt-m-prin, #txt-d-prin, #txt-meter-prin { font-weight: 800; color: var(--text-main) !important;}
+div:has(> #txt-d-prin) > div:not(#txt-d-prin) { background: #1D827B !important; }
+div:has(> #txt-meter-prin) > div:not(#txt-meter-prin) { background: #D4A017 !important; }
+
+/* --- BOTTOM NAV --- */
+.bottom-nav { position: fixed; bottom: calc(15px + env(safe-area-inset-bottom, 10px)); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: var(--bg-deep); border: 2px solid #ffffff; box-shadow: var(--shadow-out); border-radius: 40px; padding: 8px; display: flex; justify-content: space-around; align-items: center; z-index: 100000; font-weight: 800; color: var(--text-main); }
+.nav-item { display:flex; flex-direction:column; align-items:center; font-size: 10px; color: var(--text-muted); cursor: pointer; transition: 0.2s ease; gap: 4px; flex: 1; padding: 8px 0; border-radius: 20px; }
+.nav-item .nav-icon { width: 24px; height: 24px; font-size: 22px; display: flex; align-items: center; justify-content: center; transition: 0.2s ease; }
+.nav-item.active { color: var(--success); background: var(--bg-deep); box-shadow: var(--shadow-in); }
+.nav-item.active .nav-icon { transform: translateY(-2px); }
+body:has(#lock-screen:not([style*="display: none"]):not([style*="display:none"]):not(.hidden):not(.d-none)) .bottom-nav { display: none !important; }
+
+/* --- AI CHATBOX --- */
+#ai-chat-btn { position: fixed; bottom: 95px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: #1D827B !important; color: white; border: none; padding: 0; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 4px 6px 12px rgba(29, 130, 123, 0.4) !important; cursor: pointer; z-index: 999999; transition: transform 0.2s ease; }
+#ai-chat-btn:active { transform: scale(0.95); }
+#ai-chat-window { position: fixed; bottom: 120px; right: 25px; width: 340px; height: 480px; max-width: 90vw; background: var(--bg-deep); border-radius: 28px; box-shadow: var(--shadow-out); border: 2px solid #ffffff; display: flex; flex-direction: column; z-index: 10000; overflow: hidden; }
+#ai-chat-header { background: transparent; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed rgba(0,0,0,0.05); }
+#ai-chat-header button, #ai-chat-window .close-btn { background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1); color: var(--text-main); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: none; opacity: 0.8; }
+#ai-chat-header button:active { background: rgba(0,0,0,0.1); opacity: 1; }
+#ai-chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.ai-msg, .user-msg { max-width: 85%; padding: 12px 16px; font-size: 13px; line-height: 1.5; word-wrap: break-word; color: var(--text-main) !important; font-weight: 800; }
+.ai-msg { background: var(--bg-deep) !important; border: 2px solid #ffffff !important; box-shadow: 5px 5px 15px rgba(0,0,0,0.05), -5px -5px 15px #ffffff !important; border-radius: 12px !important; align-self: flex-start; border-bottom-left-radius: 4px; }
+.ai-msg div { color: var(--text-main) !important; }
+.user-msg { background: var(--accent-orange); color: white !important; border-radius: 12px; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 2px 4px 8px var(--accent-glow); }
+#ai-chat-input-area { display: flex; padding: 12px; background: transparent; border-top: 2px dashed rgba(0,0,0,0.05); gap: 8px; }
+#ai-mic-btn, #ai-send-btn { background: var(--success); color: white; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; border: none; box-shadow: 4px 4px 10px rgba(29, 130, 123, 0.3); }
+#ai-mic-btn { background: var(--bg-deep); color: var(--text-main); border: 2px solid #ffffff; box-shadow: var(--shadow-out); }
+#ai-send-btn:active, #ai-mic-btn:active { transform: scale(0.9); }
+@media screen and (max-width: 600px) { #ai-chat-window { bottom: 140px; width: 90%; right: 5%; } }
+
+/* --- ANIMATIONS & UTILS --- */
+@keyframes shakeAnimation { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.shake-error { animation: shakeAnimation 0.4s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger) !important; background: rgba(217, 83, 79, 0.08) !important; }
+
+/* =========================================
+   🔥 MASTER FIX: PENDING COLLECTIONS RED ALERT
+   ========================================= */
+
+/* 1. Pending Amount aur Basis ko wapas Red karega */
+.pending-card[style*="DC3545" i] .pc-amt,
+.pending-card[style*="DC3545" i] .pc-basis {
+    color: var(--danger) !important;
+}
+
+/* 2. Niche jo "TOTAL:: ₹" aata hai usko wapas Red karega */
+#rep-list div[style*="DC3545" i], 
+#rep-list span[style*="DC3545" i], 
+#rep-list b[style*="DC3545" i] {
+    color: var(--danger) !important;
+}
+
+/* =========================================
+   🔥 MASTER FIX: RECEIVE BADGE TEXT COLOR
+   ========================================= */
+#rep-list .pending-card .pc-badge,
+.pending-card .pc-badge,
+.pc-badge {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important; /* Apple/iPad par color force karne ke liye */
+    font-weight: 900 !important; /* Text ko thoda extra bold karega */
+}
+/* =========================================
+   🔥 MASTER FIX: TEXT WRAP & PORTFOLIO COLORS
+   ========================================= */
+
+/* 1. Missed Dates Overlap Fix (Text ko niche ki line mein todega) */
+.pc-missed, .pc-detail-text {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.4 !important;
+    padding-right: 15px !important; /* Button se thoda gap rakhega */
+}
+
+/* 2. Business Portfolio Colors Fix (HTML inline colors ko katega) */
+
+/* Daily = Signature Teal Green */
+#bar-d-prin { background: #1D827B !important; }
+div:has(> #txt-d-prin) > div:first-child { 
+    background: #1D827B !important; 
+    box-shadow: 0 0 8px #1D827B !important; 
+}
+
+/* Meter = VIP Gold */
+#bar-meter-prin { background: #D4A017 !important; }
+div:has(> #txt-meter-prin) > div:first-child { 
+    background: #D4A017 !important; 
+    box-shadow: 0 0 8px #D4A017 !important; 
+}
+
+/* Monthly = Premium Copper */
+#bar-m-prin { background: var(--accent-orange) !important; }
+div:has(> #txt-m-prin) > div:first-child { 
+    background: var(--accent-orange) !important; 
+    box-shadow: 0 0 8px var(--accent-orange) !important; 
+}
+
+/* =========================================
+   🔥 MASTER FIX: MODAL PHOTO PREVIEW SIZE
+   ========================================= */
+.photo-preview-img { 
+    width: 50px !important; 
+    height: 50px !important; 
+    border-radius: 50% !important; 
+    object-fit: cover !important; 
+    border: 2px solid var(--success) !important; 
+}
+/* =========================================
+   🚀 FULL GPU HARDWARE ACCELERATION ENGINE
+   ========================================= */
+
+/* 1. Super-Smooth Inertial Touch Scrolling */
+html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* 2. GPU Hardware Acceleration for Cards & Animated Elements */
+.cust-card, 
+.pending-card, 
+.sum-card, 
+.glass-card, 
+.modal-cont, 
+#ai-chat-window {
+    transform: translateZ(0); /* Forces Dedicated GPU Compositing Layer */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
+}
+
+/* 3. Off-Screen Rendering Optimization (Boosts FPS on Long Lists) */
+.cust-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 140px;
+}
+/* ========================================================================= */
+/* 🔍 SEARCH & FILTER ROW (ORIGINAL RATIO - 65% SEARCH / 35% FILTER)        */
+/* ========================================================================= */
+
+/* 1. Main Search Row Container */
+#section-search {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+}
+
+/* 2. Review Tab / Hidden state par pakka hide hoga */
+#section-search[style*="display: none"],
+#section-search[style*="display:none"],
+#section-sort[style*="display: none"],
+#section-sort[style*="display:none"] {
+    display: none !important;
+}
+
+/* 2. Search Box (Auto-adjusts to ~65% width, never pushes filter out) */
+#section-search .input-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important; /* Fixed 100% width hataya */
+    height: 54px !important;
+    padding: 0 14px !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#section-search .input-group input#search-box,
+#section-search #search-box {
+    flex: 1 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 6px !important;
+    font-size: 14px !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* 3. Search Lens & Mic Icons (Inside Search Box) */
+#section-search .input-icon,
+#section-search span[onclick*="startVoiceSearch"] {
+    font-size: 16px !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+}
+
+/* 4. "All Types" Dropdown (Strict 35% Ratio, Fits Inside Screen) */
+#section-search .filter-dropdown,
+#section-search #filter-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 35% !important;
+    width: 35% !important;
+    max-width: 120px !important;
+    min-width: 95px !important;
+    height: 54px !important;
+    margin-bottom: 0 !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+}
+
+/* 5. "Latest First ▼" Sort Link (Clean Right Alignment) */
+#section-sort {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+    margin-bottom: 12px !important;
+    padding-right: 4px !important;
+}
+
+#sort-box {
+    width: auto !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+}
+
+/* ========================================================================= */
+/* 📱 CARD ACTION BUTTONS & REVIEW BOXES (RESPONSIVE AUTO-FIT)              */
+/* ========================================================================= */
+@media screen and (max-width: 600px) {
+    /* Action Buttons (Cards) */
+    .card-actions-row, .btn-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        margin-top: 12px !important;
     }
-  ]
+
+    .btn-row .s-btn.btn-icon {
+        flex: 0 0 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .btn-row .s-btn.collect {
+        flex: 1 1 auto !important;
+        height: 38px !important;
+        border-radius: 20px !important;
+        font-size: 13px !important;
+        margin-top: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    /* Review 3 Summary Boxes */
+    #rep-results > div:first-child {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+    }
+
+    #rep-results > div:first-child > div {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        padding: 10px 4px !important;
+        border-radius: 14px !important;
+        text-align: center !important;
+    }
+
+    #rep-results > div:first-child > div span {
+        font-size: 9px !important;
+        line-height: 1.2 !important;
+        display: block !important;
+        height: 22px !important;
+    }
+
+    #rep-results > div:first-child > div b {
+        font-size: 15px !important;
+        white-space: nowrap !important;
+    }
+}
+/* ========================================================================= */
+/* 📱 IPAD & SAFARI BUTTON TOUCH & CLICK RESTORATION ENGINE                  */
+/* ========================================================================= */
+
+/* 1. Card Scale ko sirf Header Clickable Area par shift karein (Buttons safe rahenge) */
+.cust-card:active {
+    transform: none !important; /* Card ko hilne se rokega taaki child buttons click ho sakein */
+}
+
+.clickable-area:active {
+    transform: scale(0.98); /* Sirf header tap karne par 3D press effect aayega */
+    transition: transform 0.05s ease;
+}
+
+/* 2. Action Buttons ko Top Layer (High Z-Index) par lock karein */
+.card-actions-row,
+.btn-row,
+.card-actions-row button,
+.btn-row button,
+.btn-icon,
+.s-btn {
+    position: relative !important;
+    z-index: 10 !important;
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
+/* 3. Modal Popup Buttons Click Fix (iPad Safari Stacking Fix) */
+.modal {
+    pointer-events: auto !important;
+}
+
+.modal-cont {
+    position: relative !important;
+    z-index: 999999 !important;
+    pointer-events: auto !important;
+    transform: none !important; /* Modal ke andar click cancel hone se bachayega */
+}
+
+.modal button,
+.modal .main-btn,
+.modal .s-btn,
+#confirm-modal button {
+    position: relative !important;
+    z-index: 9999999 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
