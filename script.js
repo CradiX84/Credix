@@ -130,49 +130,25 @@ const EnterpriseSyncEngine = {
             const pendingTasks = await localDB.syncQueue.orderBy('autoId').toArray();
             for (const task of pendingTasks) {
                 try {
-        if (task.action === 'UPSERT_CASE') {
-            // ------------------------------------------
-            // Local tombstone protection
-            // ------------------------------------------
-            if (
-                localTombstones[task.caseId] &&
-                localTombstones[task.caseId].deletedAt >= (task.timestamp || 0)
-            ) {
-                console.warn(`[SyncQueue] Stale upsert discarded for deleted case ${task.caseId}`);
-                await localDB.syncQueue.delete(task.autoId);
-                continue;
-            }
-
-            // ------------------------------------------
-            // Server tombstone protection
-            // ------------------------------------------
-            const tSnap = await database.ref(`credix_db/tombstones/${task.caseId}`).once('value');
-            const serverTomb = tSnap.val();
-            if (
-                serverTomb &&
-                serverTomb.deletedAt >= (task.timestamp || 0)
-            ) {
-                console.warn(`[SyncQueue] Server tombstone active for case ${task.caseId}. Discarding update.`);
-                localTombstones[task.caseId] = serverTomb;
-                saveLocalTombstones();
-                await localDB.syncQueue.delete(task.autoId);
-                continue;
-            }
-
-            // ------------------------------------------
-            // Upload
-            // ------------------------------------------
-            let updates = {};
-            updates[`credix_db/cases/${task.caseId}`] = task.payload;
-            await database.ref().update(updates);
-
-            // ------------------------------------------
-            // IMPORTANT:
-            // Clear Dirty Flag ONLY when the uploaded
-            // version is still the current local version.
-            // ------------------------------------------
-            clearSyncPendingIfCurrent(task.caseId, task.payload);
-
+                    if (task.action === 'UPSERT_CASE') {
+                        // Stale check
+                        if (localTombstones[task.caseId] && localTombstones[task.caseId].deletedAt >= (task.timestamp || 0)) {
+                            console.warn(`[SyncQueue] Stale upsert discarded for deleted case ${task.caseId}`);
+                            await localDB.syncQueue.delete(task.autoId);
+                            continue;
+                        }
+                        const tSnap = await database.ref(`credix_db/tombstones/${task.caseId}`).once('value');
+                        const serverTomb = tSnap.val();
+                        if (serverTomb && serverTomb.deletedAt >= (task.timestamp || 0)) {
+                            console.warn(`[SyncQueue] Server tombstone active for case ${task.caseId}. Discarding update.`);
+                            localTombstones[task.caseId] = serverTomb;
+                            saveLocalTombstones();
+                            await localDB.syncQueue.delete(task.autoId);
+                            continue;
+                        }
+                        let updates = {};
+                        updates[`credix_db/cases/${task.caseId}`] = task.payload;
+                        await database.ref().update(updates);
                     } else if (task.action === 'DELETE_CASE') {
                         let updates = {};
                         updates[`credix_db/cases/${task.caseId}`] = null;
@@ -228,14 +204,6 @@ window.addEventListener('offline', () => {
 // ==========================================
 // 4. UTILITY & LOCALIZATION HELPERS
 // ==========================================
-function sameId(a, b) {
-    return String(a) === String(b);
-}
-
-function generateUniqueId() {
-    return Date.now() + "_" + Math.random().toString(36).substring(2, 9);
-}
-
 function getISTDate() {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000; // Exact IST (+5:30)
@@ -1154,66 +1122,20 @@ function saveLocalTombstones() {
     localStorage.setItem('paymitra_tombstones', JSON.stringify(localTombstones));
 }
 
-// ==========================================
-// SYNC PENDING FLAG FINALIZER
-// ==========================================
-function clearSyncPendingIfCurrent(caseId, syncedPayload) {
-    if (!caseId || !syncedPayload) return false;
-    const localCase = db.find(
-        x => x &&
-             x.type !== 'config' &&
-             x.type !== 'trash' &&
-             sameId(x.id, caseId)
-    );
-    if (!localCase) return false;
-    
-    const sameVersion =
-        Number(localCase.version || 0) ===
-        Number(syncedPayload.version || 0);
-    const sameUpdatedAt =
-        Number(localCase.updatedAt || 0) ===
-        Number(syncedPayload.updatedAt || 0);
-        
-    if (!sameVersion || !sameUpdatedAt) {
-        return false;
-    }
-    
-    localCase.isSyncPending = false;
-    
-    localStorage.setItem(
-        'paymitra_v11',
-        JSON.stringify(db)
-    );
-    
-    try {
-        if (
-            typeof localDB !== 'undefined' &&
-            localDB.cases
-        ) {
-            localDB.cases.put(localCase).catch(() => {});
-        }
-    } catch (e) {}
-    
-    return true;
-}
-
 // Delta Sync Dispatchers (Updated for Unified Enqueue)
 function syncCaseDelta(caseObj) {
     if (!caseObj || !caseObj.id) return;
     caseObj.updatedAt = Date.now();
-    caseObj.isSyncPending = true;
     caseObj.version = (caseObj.version || 0) + 1;
-
-    // Save local state immediately
+    
     let currentDbStr = JSON.stringify(db);
     localStorage.setItem('paymitra_v11', currentDbStr);
-
-    // IndexedDB mirror
+    
     try {
         if (typeof localDB !== 'undefined' && localDB.cases) {
             localDB.cases.put(caseObj).catch(() => {});
         }
-    } catch (e) {}
+    } catch(e) {}
 
     let syncStatus = document.getElementById('sync-status');
     let cloudInd = document.getElementById('cloud-indicator');
@@ -1222,12 +1144,9 @@ function syncCaseDelta(caseObj) {
         action: 'UPSERT_CASE',
         caseId: caseObj.id,
         collection: 'credix_db/cases',
-        payload: JSON.parse(JSON.stringify(caseObj))
+        payload: caseObj
     };
 
-    // ==========================================
-    // OFFLINE
-    // ==========================================
     if (!navigator.onLine) {
         if (syncStatus) syncStatus.innerText = "Saved Offline";
         if (cloudInd) cloudInd.className = "status-dot offline";
@@ -1235,31 +1154,20 @@ function syncCaseDelta(caseObj) {
         return;
     }
 
-    // ==========================================
-    // ONLINE
-    // ==========================================
     if (syncStatus) syncStatus.innerText = "Syncing...";
     if (cloudInd) cloudInd.className = "status-dot sync-anim";
 
     let updates = {};
     updates[`credix_db/cases/${caseObj.id}`] = caseObj;
-
-    database.ref().update(updates)
-        .then(() => {
-            // Clear ONLY if this exact version is still the latest local version.
-            clearSyncPendingIfCurrent(caseObj.id, caseObj);
-            
-            if (syncStatus) syncStatus.innerText = "Cloud Synced";
-            if (cloudInd) cloudInd.className = "status-dot";
-        })
-        .catch((err) => {
-            console.warn("[Sync] Direct upload failed. Queuing:", err);
-            if (syncStatus) syncStatus.innerText = "Saved Offline";
-            if (cloudInd) cloudInd.className = "status-dot offline";
-            EnterpriseSyncEngine.enqueue(queueTask);
-        });
+    database.ref().update(updates).then(() => {
+        if (syncStatus) syncStatus.innerText = "Cloud Synced";
+        if (cloudInd) cloudInd.className = "status-dot";
+    }).catch((err) => {
+        if (syncStatus) syncStatus.innerText = "Saved Offline";
+        if (cloudInd) cloudInd.className = "status-dot offline";
+        EnterpriseSyncEngine.enqueue(queueTask);
+    });
 }
-
 
 function deleteCaseDelta(caseId, tombstone, trashPayload) {
     localTombstones[caseId] = tombstone;
@@ -1402,12 +1310,6 @@ function setupFirebaseListener() {
             validCases.forEach(item => {
                 if (!item.history) item.history = [];
             });
-db.forEach(loc => {
-    if (loc.isSyncPending && loc.type !== 'config' && loc.type !== 'trash') {
-        validCases = validCases.filter(srv => !sameId(srv.id, loc.id));
-        validCases.push(loc);
-    }
-});
 
             // Reconstruct unified local DB state
             let newDb = [
@@ -1449,122 +1351,50 @@ db.forEach(loc => {
     });
 }
 
-function hardRefresh() {
-    const syncStatus = document.getElementById('sync-status');
-    if (syncStatus) {
-        syncStatus.innerText = "Syncing...";
-    }
-    database.ref('credix_db')
-        .once('value')
-        .then((snapshot) => {
-            if (!snapshot.exists()) {
-                if (syncStatus) syncStatus.innerText = "Cloud Synced";
-                return;
-            }
-            const data = snapshot.val() || {};
-            
-            // ==========================================
-            // SERVER TOMBSTONES
-            // ==========================================
-            const serverTombstones = data.tombstones || {};
+function hardRefresh() { 
+    document.getElementById('sync-status').innerText = "Syncing...";
+    database.ref('credix_db').once('value').then((snapshot) => {
+        if (snapshot.exists()) {
+            let data = snapshot.val() || {};
+            let serverTombstones = data.tombstones || {};
             Object.assign(localTombstones, serverTombstones);
             saveLocalTombstones();
-            
-            // ==========================================
-            // SERVER CASES
-            // ==========================================
-            const serverCasesMap = data.cases || {};
-            let serverCases = [];
-            if (Array.isArray(serverCasesMap)) {
-                serverCases = serverCasesMap.filter(c => c != null);
-            } else if (typeof serverCasesMap === 'object') {
-                serverCases = Object.values(serverCasesMap).filter(c => c != null);
-            }
-            // Legacy compatibility
+
+            let serverCasesMap = data.cases || {};
+            let serverCases = Array.isArray(serverCasesMap) ? serverCasesMap.filter(c => c != null) : Object.values(serverCasesMap).filter(c => c != null);
             if (serverCases.length === 0 && Array.isArray(data)) {
                 serverCases = data.filter(x => x && x.type !== 'config' && x.type !== 'trash');
             }
-            
-            // ==========================================
-            // CONFIG + TRASH
-            // ==========================================
-            const serverConfig = data.config || getConfig();
-            const serverTrash = data.trash || getTrash();
-            
-            // ==========================================
-            // TOMBSTONE FILTER
-            // ==========================================
+
+            let serverConfig = data.config || getConfig();
+            let serverTrash = data.trash || getTrash();
+
             let validCases = serverCases.filter(c => {
                 if (!c || !c.id) return false;
-                const tomb = localTombstones[c.id];
+                let tomb = localTombstones[c.id];
                 return !(tomb && tomb.deletedAt >= (c.updatedAt || 0));
             });
-            validCases.forEach(item => {
-                if (!item.history) {
-                    item.history = [];
-                }
-            });
-            
-            // ==========================================
-            // CRITICAL:
-            // PRESERVE LOCAL DIRTY RECORDS
-            // ==========================================
-            db.forEach(localCase => {
-                if (!localCase || localCase.type === 'config' || localCase.type === 'trash') {
-                    return;
-                }
-                if (!localCase.isSyncPending) {
-                    return;
-                }
-                // Remove server copy of same case
-                validCases = validCases.filter(serverCase => !sameId(serverCase.id, localCase.id));
-                // Keep local pending copy
-                validCases.push(localCase);
-            });
-            
-            // ==========================================
-            // REBUILD LOCAL DB
-            // ==========================================
+
+            validCases.forEach(item => { if (!item.history) item.history = []; });
+
             db = [serverConfig, serverTrash, ...validCases];
-            const dbStr = JSON.stringify(db);
+            let dbStr = JSON.stringify(db);
             localStorage.setItem('paymitra_v11', dbStr);
+            localStorage.setItem('paymitra_last_synced_v11', dbStr);
             
-            // IMPORTANT: Do not treat pending local data as "last cloud synced" state.
-            const cloudSafeCases = validCases.filter(c => !c.isSyncPending);
-            const cloudSafeDb = [serverConfig, serverTrash, ...cloudSafeCases];
-            localStorage.setItem('paymitra_last_synced_v11', JSON.stringify(cloudSafeDb));
-            
-            // ==========================================
-            // INDEXEDDB MIRROR
-            // ==========================================
             try {
                 if (typeof localDB !== 'undefined' && localDB.cases) {
-                    localDB.cases.clear()
-                        .then(() => localDB.cases.bulkPut(validCases))
-                        .catch(() => {});
+                    localDB.cases.clear().then(() => localDB.cases.bulkPut(validCases)).catch(() => {});
                 }
-            } catch (e) {}
-            
-            // ==========================================
-            // UI
-            // ==========================================
-            if (syncStatus) {
-                syncStatus.innerText = "Cloud Synced";
-            }
-            showToast("Sync Successful!");
-            if (typeof render === 'function') {
-                render();
-            }
-        })
-        .catch((err) => {
-            console.warn("[HardRefresh] Failed:", err);
-            if (syncStatus) {
-                syncStatus.innerText = "Offline Mode";
-            }
-            showToast("Cloud Sync Failed. Local data preserved.");
-        });
+            } catch(e) {}
+        }
+        document.getElementById('sync-status').innerText = "Cloud Synced";
+        showToast("Sync Successful!");
+        if (typeof render === 'function') render();
+    }).catch(() => {
+        document.getElementById('sync-status').innerText = "Offline Mode";
+    });
 }
-
 
 function saveAndRender() {
     try {
@@ -1731,7 +1561,7 @@ async function addCustomer() {
     }
     
     let cust = { 
-        id: generateUniqueId(), 
+        id: Date.now(), 
         name, 
         principal: amt, 
         type, 
@@ -1831,7 +1661,7 @@ function toggleSelectAllHistory(id) {
 }
 
 function openPayModal(id, prefillAmt = null) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('pay-id').value = id; 
     document.getElementById('pay-date').value = getISTDate(); 
     let amt = 0;
@@ -1845,8 +1675,8 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function savePayment() { 
-let id = document.getElementById('pay-id').value; 
-let c = db.find(x => sameId(x.id, id));
+    let id = parseInt(document.getElementById('pay-id').value); 
+    let c = db.find(x => x.id === id); 
     if (!c) return showToast("Customer account not found!");
 
     let amt = parseFloat(document.getElementById('pay-amt').value); 
@@ -1879,7 +1709,7 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function openBulkModal(id, startOverride = null, endOverride = null) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('bulk-id').value = id; 
     let todayStr = getISTDate(); 
     
@@ -1926,8 +1756,8 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function saveBulkPayment() { 
-let id = document.getElementById('bulk-id').value; 
-let c = db.find(x => sameId(x.id, id));
+    let id = parseInt(document.getElementById('bulk-id').value); 
+    let c = db.find(x => x.id === id); 
     if (!c) return showToast("Customer account not found!");
 
     let amt = parseFloat(document.getElementById('bulk-amt').value); 
@@ -2001,7 +1831,7 @@ let c = db.find(x => sameId(x.id, id));
 function openEditModal(id) { 
     window._pendingPhotoRemoval = false;
     lastCroppedBase64 = ''; 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     document.getElementById('edit-id').value = id; 
     document.getElementById('edit-name').value = c.name; 
     document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
@@ -2042,8 +1872,8 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 async function saveEdit() { 
-let id = document.getElementById('edit-id').value; 
-let c = db.find(x => sameId(x.id, id));
+    let id = parseInt(document.getElementById('edit-id').value); 
+    let c = db.find(x => x.id === id); 
     let oldRate = c.rate; 
     let oldInstallment = c.installment; 
     let oldTotalPayable = c.totalPayable; 
@@ -2090,7 +1920,7 @@ let c = db.find(x => sameId(x.id, id));
 
 function deleteCustUI(id) { 
     askConfirm("Move this entire account to Recycle Bin?", () => { 
-let cIndex = db.findIndex(x => sameId(x.id, id));
+        let cIndex = db.findIndex(x => x.id === id);
         if (cIndex > -1) {
             let c = db[cIndex];
             let tr = getTrash();
@@ -2106,7 +1936,7 @@ let cIndex = db.findIndex(x => sameId(x.id, id));
                 deletedBy: deviceStaffName
             };
             
-try { deleteCaseDelta(id, tombstone, tr); } catch(e) { console.log("Sync Error", e); }
+            deleteCaseDelta(id, tombstone, tr);
             if (typeof render === 'function') render();
             showToast("Account Moved to Recycle Bin! 🗑️"); 
         }
@@ -2115,7 +1945,7 @@ try { deleteCaseDelta(id, tombstone, tr); } catch(e) { console.log("Sync Error",
 
 function deleteHistoryUI(custId, originalIndex) { 
     askConfirm("Move this entry to Recycle Bin?", () => { 
-let c = db.find(x => sameId(x.id, custId));
+        let c = db.find(x => x.id === custId); 
         let tr = getTrash();
         if (!tr.histories) tr.histories = []; 
         let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
@@ -2135,7 +1965,7 @@ function deleteSelectedHistoryUI(id) {
     let checks = document.querySelectorAll(`.del-chk-${id}:checked`); 
     if (checks.length === 0) return toggleMultiDel(id); 
     askConfirm(`Move ${checks.length} entries to Recycle Bin?`, () => { 
-let c = db.find(x => sameId(x.id, id));
+        let c = db.find(x => x.id === id); 
         let tr = getTrash();
         if (!tr.histories) tr.histories = []; 
         let nowStr = getISTDate() + " " + new Date().toLocaleTimeString('en-US', {hour12: true, hour: "numeric", minute: "numeric"});
@@ -2156,7 +1986,7 @@ let c = db.find(x => sameId(x.id, id));
 }
 
 function toggleArchiveUI(id) { 
-let c = db.find(x => sameId(x.id, id));
+    let c = db.find(x => x.id === id); 
     let isArchiving = !c.isArchived; 
     let msg = isArchiving ? "Move to Archive (Closed Cases)?" : "Restore to Active Cases?"; 
     askConfirm(msg, () => { 
@@ -2167,6 +1997,7 @@ let c = db.find(x => sameId(x.id, id));
     }); 
 }
 
+// ==========================================
 // ==========================================
 // 13. RECYCLE BIN / TRASH MANAGEMENT
 // ==========================================
@@ -2266,9 +2097,8 @@ function processTrashAction(action, indices) {
             let item = tr.histories[idx];
             if (!item) return;
 
-        if (action === 'restore') {
-            let targetCase = db.find(x => sameId(x.id, item.caseId) && x.type !== 'config' && x.type !== 'trash');
-
+            if (action === 'restore') {
+                let targetCase = db.find(x => x.id === item.caseId && x.type !== 'config' && x.type !== 'trash');
                 if (targetCase) {
                     delete item.deletedAt;
                     delete item.deletedBy;
@@ -2457,8 +2287,7 @@ function render() {
         
         let histHtml = histData.reverse().map((h) => { 
             let origIdx = c.history.indexOf(h); 
-        let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, '${c.id}')" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI('${c.id}', ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`;
-
+            let actHtml = multiDelMode[c.id] ? `<input type="checkbox" class="del-chk-${c.id}" value="${origIdx}" onclick="handleMultiSelectCheck(event, ${c.id})" style="width:16px;height:16px;accent-color:var(--accent-orange); cursor:pointer;">` : `<span onclick="deleteHistoryUI(${c.id}, ${origIdx})" style="color:var(--text-muted);font-size:14px; cursor:pointer;">🗑️</span>`; 
             return hideSNo ? `<tr><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>` : `<tr><td>${origIdx + 1}</td><td style="color:var(--text-muted)">${formatDateDisplay(h.date)}</td><td style="color:var(--success)">₹${h.paid}</td><td>₹${Number(h.balance||0).toFixed(0)}</td><td>${actHtml}</td></tr>`; 
         }).join('');
 
@@ -2472,8 +2301,7 @@ function render() {
         accountsHtmlArray.push(`
         <div class="cust-card glass-card" ${isOwnerMode && c.isPersonal ? 'data-personal="true"' : ''}>
             ${isDueToday && c.currentBalance > 0 ? '<div class="due-indicator">Due Today</div>' : ''}
-<div onclick="toggleView('${c.id}')" class="clickable-area">
-
+            <div onclick="toggleView(${c.id})" class="clickable-area">
                 <div class="card-top-row">
                     <div class="pill-tag">${c.type.toUpperCase()} | S.No: ${c.originalSNo}${hideSNo ? '' : ' | Kishat: ' + (c.history?c.history.length:0)}</div>
                     ${statusHtml}
@@ -2512,27 +2340,24 @@ function render() {
                 ${missedDatesHtml}
                 <div class="history-header">
                     <span class="history-title">${t.payHistory}</span>
-
-                                <div class="history-actions">
-                                    ${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI('${c.id}')" class="btn-danger-small">DELETE ALL</button>` : ''}
-                                    <button onclick="toggleMultiDel('${c.id}')" class="btn-secondary-small">${multiDelMode[c.id] ? 'CANCEL' : 'MULTI-SELECT'}</button>
-                                </div>
-                            </div>
-                            <table class="view-table">
-                                <thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead>
-                                <tbody>${histHtml || '<tr><td colspan="5" class="empty-row">No records</td></tr>'}</tbody>
-                            </table>
-                        </div>
-                        <div class="btn-row card-actions-row">
-                            <button class="s-btn btn-icon" onclick="openEditModal('${c.id}')">✏️</button>
-                            ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF('${c.id}')">📄</button>` : ''}
-                            <button class="s-btn btn-icon" onclick="toggleArchiveUI('${c.id}')">${c.isArchived ? '📩' : '📦'}</button>
-                            <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI('${c.id}')">🗑️</button>
-                            <button class="s-btn collect" onclick="${currentTab === 'bulk' ? 'openBulkModal' : 'openPayModal'}('${c.id}')">${currentTab === 'bulk' ? 'Bulk' : i18n[currentLang].recBtn || 'Receive'}</button>
-                        </div>
-                    </div>`
-);
-
+                    <div class="history-actions">
+                        ${multiDelMode[c.id] ? `<button onclick="deleteSelectedHistoryUI(${c.id})" class="btn-danger-small">DELETE ALL</button>` : ''}
+                        <button onclick="toggleMultiDel(${c.id})" class="btn-secondary-small">${multiDelMode[c.id]?'CANCEL':'MULTI-SELECT'}</button>
+                    </div>
+                </div>
+                <table class="view-table">
+                    <thead>${hideSNo ? '<tr><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>' : '<tr><th>S.No</th><th>Date</th><th>Paid</th><th>Bal</th><th>X</th></tr>'}</thead>
+                    <tbody>${histHtml || '<tr><td colspan="5" class="empty-row">No records</td></tr>'}</tbody>
+                </table>
+            </div>
+            <div class="btn-row card-actions-row">
+                <button class="s-btn btn-icon" onclick="openEditModal(${c.id})">✏️</button>
+                ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
+                <button class="s-btn btn-icon" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
+                <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI(${c.id})">🗑️</button>
+                <button class="s-btn collect" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button>
+            </div>
+        </div>`);
     });
         
     let finalHtml = ""; 
@@ -2692,7 +2517,7 @@ function renderStats() {
 
 function generateCustomerPDF(id) {
     const { jsPDF } = window.jspdf;
-const c = db.find(x => sameId(x.id, id));
+    const c = db.find(x => x.id === id);
     if (!c) return;
     const doc = new jsPDF();
     doc.setFontSize(22); doc.setTextColor(255, 107, 53); doc.text("Credix.", 14, 20);
@@ -3438,7 +3263,6 @@ document.addEventListener("visibilitychange", function() {
 // ==========================================
 // 20. AI SMART ASSISTANT & CHAT ENGINE
 // ==========================================
-
 const COMMAND_INTENTS = {
     pending: ["pending", "due", "baki", "overdue", "unpaid", "late", "/pending", "/due", "पेंडिंग", "बाकी", "डियू", "kis kis", "leni"],
     collection: ["collection", "recovery", "payment", "jama", "received", "/collection", "कलेक्शन", "जमा", "रिकवरी", "पेमेंट", "ayi"],
