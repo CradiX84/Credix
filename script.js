@@ -578,7 +578,7 @@ function toSquareBase64(file) {
             img.src = reader.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const size = 400; 
+                const size = 200; // CHANGE 1: 400 se 200 kar diya
                 canvas.width = size;
                 canvas.height = size;
                 const ctx = canvas.getContext('2d');
@@ -593,7 +593,7 @@ function toSquareBase64(file) {
                     sHeight = sWidth;
                 }
                 ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.6)); // CHANGE 1: 0.8 se 0.6 kar diya
             };
         };
         reader.onerror = error => reject(error);
@@ -611,7 +611,7 @@ function toBase64(file) {
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
-                const max_size = 800; 
+                const max_size = 400; // CHANGE 2: 800 se 400 kar diya
                 if (width > height) {
                     if (width > max_size) {
                         height *= max_size / width;
@@ -627,7 +627,7 @@ function toBase64(file) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.6)); // CHANGE 2: 0.8 se 0.6 kar diya
             };
         };
         reader.onerror = error => reject(error);
@@ -669,9 +669,12 @@ async function handleImageSelect(input, target) {
 function confirmCrop() {
     if (!activeCropper) return;
     try {
-        const canvas = activeCropper.getCroppedCanvas({ width: 400, height: 400, fillColor: '#fff' });
+        // CHANGE 3: width 400, height 400 ko 200, 200 kar diya
+        const canvas = activeCropper.getCroppedCanvas({ width: 200, height: 200, fillColor: '#fff' });
         if (!canvas) return showToast("Cropping failed. Try again.");
-        lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        // CHANGE 3: 0.8 ko 0.6 kar diya
+        lastCroppedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+        
         if (currentCropTarget === 'edit') {
             document.getElementById('edit-photo-preview').src = lastCroppedBase64;
             document.getElementById('edit-photo-preview-wrap').style.display = 'flex';
@@ -720,6 +723,7 @@ function removeEditPhoto() {
     document.getElementById('edit-photo-preview').src = '';
     window._pendingPhotoRemoval = true;
 }
+
 
 // ==========================================
 // 8. LIFECYCLE & INITIALIZATION
@@ -843,14 +847,20 @@ function renderStaffList() {
     document.getElementById('staff-list-container').innerHTML = html; 
 }
 
-function addStaff() { 
+async function addStaff() { 
     let name = document.getElementById('new-staff-name').value.trim(); 
     let pinVal = document.getElementById('new-staff-pin').value.trim(); 
     if (!name || pinVal.length !== 4) return showToast("Enter Name and 4-Digit ID!"); 
     let conf = getConfig(); 
     if (conf.staffList.some(s => s.pin === pinVal) || pinVal === secretPin) { return showToast("This ID is already taken!"); } 
-    let photo = (currentCropTarget === 'staff-add' && lastCroppedBase64) ? lastCroppedBase64 : "";
-    conf.staffList.push({ name: name, pin: pinVal, photo: photo }); 
+    
+    let photoBase64 = (currentCropTarget === 'staff-add' && lastCroppedBase64) ? lastCroppedBase64 : "";
+    let finalPhotoUrl = "";
+    if (photoBase64) {
+        finalPhotoUrl = await uploadToCloudinary(photoBase64);
+    }
+
+    conf.staffList.push({ name: name, pin: pinVal, photo: finalPhotoUrl }); 
     syncConfigDelta(conf); 
     document.getElementById('new-staff-name').value = ''; 
     document.getElementById('new-staff-pin').value = ''; 
@@ -877,7 +887,7 @@ function openEditStaffProfile(idx) {
     document.getElementById('edit-staff-pin-modal').style.display = 'flex'; 
 }
 
-function saveStaffProfile() { 
+async function saveStaffProfile() { 
     let idx = document.getElementById('edit-staff-idx').value; 
     let newName = document.getElementById('edit-staff-new-name').value.trim();
     let newPin = document.getElementById('edit-staff-new-pin').value.trim(); 
@@ -886,8 +896,9 @@ function saveStaffProfile() {
     if (conf.staffList.some((s, i) => s.pin === newPin && i != idx) || newPin === secretPin) { return showToast("This ID is already taken!"); } 
     conf.staffList[idx].name = newName;
     conf.staffList[idx].pin = newPin; 
+    
     if (currentCropTarget === 'staff-edit' && lastCroppedBase64) {
-        conf.staffList[idx].photo = lastCroppedBase64;
+        conf.staffList[idx].photo = await uploadToCloudinary(lastCroppedBase64);
     } else if (window._pendingStaffPhotoRemoval) {
         conf.staffList[idx].photo = "";
     }
@@ -1541,9 +1552,7 @@ async function addCustomer() {
     const amt = parseFloat(document.getElementById('amt').value);
     const rawDate = document.getElementById('date').value;
     
-    // iPadOS / Safari hidden characters cleanup
     const date = (rawDate || getISTDate()).replace(/[^\d-]/g, '').trim();
-    
     const staffRef = isOwnerMode ? document.getElementById('staff-ref').value.trim() : deviceStaffName;
     const isPersonal = document.getElementById('is-personal') ? document.getElementById('is-personal').checked : false;
     
@@ -1560,6 +1569,12 @@ async function addCustomer() {
         }
     }
     
+    // --- CLOUDINARY UPLOAD MAGIC ---
+    let finalPhotoUrl = "";
+    if (photoBase64) {
+        finalPhotoUrl = await uploadToCloudinary(photoBase64);
+    }
+    
     let cust = { 
         id: Date.now(), 
         name, 
@@ -1570,7 +1585,7 @@ async function addCustomer() {
         staffRef: staffRef, 
         isPersonal: isPersonal, 
         isArchived: false, 
-        photo: photoBase64,
+        photo: finalPhotoUrl, // URL save hoga base64 nahi
         version: 1,
         updatedAt: Date.now()
     };
@@ -1879,16 +1894,26 @@ async function saveEdit() {
     let oldTotalPayable = c.totalPayable; 
     let nameVal = document.getElementById('edit-name').value; 
     if (nameVal) c.name = nameVal; 
+    
+    let photoBase64 = c.photo; 
     if (lastCroppedBase64) { 
-        c.photo = lastCroppedBase64; 
+        photoBase64 = lastCroppedBase64; 
     } else if (window._pendingPhotoRemoval) { 
-        c.photo = ""; 
+        photoBase64 = ""; 
     } else { 
         const fileInput = document.getElementById('edit-photo-input'); 
         if (fileInput.files && fileInput.files[0]) { 
-            c.photo = await toSquareBase64(fileInput.files[0]); 
+            photoBase64 = await toSquareBase64(fileInput.files[0]); 
         } 
     }
+
+    // --- CLOUDINARY UPLOAD MAGIC ---
+    if (photoBase64 && photoBase64.startsWith('data:image')) {
+        c.photo = await uploadToCloudinary(photoBase64);
+    } else {
+        c.photo = photoBase64; 
+    }
+
     if (isOwnerMode) { 
         c.staffRef = document.getElementById('edit-staff-ref').value.trim(); 
         c.isPersonal = document.getElementById('edit-is-personal').checked; 
@@ -1917,6 +1942,7 @@ async function saveEdit() {
     lastCroppedBase64 = ''; 
     showToast("Account Updated ✅"); 
 }
+
 
 function deleteCustUI(id) { 
     askConfirm("Move this entire account to Recycle Bin?", () => { 
@@ -3564,4 +3590,36 @@ if (aiBtn) {
     aiBtn.addEventListener('click', () => {
         if (!moved) toggleAIChat();
     });
+}
+
+// ==========================================
+// NEW: CLOUDINARY UPLOAD HELPER
+// ==========================================
+async function uploadToCloudinary(base64Image) {
+    // Agar photo nahi hai ya pehle se hi link hai, toh wahi wapas bhej do
+    if (!base64Image || !base64Image.startsWith('data:image')) return base64Image; 
+    
+    showToast("Uploading Photo to Cloud ⏳...");
+    
+    // Aapka apna Cloud Name aur Preset yahan laga diya hai
+    const url = `https://api.cloudinary.com/v1_1/fofcglam/image/upload`;
+    const formData = new FormData();
+    formData.append("file", base64Image);
+    formData.append("upload_preset", "credix_images");
+
+    try {
+        const response = await fetch(url, { method: "POST", body: formData });
+        const data = await response.json();
+        if (data.secure_url) {
+            return data.secure_url; // Cloudinary ka chota link return karega
+        } else {
+            console.error("Cloudinary Error:", data);
+            showToast("Photo Upload Failed!");
+            return "";
+        }
+    } catch (error) {
+        console.error("Upload Error:", error);
+        showToast("Network Error in Photo Upload!");
+        return "";
+    }
 }
