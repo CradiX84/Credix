@@ -1548,7 +1548,11 @@ function recalculateCase(c) {
 async function addCustomer() {
     const tLang = i18n[currentLang];
     const type = document.getElementById('type').value;
-    const name = document.getElementById('name').value.trim();
+    const name =
+document.getElementById('name').value.trim();
+    const mobile = document.getElementById('mobile') ? document.getElementById('mobile').value.trim() : '';
+    const address = document.getElementById('address') ? document.getElementById('address').value.trim() : '';
+
     const amt = parseFloat(document.getElementById('amt').value);
     const rawDate = document.getElementById('date').value;
     
@@ -1578,6 +1582,8 @@ async function addCustomer() {
     let cust = { 
         id: Date.now(), 
         name, 
+    mobile: mobile,
+    address: address,
         principal: amt, 
         type, 
         startDate: date, 
@@ -2336,8 +2342,11 @@ function render() {
                     <div class="card-header-left">
                         ${avatarHtml}
                         <div class="card-name-box">
-                            <div class="c-name">${c.name} ${c.staffRef?`<span class="ref-tag">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span class="crown-icon">👑</span>':''}</div>
-                            <div class="c-sub">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
+<div class="c-name">${c.name} ${c.staffRef?`<span class="ref-tag">[Ref: ${c.staffRef}]</span>`:''} ${(isOwnerMode && c.isPersonal)?'<span class="crown-icon">👑</span>':''}</div>
+${c.mobile ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; color: #3A3B3C; font-weight: bold;">📱 ${c.mobile}</div>` : ''}
+${c.address ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; white-space: normal;">🏠 ${c.address}</div>` : ''}
+<div class="c-sub" style="margin-top: 6px;">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
+
                         </div>
                     </div>
                     <div class="card-header-right">
