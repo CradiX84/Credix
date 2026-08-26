@@ -1861,6 +1861,7 @@ function openEditModal(id) {
     document.getElementById('edit-name').value = c.name; 
     document.getElementById('edit-mobile').value = c.mobile || '';
     document.getElementById('edit-address').value = c.address || '';
+    document.getElementById('edit-id-proof').value = c.idProof || '';
 
     document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
     document.getElementById('edit-date').value = c.startDate; 
@@ -2357,6 +2358,8 @@ function render() {
 ${c.mobile ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; color: #3A3B3C; font-weight: bold;">📱 ${c.mobile}</div>` : ''}
 ${c.address ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; white-space: normal;">🏠 ${c.address}</div>` : ''}
 <div class="c-sub" style="margin-top: 6px;">${t.caseDate || 'Case Date'}: ${formatDateDisplay(c.startDate)}</div>
+${c.idProof ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; font-weight: bold; color: var(--owner-gold);">🪪 ${c.idProof}</div>` : ''}
+
 
                         </div>
                     </div>
