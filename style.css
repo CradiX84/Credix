@@ -710,3 +710,19 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
     pointer-events: auto !important;
     cursor: pointer !important;
 }
+/* =========================================
+   🔥 MASTER FIX: PREVENT HORIZONTAL SCROLL
+   ========================================= */
+.input-group {
+    height: auto !important;
+    min-height: 54px !important;
+}
+
+.input-group input, 
+.input-group textarea {
+    flex: 1 !important;
+    min-width: 0 !important; /* Yeh screen se bahar nikalne se rokega */
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}

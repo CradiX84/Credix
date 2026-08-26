@@ -1552,6 +1552,8 @@ async function addCustomer() {
 document.getElementById('name').value.trim();
     const mobile = document.getElementById('mobile') ? document.getElementById('mobile').value.trim() : '';
     const address = document.getElementById('address') ? document.getElementById('address').value.trim() : '';
+    const idProof = document.getElementById('id-proof') ? document.getElementById('id-proof').value.trim() : '';
+
 
     const amt = parseFloat(document.getElementById('amt').value);
     const rawDate = document.getElementById('date').value;
@@ -1584,6 +1586,8 @@ document.getElementById('name').value.trim();
         name, 
     mobile: mobile,
     address: address,
+     idProof: idProof,
+
         principal: amt, 
         type, 
         startDate: date, 
@@ -1905,6 +1909,7 @@ async function saveEdit() {
     if (nameVal) c.name = nameVal; 
     c.mobile = document.getElementById('edit-mobile') ? document.getElementById('edit-mobile').value.trim() : '';
     c.address = document.getElementById('edit-address') ? document.getElementById('edit-address').value.trim() : '';
+    c.idProof = document.getElementById('edit-id-proof') ? document.getElementById('edit-id-proof').value.trim() : '';
 
     
     let photoBase64 = c.photo; 

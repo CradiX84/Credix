@@ -85,7 +85,9 @@
 <div class="input-group"><span class="input-icon">📱</span><input type="number" id="edit-mobile"></div>
 
 <label class="modal-label">Address</label>
-<div class="input-group"><span class="input-icon">🏠</span><textarea id="edit-address" style="width:100%; border:none; outline:none; background:transparent; font-size:14px; padding:8px 0; color:var(--text-main); resize:none;" rows="2"></textarea></div>
+<div class="input-group"><span class="input-icon">🏠</span><textarea id="edit-address" style="flex:1; border:none; outline:none; background:transparent; font-size:14px; padding:8px 0; color:var(--text-main); resize:none;" rows="2"></textarea></div>
+<label class="modal-label">ID Proof (Aadhaar / PAN)</label>
+<div class="input-group"><span class="input-icon">🪪</span><input type="text" id="edit-id-proof"></div>
 
         <label class="modal-label">Start Date</label>
         <div class="input-group"><span class="input-icon">📅</span><input type="date" id="edit-date"></div>
@@ -358,7 +360,12 @@
 <!-- Naya Address ka column -->
 <div class="input-group">
     <span class="input-icon">🏠</span>
-    <textarea id="address" placeholder="Full Address" style="width:100%; border:none; outline:none; background:transparent; font-size:14px; padding:8px 0; font-family:inherit; resize:none; color:var(--text-main);" rows="2"></textarea>
+    <textarea id="address" placeholder="Full Address" style="flex: 1; border:none; outline:none; background:transparent; font-size:14px; padding:8px 0; font-family:inherit; resize:none; color:var(--text-main);" rows="2"></textarea>
+</div>
+<!-- Naya ID Proof ka column -->
+<div class="input-group">
+    <span class="input-icon">🪪</span>
+    <input type="text" id="id-proof" placeholder="ID Proof (Aadhaar / PAN)">
 </div>
 
                 <div id="wrap-staff-ref" class="input-group"><span class="input-icon">🏷️</span><input type="text" id="staff-ref" placeholder="Reference / Staff Name"></div>
