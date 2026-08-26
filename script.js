@@ -1855,6 +1855,9 @@ function openEditModal(id) {
     let c = db.find(x => x.id === id); 
     document.getElementById('edit-id').value = id; 
     document.getElementById('edit-name').value = c.name; 
+    document.getElementById('edit-mobile').value = c.mobile || '';
+    document.getElementById('edit-address').value = c.address || '';
+
     document.getElementById('edit-staff-ref').value = c.staffRef || ''; 
     document.getElementById('edit-date').value = c.startDate; 
     document.getElementById('edit-amt').value = c.principal; 
@@ -1900,6 +1903,9 @@ async function saveEdit() {
     let oldTotalPayable = c.totalPayable; 
     let nameVal = document.getElementById('edit-name').value; 
     if (nameVal) c.name = nameVal; 
+    c.mobile = document.getElementById('edit-mobile') ? document.getElementById('edit-mobile').value.trim() : '';
+    c.address = document.getElementById('edit-address') ? document.getElementById('edit-address').value.trim() : '';
+
     
     let photoBase64 = c.photo; 
     if (lastCroppedBase64) { 
