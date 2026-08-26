@@ -726,3 +726,38 @@ html, body, #dashboard, .modal-cont, .card-expanded-view, #ai-chat-messages {
     max-width: 100% !important;
     box-sizing: border-box !important;
 }
+
+/* =========================================
+   🔥 MASTER FIX: REPORT CARD TEXT OVERLAP
+   ========================================= */
+.pc-closed-footer, 
+.pc-payment-details {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+}
+
+.pc-closed-stat, 
+.pc-detail-text {
+    flex: 1 1 50% !important;
+    min-width: 120px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    line-height: 1.4 !important;
+}
+
+.pc-closed-stat.right-align, 
+.pc-profit-text {
+    flex: 0 0 auto !important;
+    align-items: flex-end !important;
+    text-align: right !important;
+}
+
+.pc-white-text, 
+.pc-name, 
+.pc-basis, 
+.pc-missed {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.4 !important;
+}
