@@ -148,6 +148,20 @@ const EnterpriseSyncEngine = {
                         }
                         let updates = {};
                         updates[`credix_db/cases/${task.caseId}`] = task.payload;
+                    // Offline se online aane par portal update
+                    if (task.payload && task.payload.customerToken) {
+                        updates[`customer_portal/${task.payload.customerToken}`] = {
+                            name: task.payload.name,
+                            principal: task.payload.principal,
+                            totalPayable: task.payload.totalPayable || task.payload.principal,
+                            currentBalance: task.payload.currentBalance,
+                            installment: task.payload.installment || 0,
+                            type: task.payload.type,
+                            startDate: task.payload.startDate,
+                            history: task.payload.history || []
+                        };
+                    }
+
                         await database.ref().update(updates);
                     } else if (task.action === 'DELETE_CASE') {
                         let updates = {};
@@ -1170,6 +1184,21 @@ function syncCaseDelta(caseObj) {
 
     let updates = {};
     updates[`credix_db/cases/${caseObj.id}`] = caseObj;
+
+    // 🔥 SMART SYNC: Update Customer Portal without full DB upload
+    if (caseObj.customerToken) {
+        updates[`customer_portal/${caseObj.customerToken}`] = {
+            name: caseObj.name,
+            principal: caseObj.principal,
+            totalPayable: caseObj.totalPayable || caseObj.principal,
+            currentBalance: caseObj.currentBalance,
+            installment: caseObj.installment || 0,
+            type: caseObj.type,
+            startDate: caseObj.startDate,
+            history: caseObj.history || []
+        };
+    }
+
     database.ref().update(updates).then(() => {
         if (syncStatus) syncStatus.innerText = "Cloud Synced";
         if (cloudInd) cloudInd.className = "status-dot";
@@ -2402,6 +2431,9 @@ ${c.idProof ? `<div class="c-sub" style="margin-top: 3px; font-size: 11px; font-
             <div class="btn-row card-actions-row">
                 <button class="s-btn btn-icon" onclick="openEditModal(${c.id})">✏️</button>
                 ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="generateCustomerPDF(${c.id})">📄</button>` : ''}
+                ${isOwnerMode ? `<button class="s-btn btn-icon" onclick="shareCustomerPortal(${c.id})" style="color:#25D366; font-size:16px;">🔗</button>` : ''}
+
+
                 <button class="s-btn btn-icon" onclick="toggleArchiveUI(${c.id})">${c.isArchived?'📤':'📦'}</button>
                 <button class="s-btn btn-icon btn-danger-txt" onclick="deleteCustUI(${c.id})">🗑️</button>
                 <button class="s-btn collect" onclick="${currentTab==='bulk'?'openBulkModal':'openPayModal'}(${c.id})">${currentTab==='bulk'?'⚡ Bulk':i18n[currentLang].recBtn||'Receive'}</button>
@@ -3645,4 +3677,158 @@ async function uploadToCloudinary(base64Image) {
         showToast("Network Error in Photo Upload!");
         return "";
     }
+}
+// ==========================================
+// 🔥 SMART CUSTOMER PORTAL GENERATOR
+// ==========================================
+function shareCustomerPortal(id) {
+    let c = db.find(x => x.id === id);
+    if (!c) return;
+
+    // Agar token nahi hai toh naya random token banayein
+    if (!c.customerToken) {
+        c.customerToken = "CX" + Math.random().toString(36).substr(2, 9).toUpperCase();
+        syncCaseDelta(c); // Isse portal automatically Firebase mein save ho jayega
+    }
+
+    // Secure Link Banayein
+    let portalLink = window.location.origin + window.location.pathname + "?customer=" + c.customerToken;
+
+    // Message Ready karein
+    let msg = `*Credix - My Account*\n\nHello ${c.name},\nAapki kishat aur payment history check karne ke liye is secure link par click karein:\n\n🔗 ${portalLink}\n\n_Note: Yeh link strictly private hai._`;
+
+    // 🔥 NAYA MAGIC: Native Share Menu (Copy / WhatsApp / SMS sab ek jagah)
+    if (navigator.share) {
+        navigator.share({
+            title: 'Credix Account',
+            text: msg
+        }).catch(err => console.log("Share cancelled"));
+    } else {
+        // Fallback: Agar kisi purane phone mein share menu na khule toh direct Copy ho jayega
+        navigator.clipboard.writeText(msg);
+        let waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
+        showToast("Link Copied! 📋");
+    }
+}
+
+// ==========================================
+// 🔥 PHASE 3: SECURE CUSTOMER PORTAL VIEW
+// ==========================================
+(function initCustomerPortal() {
+    // 1. Check URL for Customer Token
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerToken = urlParams.get('customer');
+
+    if (customerToken) {
+        // 2. MAGIC: Instantly hide everything else (Owner App & PIN Screen)
+        const style = document.createElement('style');
+        style.innerHTML = `
+            body > * { display: none !important; }
+            #customer-portal-root { display: block !important; background: #f4f7f6; min-height: 100vh; }
+        `;
+        document.head.appendChild(style);
+
+        // 3. Create Customer Screen Container
+        const root = document.createElement('div');
+        root.id = 'customer-portal-root';
+        root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif; color:#2c3e50;"><h2>Credix Portal</h2><p>Loading your account details... ⏳</p></div>`;
+        document.body.appendChild(root);
+
+        // 4. Fetch ONLY this customer's data from Firebase
+        setTimeout(() => {
+            firebase.database().ref(`customer_portal/${customerToken}`).once('value')
+            .then(snapshot => {
+                if (snapshot.exists()) {
+                    renderVIPDashboard(snapshot.val(), root);
+                } else {
+                    root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif; color:red;"><h2>Link Expired or Invalid ❌</h2><p>Please contact the owner for a valid link.</p></div>`;
+                }
+            }).catch(err => {
+                root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif;"><h2>Network Error 🌐</h2><p>Please check your internet connection.</p></div>`;
+            });
+        }, 1000);
+    }
+})();
+
+function renderVIPDashboard(data, rootElement) {
+    // Calculations
+    let remaining = data.currentBalance || 0;
+    let totalPay = data.totalPayable || data.principal;
+    let paidAmount = totalPay - remaining;
+    let progress = Math.min(100, Math.round((paidAmount / totalPay) * 100)) || 0;
+
+    // History List Generation
+    let historyHtml = '';
+    if (data.history && data.history.length > 0) {
+        let revHistory = [...data.history].reverse(); // Latest payment first
+        historyHtml = revHistory.map(h => `
+            <div style="display:flex; justify-content:space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                <div>
+                    <div style="font-weight:600; color:#34495e;">${h.date}</div>
+                    <small style="color:#7f8c8d;">Kishat</small>
+                </div>
+                <div style="color: #25D366; font-weight:bold; font-size:16px;">
+                    + ₹${h.amount}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        historyHtml = `<p style="color:#7f8c8d; text-align:center; padding: 20px 0;">No payments yet.</p>`;
+    }
+
+    // Modern UI Design
+    rootElement.innerHTML = `
+        <div style="max-width: 500px; margin: 0 auto; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom:40px;">
+            <div style="text-align:center; margin-bottom: 25px; margin-top: 10px;">
+                <h1 style="color: #2c3e50; margin:0; font-size: 28px;">Credix.</h1>
+                <p style="color: #7f8c8d; margin:5px 0 0 0; font-weight:500;">👤 My Account</p>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                <h2 style="margin: 0 0 15px 0; color: #2c3e50; font-size:20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 12px;">${data.name}</h2>
+                
+                <div style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+                    <div>
+                        <small style="color:#7f8c8d; font-weight:500;">Case Amount</small>
+                        <div style="font-size: 18px; font-weight: bold; color:#2c3e50;">₹${data.principal}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <small style="color:#7f8c8d; font-weight:500;">Total Payable</small>
+                        <div style="font-size: 18px; font-weight: bold; color:#2c3e50;">₹${totalPay}</div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+                    <div>
+                        <small style="color:#7f8c8d; font-weight:500;">Paid Amount</small>
+                        <div style="font-size: 20px; font-weight: 800; color: #25D366;">₹${paidAmount}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <small style="color:#7f8c8d; font-weight:500;">Remaining</small>
+                        <div style="font-size: 20px; font-weight: 800; color: #e74c3c;">₹${remaining}</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <small style="color:#7f8c8d; font-weight:500;">Payment Progress</small>
+                        <small style="color:#2c3e50; font-weight:bold;">${progress}%</small>
+                    </div>
+                    <div style="background: #f0f0f0; height: 10px; border-radius: 5px; margin-top: 8px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, #25D366, #2ecc71); height: 100%; width: ${progress}%; border-radius: 5px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size:18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 12px;">Payment History</h3>
+                ${historyHtml}
+            </div>
+            
+            <div style="text-align:center; margin-top: 25px;">
+                <small style="color:#bdc3c7;">Securely managed by Credix</small>
+            </div>
+        </div>
+    `;
 }
