@@ -152,6 +152,11 @@ const EnterpriseSyncEngine = {
                     if (task.payload && task.payload.customerToken) {
                         updates[`customer_portal/${task.payload.customerToken}`] = {
                             name: task.payload.name,
+                            phone: task.payload.phone || '',
+                            address: task.payload.address || '',
+                            idNumber: task.payload.idNumber || task.payload.aadhar || '',
+                            refName: task.payload.refName || task.payload.reference || '',
+                            pic: task.payload.pic || task.payload.photo || '',
                             principal: task.payload.principal,
                             totalPayable: task.payload.totalPayable || task.payload.principal,
                             currentBalance: task.payload.currentBalance,
@@ -161,6 +166,7 @@ const EnterpriseSyncEngine = {
                             history: task.payload.history || []
                         };
                     }
+
 
                         await database.ref().update(updates);
                     } else if (task.action === 'DELETE_CASE') {
@@ -1185,19 +1191,25 @@ function syncCaseDelta(caseObj) {
     let updates = {};
     updates[`credix_db/cases/${caseObj.id}`] = caseObj;
 
-    // 🔥 SMART SYNC: Update Customer Portal without full DB upload
-    if (caseObj.customerToken) {
-        updates[`customer_portal/${caseObj.customerToken}`] = {
-            name: caseObj.name,
-            principal: caseObj.principal,
-            totalPayable: caseObj.totalPayable || caseObj.principal,
-            currentBalance: caseObj.currentBalance,
-            installment: caseObj.installment || 0,
-            type: caseObj.type,
-            startDate: caseObj.startDate,
-            history: caseObj.history || []
-        };
-    }
+                // 🔥 SMART SYNC: Update Customer Portal with extra details
+                if (caseObj.customerToken) {
+                    updates[`customer_portal/${caseObj.customerToken}`] = {
+                        name: caseObj.name,
+                        phone: caseObj.phone || '',
+                        address: caseObj.address || '',
+                        idNumber: caseObj.idNumber || caseObj.aadhar || '',
+                        refName: caseObj.refName || caseObj.reference || '',
+                        pic: caseObj.pic || caseObj.photo || '',
+                        principal: caseObj.principal,
+                        totalPayable: caseObj.totalPayable || caseObj.principal,
+                        currentBalance: caseObj.currentBalance,
+                        installment: caseObj.installment || 0,
+                        type: caseObj.type,
+                        startDate: caseObj.startDate,
+                        history: caseObj.history || []
+                    };
+                }
+
 
     database.ref().update(updates).then(() => {
         if (syncStatus) syncStatus.innerText = "Cloud Synced";
@@ -3756,7 +3768,7 @@ function renderVIPDashboard(data, rootElement) {
     let remaining = Number(data.currentBalance || 0);
     let paidAmount = totalPay - remaining;
 
-    // 1. History Table Logic & Running Balance
+    // Table and Missed Dates Logic
     let historyHtml = '';
     let processedHistory = [];
     let missedDates = [];
@@ -3766,33 +3778,23 @@ function renderVIPDashboard(data, rootElement) {
         processedHistory = data.history.map((h, index) => {
             let amt = Number(h.amount || h.paid || h.rec || h.received || h.installment || 0);
             runningBal -= amt;
-            return {
-                sno: index + 1,
-                date: h.date,
-                paid: amt,
-                bal: runningBal
-            };
+            return { sno: index + 1, date: h.date, paid: amt, bal: runningBal };
         });
         
-        // 2. Missed Dates Logic (Sunday skip karega)
         if ((data.type || '').toUpperCase().includes('DAILY')) {
             let today = new Date();
             today.setHours(0,0,0,0);
-            
             let sParts = (data.startDate || '').split('/');
             if(sParts.length === 3) {
                 let sDate = new Date(2000 + parseInt(sParts[2]), parseInt(sParts[1])-1, parseInt(sParts[0]));
                 let historyDates = data.history.map(h => h.date);
-                
                 let currDate = new Date(sDate);
                 while(currDate <= today) {
-                    if (currDate.getDay() !== 0) { // Sunday (0) skip
+                    if (currDate.getDay() !== 0) { 
                         let dStr = String(currDate.getDate()).padStart(2, '0') + '/' + 
                                    String(currDate.getMonth()+1).padStart(2, '0') + '/' + 
                                    String(currDate.getFullYear()).slice(-2);
-                        if (!historyDates.includes(dStr)) {
-                            missedDates.push(dStr);
-                        }
+                        if (!historyDates.includes(dStr)) missedDates.push(dStr);
                     }
                     currDate.setDate(currDate.getDate() + 1);
                 }
@@ -3800,35 +3802,27 @@ function renderVIPDashboard(data, rootElement) {
         }
     }
 
-    // 3. Missed Dates Red Box
-    let missedDatesHtml = '';
-    if (missedDates.length > 0) {
-        missedDatesHtml = `
-            <div style="background-color: #fcebeb; border: 1.5px solid #e74c3c; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                <div style="color: #c0392b; font-weight: bold; font-size: 14px;">⚠️ Missed Dates:</div>
-                <div style="color: #c0392b; font-size: 14px; margin-top: 4px; line-height: 1.5;">
-                    ${missedDates.join(', ')}
-                </div>
-            </div>
-        `;
-    }
+    let missedDatesHtml = missedDates.length > 0 ? `
+        <div style="background-color: #fcebeb; border: 1.5px solid #e74c3c; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+            <div style="color: #c0392b; font-weight: bold; font-size: 14px;">⚠️ Missed Dates:</div>
+            <div style="color: #c0392b; font-size: 14px; margin-top: 4px; line-height: 1.5;">${missedDates.join(', ')}</div>
+        </div>` : '';
 
-    // 4. Table Rows
     if (processedHistory.length > 0) {
         let revHistory = [...processedHistory].reverse();
         historyHtml = revHistory.map(h => `
             <tr style="border-bottom: 1px solid #eaeaea; color: #2c3e50; font-weight:600; font-size: 14px;">
-                <td style="padding: 12px 5px;">${h.sno}</td>
                 <td style="padding: 12px 5px;">${h.date}</td>
                 <td style="padding: 12px 5px; color:#009688;">₹${h.paid}</td>
                 <td style="padding: 12px 5px; color:#2c3e50;">₹${h.bal}</td>
             </tr>
         `).join('');
     } else {
-        historyHtml = `<tr><td colspan="4" style="padding: 20px; color:#7f8c8d; text-align:center;">No records</td></tr>`;
+        historyHtml = `<tr><td colspan="3" style="padding: 20px; color:#7f8c8d; text-align:center;">No records</td></tr>`;
     }
 
-    // 5. Final UI
+    let profilePicHtml = data.pic ? `<img src="${data.pic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : `👤`;
+
     rootElement.innerHTML = `
         <div style="max-width: 500px; margin: 0 auto; padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom:40px; background:#f4f7f6; min-height:100vh;">
             
@@ -3836,28 +3830,28 @@ function renderVIPDashboard(data, rootElement) {
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <div style="background:#f0f0f0; color:#555; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; letter-spacing:0.5px;">
-                        ${(data.type || 'DAILY').toUpperCase()}
+                        ${(data.type || 'DAILY').toUpperCase()} | S.No: ${data.sNo || ''}
                     </div>
                     <div style="color:#009688; font-weight:bold; font-size:13px;">● Active</div>
                 </div>
 
-                <div style="display:flex; align-items:center; margin-bottom:25px;">
-                    <div style="width:55px; height:55px; background:#e0f2f1; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:24px; margin-right:15px; border:2px solid #009688;">
-                        👤
+                <div style="display:flex; align-items:flex-start; margin-bottom:25px;">
+                    <div style="width:65px; height:65px; background:#e0f2f1; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:28px; margin-right:15px; border:2px solid #009688; overflow:hidden; flex-shrink: 0;">
+                        ${profilePicHtml}
                     </div>
                     <div style="flex-grow:1;">
-                        <div style="font-size:20px; font-weight:bold; color:#2c3e50;">${data.name}</div>
-                        <div style="font-size:12px; color:#7f8c8d; margin-top:4px; font-weight:600;">Case Date: ${data.startDate || 'N/A'}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:24px; font-weight:900; color:#009688;">₹${remaining}</div>
-                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold;">Balance</div>
+                        <div style="font-size:22px; font-weight:bold; color:#2c3e50;">${data.name}</div>
+                        ${data.refName ? `<div style="font-size:13px; color:#c0392b; font-weight:bold; margin-top:3px;">[Ref: ${data.refName}]</div>` : ''}
+                        ${data.phone ? `<div style="font-size:14px; color:#2c3e50; font-weight:bold; margin-top:8px;">📱 ${data.phone}</div>` : ''}
+                        ${data.address ? `<div style="font-size:13px; color:#7f8c8d; font-weight:600; margin-top:6px; line-height:1.4;">🏠 ${data.address}</div>` : ''}
+                        <div style="font-size:13px; color:#7f8c8d; font-weight:bold; margin-top:8px;">Case Date: ${data.startDate || 'N/A'}</div>
+                        ${data.idNumber ? `<div style="font-size:14px; color:#c0392b; font-weight:bold; margin-top:6px;">🪪 ${data.idNumber}</div>` : ''}
                     </div>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; background:#fbfbfb; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align:center; border: 1px solid #f0f0f0;">
                     <div>
-                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Return Amt</div>
+                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Original (Mool)</div>
                         <div style="font-size:16px; font-weight:900; color:#2c3e50;">₹${totalPay}</div>
                     </div>
                     <div>
@@ -3881,7 +3875,6 @@ function renderVIPDashboard(data, rootElement) {
                 <div style="background: #fbfbfb; border-radius: 12px; border: 1px solid #f0f0f0; overflow:hidden;">
                     <table style="width: 100%; border-collapse: collapse; text-align: center;">
                         <tr style="border-bottom: 2px solid #eaeaea; color: #7f8c8d; font-size:12px;">
-                            <th style="padding: 12px 5px;">S.NO</th>
                             <th style="padding: 12px 5px;">DATE</th>
                             <th style="padding: 12px 5px;">PAID</th>
                             <th style="padding: 12px 5px;">BAL</th>
@@ -3897,4 +3890,3 @@ function renderVIPDashboard(data, rootElement) {
         </div>
     `;
 }
-
