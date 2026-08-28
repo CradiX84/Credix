@@ -3752,83 +3752,149 @@ function shareCustomerPortal(id) {
 })();
 
 function renderVIPDashboard(data, rootElement) {
-    // Calculations
-    let remaining = data.currentBalance || 0;
-    let totalPay = data.totalPayable || data.principal;
+    let totalPay = Number(data.totalPayable || data.principal || 0);
+    let remaining = Number(data.currentBalance || 0);
     let paidAmount = totalPay - remaining;
-    let progress = Math.min(100, Math.round((paidAmount / totalPay) * 100)) || 0;
 
-    // History List Generation
+    // 1. History Table Logic & Running Balance
     let historyHtml = '';
+    let processedHistory = [];
+    let missedDates = [];
+
     if (data.history && data.history.length > 0) {
-        let revHistory = [...data.history].reverse(); // Latest payment first
-        historyHtml = revHistory.map(h => `
-            <div style="display:flex; justify-content:space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
-                <div>
-                    <div style="font-weight:600; color:#34495e;">${h.date}</div>
-                    <small style="color:#7f8c8d;">Kishat</small>
-                </div>
-                <div style="color: #25D366; font-weight:bold; font-size:16px;">
-                    + ₹${h.amount}
-                </div>
-            </div>
-        `).join('');
-    } else {
-        historyHtml = `<p style="color:#7f8c8d; text-align:center; padding: 20px 0;">No payments yet.</p>`;
+        let runningBal = totalPay;
+        processedHistory = data.history.map((h, index) => {
+            let amt = Number(h.amount || h.paid || h.rec || h.received || h.installment || 0);
+            runningBal -= amt;
+            return {
+                sno: index + 1,
+                date: h.date,
+                paid: amt,
+                bal: runningBal
+            };
+        });
+        
+        // 2. Missed Dates Logic (Sunday skip karega)
+        if ((data.type || '').toUpperCase().includes('DAILY')) {
+            let today = new Date();
+            today.setHours(0,0,0,0);
+            
+            let sParts = (data.startDate || '').split('/');
+            if(sParts.length === 3) {
+                let sDate = new Date(2000 + parseInt(sParts[2]), parseInt(sParts[1])-1, parseInt(sParts[0]));
+                let historyDates = data.history.map(h => h.date);
+                
+                let currDate = new Date(sDate);
+                while(currDate <= today) {
+                    if (currDate.getDay() !== 0) { // Sunday (0) skip
+                        let dStr = String(currDate.getDate()).padStart(2, '0') + '/' + 
+                                   String(currDate.getMonth()+1).padStart(2, '0') + '/' + 
+                                   String(currDate.getFullYear()).slice(-2);
+                        if (!historyDates.includes(dStr)) {
+                            missedDates.push(dStr);
+                        }
+                    }
+                    currDate.setDate(currDate.getDate() + 1);
+                }
+            }
+        }
     }
 
-    // Modern UI Design
+    // 3. Missed Dates Red Box
+    let missedDatesHtml = '';
+    if (missedDates.length > 0) {
+        missedDatesHtml = `
+            <div style="background-color: #fcebeb; border: 1.5px solid #e74c3c; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <div style="color: #c0392b; font-weight: bold; font-size: 14px;">⚠️ Missed Dates:</div>
+                <div style="color: #c0392b; font-size: 14px; margin-top: 4px; line-height: 1.5;">
+                    ${missedDates.join(', ')}
+                </div>
+            </div>
+        `;
+    }
+
+    // 4. Table Rows
+    if (processedHistory.length > 0) {
+        let revHistory = [...processedHistory].reverse();
+        historyHtml = revHistory.map(h => `
+            <tr style="border-bottom: 1px solid #eaeaea; color: #2c3e50; font-weight:600; font-size: 14px;">
+                <td style="padding: 12px 5px;">${h.sno}</td>
+                <td style="padding: 12px 5px;">${h.date}</td>
+                <td style="padding: 12px 5px; color:#009688;">₹${h.paid}</td>
+                <td style="padding: 12px 5px; color:#2c3e50;">₹${h.bal}</td>
+            </tr>
+        `).join('');
+    } else {
+        historyHtml = `<tr><td colspan="4" style="padding: 20px; color:#7f8c8d; text-align:center;">No records</td></tr>`;
+    }
+
+    // 5. Final UI
     rootElement.innerHTML = `
-        <div style="max-width: 500px; margin: 0 auto; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom:40px;">
-            <div style="text-align:center; margin-bottom: 25px; margin-top: 10px;">
-                <h1 style="color: #2c3e50; margin:0; font-size: 28px;">Credix.</h1>
-                <p style="color: #7f8c8d; margin:5px 0 0 0; font-weight:500;">👤 My Account</p>
-            </div>
-
-            <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 20px;">
-                <h2 style="margin: 0 0 15px 0; color: #2c3e50; font-size:20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 12px;">${data.name}</h2>
+        <div style="max-width: 500px; margin: 0 auto; padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom:40px; background:#f4f7f6; min-height:100vh;">
+            
+            <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; margin-top: 20px;">
                 
-                <div style="display:flex; justify-content:space-between; margin-bottom: 15px;">
-                    <div>
-                        <small style="color:#7f8c8d; font-weight:500;">Case Amount</small>
-                        <div style="font-size: 18px; font-weight: bold; color:#2c3e50;">₹${data.principal}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div style="background:#f0f0f0; color:#555; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800; letter-spacing:0.5px;">
+                        ${(data.type || 'DAILY').toUpperCase()}
+                    </div>
+                    <div style="color:#009688; font-weight:bold; font-size:13px;">● Active</div>
+                </div>
+
+                <div style="display:flex; align-items:center; margin-bottom:25px;">
+                    <div style="width:55px; height:55px; background:#e0f2f1; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:24px; margin-right:15px; border:2px solid #009688;">
+                        👤
+                    </div>
+                    <div style="flex-grow:1;">
+                        <div style="font-size:20px; font-weight:bold; color:#2c3e50;">${data.name}</div>
+                        <div style="font-size:12px; color:#7f8c8d; margin-top:4px; font-weight:600;">Case Date: ${data.startDate || 'N/A'}</div>
                     </div>
                     <div style="text-align:right;">
-                        <small style="color:#7f8c8d; font-weight:500;">Total Payable</small>
-                        <div style="font-size: 18px; font-weight: bold; color:#2c3e50;">₹${totalPay}</div>
+                        <div style="font-size:24px; font-weight:900; color:#009688;">₹${remaining}</div>
+                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold;">Balance</div>
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; background:#fbfbfb; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align:center; border: 1px solid #f0f0f0;">
                     <div>
-                        <small style="color:#7f8c8d; font-weight:500;">Paid Amount</small>
-                        <div style="font-size: 20px; font-weight: 800; color: #25D366;">₹${paidAmount}</div>
+                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Return Amt</div>
+                        <div style="font-size:16px; font-weight:900; color:#2c3e50;">₹${totalPay}</div>
                     </div>
-                    <div style="text-align:right;">
-                        <small style="color:#7f8c8d; font-weight:500;">Remaining</small>
-                        <div style="font-size: 20px; font-weight: 800; color: #e74c3c;">₹${remaining}</div>
+                    <div>
+                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Total Paid</div>
+                        <div style="font-size:16px; font-weight:900; color:#009688;">₹${paidAmount}</div>
                     </div>
-                </div>
-                
-                <div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <small style="color:#7f8c8d; font-weight:500;">Payment Progress</small>
-                        <small style="color:#2c3e50; font-weight:bold;">${progress}%</small>
-                    </div>
-                    <div style="background: #f0f0f0; height: 10px; border-radius: 5px; margin-top: 8px; overflow: hidden;">
-                        <div style="background: linear-gradient(90deg, #25D366, #2ecc71); height: 100%; width: ${progress}%; border-radius: 5px;"></div>
+                    <div>
+                        <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Remaining</div>
+                        <div style="font-size:16px; font-weight:900; color:#e74c3c;">₹${remaining}</div>
                     </div>
                 </div>
+
+                ${missedDatesHtml}
             </div>
 
-            <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-                <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size:18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 12px;">Payment History</h3>
-                ${historyHtml}
+            <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #7f8c8d; font-size:14px; font-weight:bold;">Payment History</h3>
+                </div>
+                
+                <div style="background: #fbfbfb; border-radius: 12px; border: 1px solid #f0f0f0; overflow:hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                        <tr style="border-bottom: 2px solid #eaeaea; color: #7f8c8d; font-size:12px;">
+                            <th style="padding: 12px 5px;">S.NO</th>
+                            <th style="padding: 12px 5px;">DATE</th>
+                            <th style="padding: 12px 5px;">PAID</th>
+                            <th style="padding: 12px 5px;">BAL</th>
+                        </tr>
+                        ${historyHtml}
+                    </table>
+                </div>
             </div>
             
             <div style="text-align:center; margin-top: 25px;">
-                <small style="color:#bdc3c7;">Securely managed by Credix</small>
+                <small style="color:#bdc3c7; font-weight:bold;">Securely managed by Credix</small>
             </div>
         </div>
     `;
 }
+
