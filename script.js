@@ -3773,7 +3773,6 @@ function renderVIPDashboard(data, rootElement) {
     let caseType = (data.type || 'DAILY').toUpperCase().trim();
     let isMonthlyOrMeter = caseType.includes('MONTHLY') || caseType.includes('METER');
 
-    // Table and Missed Dates Logic
     let historyHtml = '';
     let processedHistory = [];
     let missedDates = [];
@@ -3803,22 +3802,21 @@ function renderVIPDashboard(data, rootElement) {
             let today = new Date();
             today.setHours(0,0,0,0);
             
-            let sDate = null;
-            if (data.startDate) {
-                if (data.startDate.includes('-')) {
-                    sDate = new Date(data.startDate);
-                } else if (data.startDate.includes('/')) {
-                    let p = data.startDate.split('/');
-                    let y = p[2].length === 2 ? '20' + p[2] : p[2];
-                    sDate = new Date(y, p[1]-1, p[0]);
-                }
+            let sy, sm, sd;
+            if (data.startDate && data.startDate.includes('-')) {
+                let p = data.startDate.split('-');
+                sy = parseInt(p[0]); sm = parseInt(p[1]); sd = parseInt(p[2]);
+            } else if (data.startDate && data.startDate.includes('/')) {
+                let p = data.startDate.split('/');
+                sy = parseInt(p[2].length === 2 ? '20' + p[2] : p[2]); sm = parseInt(p[1]); sd = parseInt(p[0]);
             }
 
-            if (sDate && !isNaN(sDate)) {
+            if (sy && sm && sd) {
                 let historyDates = data.history.map(h => h.date);
-                let currDate = new Date(sDate);
+                // 🔥 NAYA FIX: Local timezone ke hisaab se exact date set ki
+                let currDate = new Date(sy, sm - 1, sd);
                 
-                // 🔥 NAYA FIX: Daily case ki kishat agle din (+1) se shuru hoti hai
+                // 🔥 NAYA FIX: Case date ke theek agle din (+1) se checking shuru hogi
                 currDate.setDate(currDate.getDate() + 1);
                 
                 while(currDate <= today) {
