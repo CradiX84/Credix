@@ -151,21 +151,22 @@ const EnterpriseSyncEngine = {
                     // Offline se online aane par portal update
                     if (task.payload && task.payload.customerToken) {
                         updates[`customer_portal/${task.payload.customerToken}`] = {
-                            name: task.payload.name,
-                            phone: task.payload.phone || '',
+                            name: task.payload.name || '',
+                            phone: task.payload.phone || task.payload.mobile || task.payload.mobileNo || task.payload.contact || '',
                             address: task.payload.address || '',
-                            idNumber: task.payload.idNumber || task.payload.aadhar || '',
-                            refName: task.payload.refName || task.payload.reference || '',
-                            pic: task.payload.pic || task.payload.photo || '',
-                            principal: task.payload.principal,
-                            totalPayable: task.payload.totalPayable || task.payload.principal,
-                            currentBalance: task.payload.currentBalance,
+                            idNumber: task.payload.idNumber || task.payload.aadhar || task.payload.idProof || task.payload.document || '',
+                            refName: task.payload.refName || task.payload.ref || task.payload.reference || task.payload.guarantor || '',
+                            pic: task.payload.pic || task.payload.photo || task.payload.image || '',
+                            principal: task.payload.principal || 0,
+                            totalPayable: task.payload.totalPayable || task.payload.principal || 0,
+                            currentBalance: task.payload.currentBalance || 0,
                             installment: task.payload.installment || 0,
-                            type: task.payload.type,
-                            startDate: task.payload.startDate,
+                            type: task.payload.type || '',
+                            startDate: task.payload.startDate || '',
                             history: task.payload.history || []
                         };
                     }
+
 
 
                         await database.ref().update(updates);
@@ -1194,21 +1195,22 @@ function syncCaseDelta(caseObj) {
                 // 🔥 SMART SYNC: Update Customer Portal with extra details
                 if (caseObj.customerToken) {
                     updates[`customer_portal/${caseObj.customerToken}`] = {
-                        name: caseObj.name,
-                        phone: caseObj.phone || '',
+                        name: caseObj.name || '',
+                        phone: caseObj.phone || caseObj.mobile || caseObj.mobileNo || caseObj.contact || '',
                         address: caseObj.address || '',
-                        idNumber: caseObj.idNumber || caseObj.aadhar || '',
-                        refName: caseObj.refName || caseObj.reference || '',
-                        pic: caseObj.pic || caseObj.photo || '',
-                        principal: caseObj.principal,
-                        totalPayable: caseObj.totalPayable || caseObj.principal,
-                        currentBalance: caseObj.currentBalance,
+                        idNumber: caseObj.idNumber || caseObj.aadhar || caseObj.idProof || caseObj.document || '',
+                        refName: caseObj.refName || caseObj.ref || caseObj.reference || caseObj.guarantor || '',
+                        pic: caseObj.pic || caseObj.photo || caseObj.image || '',
+                        principal: caseObj.principal || 0,
+                        totalPayable: caseObj.totalPayable || caseObj.principal || 0,
+                        currentBalance: caseObj.currentBalance || 0,
                         installment: caseObj.installment || 0,
-                        type: caseObj.type,
-                        startDate: caseObj.startDate,
+                        type: caseObj.type || '',
+                        startDate: caseObj.startDate || '',
                         history: caseObj.history || []
                     };
                 }
+
 
 
     database.ref().update(updates).then(() => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'credix-offline-v10';
+const CACHE_NAME = 'credix-offline-v11';
 
 const urlsToCache = [
     './',
