@@ -3770,7 +3770,6 @@ function renderVIPDashboard(data, rootElement) {
     let remaining = Number(data.currentBalance || 0);
     let paidAmount = totalPay - remaining;
 
-    // 🔥 Naya Logic: Agar Monthly ya Meter hai toh 'Total Paid' hide kar do
     let caseType = (data.type || 'DAILY').toUpperCase().trim();
     let isMonthlyOrMeter = caseType.includes('MONTHLY') || caseType.includes('METER');
 
@@ -3780,14 +3779,33 @@ function renderVIPDashboard(data, rootElement) {
     let missedDates = [];
 
     if (data.history && data.history.length > 0) {
-        let runningBal = totalPay;
         processedHistory = data.history.map((h, index) => {
             let amt = Number(h.amount || h.paid || h.rec || h.received || h.installment || 0);
-            runningBal -= amt;
-            return { sno: index + 1, date: h.date, paid: amt, bal: runningBal }; // S.No yahan banta hai
+            
+            // 🔥 Naya Logic: Apna manual math hata diya. Ab seedha Firebase wala correct balance uthayega
+            let bal = h.balance !== undefined ? Number(h.balance) : (h.bal !== undefined ? Number(h.bal) : remaining);
+            
+            // Date ko sundar format (DD/MM/YY) mein set karna
+            let fDate = h.date;
+            if(fDate && fDate.includes('-')) {
+                let p = fDate.split('-');
+                if(p.length === 3) fDate = `${p[2]}/${p[1]}/${p[0].slice(-2)}`;
+            }
+            
+            return { sno: index + 1, date: fDate, rawDate: h.date, paid: amt, bal: bal };
         });
         
-        // 🔥 Naya Bulletproof Missed Dates Logic (Har date format ko samjhega)
+        // 🔥 Staff Mode Filter (Line 799 jaisa): Monthly/Meter mein history hide karega
+        if (isMonthlyOrMeter && processedHistory.length > 1) {
+            let today = new Date();
+            let currentMonthStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2, '0');
+            // Sirf current month ki history dikhayega
+            let activeMonthRecords = processedHistory.filter(h => h.rawDate && h.rawDate.substring(0, 7) === currentMonthStr);
+            // Agar current month ki nahi hai, toh sirf sabse latest (ek) record dikhayega
+            processedHistory = activeMonthRecords.length > 0 ? activeMonthRecords : processedHistory.slice(-1);
+        }
+        
+        // Missed dates logic (Sirf Daily ke liye)
         if (caseType.includes('DAILY')) {
             let today = new Date();
             today.setHours(0,0,0,0);
@@ -3795,11 +3813,11 @@ function renderVIPDashboard(data, rootElement) {
             let sDate = null;
             if (data.startDate) {
                 if (data.startDate.includes('-')) {
-                    sDate = new Date(data.startDate); // 2026-06-03 (Naya format)
+                    sDate = new Date(data.startDate);
                 } else if (data.startDate.includes('/')) {
                     let p = data.startDate.split('/');
                     let y = p[2].length === 2 ? '20' + p[2] : p[2];
-                    sDate = new Date(y, p[1]-1, p[0]); // DD/MM/YY (Purana format)
+                    sDate = new Date(y, p[1]-1, p[0]);
                 }
             }
 
@@ -3808,18 +3826,17 @@ function renderVIPDashboard(data, rootElement) {
                 let currDate = new Date(sDate);
                 
                 while(currDate <= today) {
-                    if (currDate.getDay() !== 0) { // Sunday skip karega
+                    if (currDate.getDay() !== 0) { // Sunday skip
                         let y = currDate.getFullYear();
                         let m = String(currDate.getMonth()+1).padStart(2,'0');
                         let d = String(currDate.getDate()).padStart(2,'0');
                         
-                        // Teeno Date format check karega
                         let f1 = `${y}-${m}-${d}`;
                         let f2 = `${d}/${m}/${String(y).slice(-2)}`;
                         let f3 = `${d}/${m}/${y}`;
                         
                         if (!historyDates.includes(f1) && !historyDates.includes(f2) && !historyDates.includes(f3)) {
-                            missedDates.push(`${d}/${m}/${String(y).slice(-2)}`); // Readable format mein dikhayega
+                            missedDates.push(`${d}/${m}/${String(y).slice(-2)}`);
                         }
                     }
                     currDate.setDate(currDate.getDate() + 1);
@@ -3834,25 +3851,30 @@ function renderVIPDashboard(data, rootElement) {
             <div style="color: #c0392b; font-size: 14px; margin-top: 4px; line-height: 1.5;">${missedDates.join(', ')}</div>
         </div>` : '';
 
-    // 🔥 S.No (Counting) Column wapas add kiya gaya hai
     if (processedHistory.length > 0) {
         let revHistory = [...processedHistory].reverse();
         historyHtml = revHistory.map(h => `
             <tr style="border-bottom: 1px solid #eaeaea; color: #2c3e50; font-weight:600; font-size: 14px;">
-                <td style="padding: 12px 5px;">${h.sno}</td>
+                ${!isMonthlyOrMeter ? `<td style="padding: 12px 5px;">${h.sno}</td>` : ''}
                 <td style="padding: 12px 5px;">${h.date}</td>
                 <td style="padding: 12px 5px; color:#009688;">₹${h.paid}</td>
                 <td style="padding: 12px 5px; color:#2c3e50;">₹${h.bal}</td>
             </tr>
         `).join('');
     } else {
-        historyHtml = `<tr><td colspan="4" style="padding: 20px; color:#7f8c8d; text-align:center;">No records</td></tr>`;
+        let colSpan = isMonthlyOrMeter ? 3 : 4;
+        historyHtml = `<tr><td colspan="${colSpan}" style="padding: 20px; color:#7f8c8d; text-align:center;">No records</td></tr>`;
+    }
+
+    let headerStartDate = data.startDate || 'N/A';
+    if(headerStartDate.includes('-')) {
+        let p = headerStartDate.split('-');
+        if(p.length === 3) headerStartDate = `${p[2]}/${p[1]}/${p[0].slice(-2)}`;
     }
 
     let profilePicHtml = data.pic ? `<img src="${data.pic}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : `👤`;
-    let sNoDisplay = data.sNo ? ` | S.No: ${data.sNo}` : '';
+    let sNoDisplay = (!isMonthlyOrMeter && data.sNo) ? ` | S.No: ${data.sNo}` : '';
 
-    // 🔥 Smart Columns: Agar Monthly/Meter hai toh beech wala 'Total Paid' gayab!
     let middleColumnHtml = !isMonthlyOrMeter ? `
         <div>
             <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Total Paid</div>
@@ -3881,7 +3903,7 @@ function renderVIPDashboard(data, rootElement) {
                         ${data.refName ? `<div style="font-size:13px; color:#c0392b; font-weight:bold; margin-top:3px;">[Ref: ${data.refName}]</div>` : ''}
                         ${data.phone ? `<div style="font-size:14px; color:#2c3e50; font-weight:bold; margin-top:8px;">📱 ${data.phone}</div>` : ''}
                         ${data.address ? `<div style="font-size:13px; color:#7f8c8d; font-weight:600; margin-top:6px; line-height:1.4;">🏠 ${data.address}</div>` : ''}
-                        <div style="font-size:13px; color:#7f8c8d; font-weight:bold; margin-top:8px;">Case Date: ${data.startDate || 'N/A'}</div>
+                        <div style="font-size:13px; color:#7f8c8d; font-weight:bold; margin-top:8px;">Case Date: ${headerStartDate}</div>
                         ${data.idNumber ? `<div style="font-size:14px; color:#c0392b; font-weight:bold; margin-top:6px;">🪪 ${data.idNumber}</div>` : ''}
                     </div>
                 </div>
@@ -3909,7 +3931,7 @@ function renderVIPDashboard(data, rootElement) {
                 <div style="background: #fbfbfb; border-radius: 12px; border: 1px solid #f0f0f0; overflow:hidden;">
                     <table style="width: 100%; border-collapse: collapse; text-align: center;">
                         <tr style="border-bottom: 2px solid #eaeaea; color: #7f8c8d; font-size:12px;">
-                            <th style="padding: 12px 5px;">S.NO</th>
+                            ${!isMonthlyOrMeter ? `<th style="padding: 12px 5px;">S.NO</th>` : ''}
                             <th style="padding: 12px 5px;">DATE</th>
                             <th style="padding: 12px 5px;">PAID</th>
                             <th style="padding: 12px 5px;">BAL</th>
