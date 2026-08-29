@@ -3750,16 +3750,17 @@ function shareCustomerPortal(id) {
         document.body.appendChild(root);
 
         // 4. Fetch ONLY this customer's data from Firebase
-        setTimeout(() => {
-            firebase.database().ref(`customer_portal/${customerToken}`).once('value')
-            .then(snapshot => {
-                if (snapshot.exists()) {
-                    renderVIPDashboard(snapshot.val(), root);
-                } else {
-                    root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif; color:red;"><h2>Link Expired or Invalid ❌</h2><p>Please contact the owner for a valid link.</p></div>`;
-                }
-            }).catch(err => {
-                root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif;"><h2>Network Error 🌐</h2><p>Please check your internet connection.</p></div>`;
+            setTimeout(() => {
+                firebase.database().ref(`customer_portal/${customerToken}`).once('value')
+                    .then(snapshot => {
+                        if (snapshot.exists()) {
+                            renderVIPDashboard(snapshot.val(), root);
+                            firebase.database().goOffline(); // 🔥 NAYA FIX: Data milte hi connection KAT do!
+                        } else {
+                            root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif; color:red;"><h2>Link Expired or Invalid ❌</h2><p>Please contact the owner for a valid link.</p></div>`;
+                        }
+                    }).catch(err => {
+               root.innerHTML = `<div style="text-align:center; padding: 50px; font-family:sans-serif;"><h2>Network Error 🌐</h2><p>Please check your internet connection.</p></div>`;
             });
         }, 1000);
     }
