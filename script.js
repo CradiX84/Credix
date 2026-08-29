@@ -3941,3 +3941,13 @@ function renderVIPDashboard(data, rootElement) {
         </div>
     `;
 }
+
+// ==========================================
+// 🔥 BLOCK APP INSTALL PROMPT FOR CUSTOMERS
+// ==========================================
+window.addEventListener('beforeinstallprompt', (e) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('customer')) {
+        e.preventDefault(); // Install popup ko customer ke liye rok dega
+    }
+});
