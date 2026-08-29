@@ -1731,7 +1731,40 @@ function toggleSelectAllHistory(id) {
 function openPayModal(id, prefillAmt = null) { 
     let c = db.find(x => x.id === id); 
     document.getElementById('pay-id').value = id; 
-    document.getElementById('pay-date').value = getISTDate(); 
+    
+    // 🔥 SMART DATE AUTO-FILL LOGIC
+    let todayStr = getISTDate();
+    let nextDateStr = todayStr;
+
+    if (c.history && c.history.length > 0) {
+        let sortedHist = [...c.history].sort((a, b) => a.date > b.date ? 1 : -1);
+        let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
+
+        if (c.type === 'monthly') {
+            nextDateStr = addMonthsSafe(lastPaidDateStr, 1);
+        } else {
+            let dParts = lastPaidDateStr.split('-');
+            let nd = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+            nd.setDate(nd.getDate() + 1);
+            nextDateStr = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
+        }
+    } else {
+        if (c.type === 'monthly') {
+            nextDateStr = addMonthsSafe(c.startDate, 1);
+        } else {
+            let dParts = c.startDate.split('-');
+            let nd = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+            nd.setDate(nd.getDate() + 1);
+            nextDateStr = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
+        }
+    }
+
+    if (nextDateStr > todayStr) {
+        nextDateStr = todayStr;
+    }
+    
+    document.getElementById('pay-date').value = nextDateStr; 
+    
     let amt = 0;
     if (prefillAmt !== null && prefillAmt > 0) {
         amt = prefillAmt; 
@@ -1741,6 +1774,7 @@ function openPayModal(id, prefillAmt = null) {
     document.getElementById('pay-amt').value = amt.toFixed(0); 
     document.getElementById('pay-modal').style.display = 'flex'; 
 }
+
 
 function savePayment() { 
     let id = parseInt(document.getElementById('pay-id').value); 
@@ -1782,37 +1816,39 @@ function openBulkModal(id, startOverride = null, endOverride = null) {
     let todayStr = getISTDate(); 
     
     let calculatedStartDate = todayStr;
-    if (startOverride && typeof startOverride === 'string') {
+    if (startOverride && typeof startOverride === 'string' && startOverride.trim() !== '') {
         calculatedStartDate = startOverride; 
     } else {
         if (c.history && c.history.length > 0) {
             let sortedHist = [...c.history].sort((a, b) => a.date > b.date ? 1 : -1);
-                    let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
-                    
-                    if (c.type === 'monthly') {
-                        // Monthly cases ke liye naya safe function use karein
-                        calculatedStartDate = addMonthsSafe(lastPaidDateStr, 1);
-                    } else {
-                        // Daily/Meter cases ke liye purana logic (sirf din add karna)
-                        let nextDate = new Date(lastPaidDateStr);
-                        nextDate.setDate(nextDate.getDate() + 1);
-                        let y = nextDate.getFullYear();
-                        let m = String(nextDate.getMonth() + 1).padStart(2, '0');
-                        let d = String(nextDate.getDate()).padStart(2, '0');
-                        calculatedStartDate = `${y}-${m}-${d}`;
-                    }
-
+            let lastPaidDateStr = sortedHist[sortedHist.length - 1].date;
+            
+            if (c.type === 'monthly') {
+                calculatedStartDate = addMonthsSafe(lastPaidDateStr, 1);
+            } else {
+                let dParts = lastPaidDateStr.split('-');
+                let nextDate = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+                nextDate.setDate(nextDate.getDate() + 1);
+                calculatedStartDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+            }
             
             if (calculatedStartDate > todayStr) {
                 calculatedStartDate = todayStr;
             }
         } else {
-            calculatedStartDate = c.startDate;
+            if (c.type === 'monthly') {
+                calculatedStartDate = addMonthsSafe(c.startDate, 1);
+            } else {
+                let dParts = c.startDate.split('-');
+                let nextDate = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+                nextDate.setDate(nextDate.getDate() + 1);
+                calculatedStartDate = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+            }
         }
     }
 
     document.getElementById('bulk-start-date').value = calculatedStartDate; 
-    document.getElementById('bulk-end-date').value = (endOverride && typeof endOverride === 'string') ? endOverride : todayStr; 
+    document.getElementById('bulk-end-date').value = (endOverride && typeof endOverride === 'string' && endOverride.trim() !== '') ? endOverride : todayStr; 
     
     let amt = c.type === 'monthly' ? (c.principal * (c.rate||0)/100) : (c.type === 'meter' ? (c.principal * (c.rate||0)/100) : (c.installment || 0)); 
     document.getElementById('bulk-amt').value = amt.toFixed(0); 
@@ -1822,6 +1858,7 @@ function openBulkModal(id, startOverride = null, endOverride = null) {
     document.getElementById('bulk-amt-label').innerText = c.type === 'monthly' ? t.perMonthAmt : t.perDayAmt; 
     document.getElementById('bulk-modal').style.display = 'flex'; 
 }
+
 
 function saveBulkPayment() { 
     let id = parseInt(document.getElementById('bulk-id').value); 
