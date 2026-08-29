@@ -3781,11 +3781,8 @@ function renderVIPDashboard(data, rootElement) {
     if (data.history && data.history.length > 0) {
         processedHistory = data.history.map((h, index) => {
             let amt = Number(h.amount || h.paid || h.rec || h.received || h.installment || 0);
-            
-            // 🔥 Naya Logic: Apna manual math hata diya. Ab seedha Firebase wala correct balance uthayega
             let bal = h.balance !== undefined ? Number(h.balance) : (h.bal !== undefined ? Number(h.bal) : remaining);
             
-            // Date ko sundar format (DD/MM/YY) mein set karna
             let fDate = h.date;
             if(fDate && fDate.includes('-')) {
                 let p = fDate.split('-');
@@ -3795,17 +3792,13 @@ function renderVIPDashboard(data, rootElement) {
             return { sno: index + 1, date: fDate, rawDate: h.date, paid: amt, bal: bal };
         });
         
-        // 🔥 Staff Mode Filter (Line 799 jaisa): Monthly/Meter mein history hide karega
         if (isMonthlyOrMeter && processedHistory.length > 1) {
             let today = new Date();
             let currentMonthStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2, '0');
-            // Sirf current month ki history dikhayega
             let activeMonthRecords = processedHistory.filter(h => h.rawDate && h.rawDate.substring(0, 7) === currentMonthStr);
-            // Agar current month ki nahi hai, toh sirf sabse latest (ek) record dikhayega
             processedHistory = activeMonthRecords.length > 0 ? activeMonthRecords : processedHistory.slice(-1);
         }
         
-        // Missed dates logic (Sirf Daily ke liye)
         if (caseType.includes('DAILY')) {
             let today = new Date();
             today.setHours(0,0,0,0);
@@ -3824,6 +3817,9 @@ function renderVIPDashboard(data, rootElement) {
             if (sDate && !isNaN(sDate)) {
                 let historyDates = data.history.map(h => h.date);
                 let currDate = new Date(sDate);
+                
+                // 🔥 NAYA FIX: Daily case ki kishat agle din (+1) se shuru hoti hai
+                currDate.setDate(currDate.getDate() + 1);
                 
                 while(currDate <= today) {
                     if (currDate.getDay() !== 0) { // Sunday skip
