@@ -3943,7 +3943,8 @@ function renderVIPDashboard(data, rootElement) {
 
     // 🔥 NAYA CODE: Generate Payment Section if UPI exists
     let paymentSectionHtml = '';
-console.log("Firebase Customer Data:", data);
+alert("Staff Name: " + data.refName + "\nUPI ID: " + data.upiId);
+
 
     if (data.upiId && remaining > 0) {
         // Amount set karein (Installment amount, agar wo nahi toh bacha hua balance)
