@@ -3950,7 +3950,9 @@ function renderVIPDashboard(data, rootElement) {
         if (payAmt === 0 || payAmt > remaining) payAmt = remaining;
         
         // Smart GPay/PhonePe Link banayein
-        let upiLink = `upi://pay?pa=${data.upiId}&pn=${encodeURIComponent(data.refName || 'Staff')}&am=${payAmt}&cu=INR&tn=Installment`;
+let upiLink = `upi://pay?pa=${data.upiId}&pn=${encodeURIComponent(data.refName || 'Staff')}&am=${payAmt}&cu=INR&tn=Installment&mc=0000`;
+
+
         
         // Live QR Code API
         let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiLink)}`;
