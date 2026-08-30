@@ -1209,7 +1209,8 @@ function syncCaseDelta(caseObj) {
                 // 🔥 SMART SYNC: Update Customer Portal with extra details
         if (caseObj.customerToken) {
             // 🔥 SUPER-MAGNET: Check all possible variables where Staff Name might be hiding
-            let actualRef = caseObj.refName || caseObj.ref || caseObj.reference || caseObj.staff || caseObj.staffName || caseObj.agent || caseObj.guarantor || '';
+let actualRef = caseObj.staffRef || caseObj.refName || caseObj.ref || caseObj.reference || caseObj.staff || caseObj.staffName || caseObj.agent || caseObj.guarantor || '';
+
             
             let staffUpi = "";
             if (actualRef) {
@@ -3942,9 +3943,6 @@ function renderVIPDashboard(data, rootElement) {
     ` : '';
 
     // 🔥 NAYA CODE: Generate Payment Section if UPI exists
-    let paymentSectionHtml = '';
-alert("Staff Name: " + data.refName + "\nUPI ID: " + data.upiId);
-
 
     if (data.upiId && remaining > 0) {
         // Amount set karein (Installment amount, agar wo nahi toh bacha hua balance)
