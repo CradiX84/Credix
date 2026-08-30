@@ -1208,11 +1208,14 @@ function syncCaseDelta(caseObj) {
 
                 // 🔥 SMART SYNC: Update Customer Portal with extra details
         if (caseObj.customerToken) {
-            // 🔥 NEW: Find the assigned staff and get their UPI ID
+            // 🔥 SUPER-MAGNET: Check all possible variables where Staff Name might be hiding
+            let actualRef = caseObj.refName || caseObj.ref || caseObj.reference || caseObj.staff || caseObj.staffName || caseObj.agent || caseObj.guarantor || '';
+            
             let staffUpi = "";
-            if (caseObj.refName) {
+            if (actualRef) {
                 let conf = getConfig();
-                let staff = conf.staffList.find(s => s.name === caseObj.refName);
+                // Exact match (ignores spaces or capital/small letters)
+                let staff = conf.staffList.find(s => (s.name || '').trim().toLowerCase() === actualRef.trim().toLowerCase());
                 if (staff && staff.upiId) {
                     staffUpi = staff.upiId;
                 }
@@ -1223,7 +1226,7 @@ function syncCaseDelta(caseObj) {
                 phone: caseObj.phone || caseObj.mobile || caseObj.mobileNo || caseObj.contact || '',
                 address: caseObj.address || '',
                 idNumber: caseObj.idNumber || caseObj.aadhar || caseObj.idProof || caseObj.document || '',
-                refName: caseObj.refName || caseObj.ref || caseObj.reference || caseObj.guarantor || '',
+                refName: actualRef, 
                 pic: caseObj.pic || caseObj.photo || caseObj.image || '',
                 principal: caseObj.principal || 0,
                 totalPayable: caseObj.totalPayable || caseObj.principal || 0,
@@ -1232,9 +1235,10 @@ function syncCaseDelta(caseObj) {
                 type: caseObj.type || '',
                 startDate: caseObj.startDate || '',
                 history: caseObj.history || [],
-                upiId: staffUpi // 🔥 NEW: Sent safely to Customer Portal
+                upiId: staffUpi // 🔥 Raju ki UPI ID yahan set ho jayegi!
             };
         }
+
 
     database.ref().update(updates).then(() => {
         if (syncStatus) syncStatus.innerText = "Cloud Synced";
