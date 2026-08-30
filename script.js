@@ -871,6 +871,8 @@ function renderStaffList() {
 async function addStaff() { 
     let name = document.getElementById('new-staff-name').value.trim(); 
     let pinVal = document.getElementById('new-staff-pin').value.trim(); 
+    let upiId = document.getElementById('new-staff-upi') ? document.getElementById('new-staff-upi').value.trim() : '';
+
     if (!name || pinVal.length !== 4) return showToast("Enter Name and 4-Digit ID!"); 
     let conf = getConfig(); 
     if (conf.staffList.some(s => s.pin === pinVal) || pinVal === secretPin) { return showToast("This ID is already taken!"); } 
@@ -881,10 +883,12 @@ async function addStaff() {
         finalPhotoUrl = await uploadToCloudinary(photoBase64);
     }
 
-    conf.staffList.push({ name: name, pin: pinVal, photo: finalPhotoUrl }); 
+    conf.staffList.push({ name: name, pin: pinVal, photo: finalPhotoUrl, upiId: upiId }); 
     syncConfigDelta(conf); 
     document.getElementById('new-staff-name').value = ''; 
     document.getElementById('new-staff-pin').value = ''; 
+    if(document.getElementById('new-staff-upi')) document.getElementById('new-staff-upi').value = '';
+    
     removeStaffAddPhoto();
     renderStaffList(); 
     showToast("Staff Added!"); 
@@ -897,6 +901,11 @@ function openEditStaffProfile(idx) {
     document.getElementById('edit-staff-idx').value = idx; 
     document.getElementById('edit-staff-new-name').value = conf.staffList[idx].name; 
     document.getElementById('edit-staff-new-pin').value = conf.staffList[idx].pin; 
+    
+    if(document.getElementById('edit-staff-upi')) {
+        document.getElementById('edit-staff-upi').value = conf.staffList[idx].upiId || '';
+    }
+
     const previewWrap = document.getElementById('edit-staff-photo-preview-wrap');
     const previewImg = document.getElementById('edit-staff-photo-preview');
     if (conf.staffList[idx].photo) {
@@ -912,11 +921,15 @@ async function saveStaffProfile() {
     let idx = document.getElementById('edit-staff-idx').value; 
     let newName = document.getElementById('edit-staff-new-name').value.trim();
     let newPin = document.getElementById('edit-staff-new-pin').value.trim(); 
+    let newUpi = document.getElementById('edit-staff-upi') ? document.getElementById('edit-staff-upi').value.trim() : '';
+
     if (!newName || newPin.length !== 4) return showToast("Name & 4-Digit ID required!"); 
     let conf = getConfig(); 
     if (conf.staffList.some((s, i) => s.pin === newPin && i != idx) || newPin === secretPin) { return showToast("This ID is already taken!"); } 
+    
     conf.staffList[idx].name = newName;
     conf.staffList[idx].pin = newPin; 
+    conf.staffList[idx].upiId = newUpi; 
     
     if (currentCropTarget === 'staff-edit' && lastCroppedBase64) {
         conf.staffList[idx].photo = await uploadToCloudinary(lastCroppedBase64);
@@ -929,6 +942,7 @@ async function saveStaffProfile() {
     showToast("Staff Profile Updated!"); 
     syncConfigDelta(conf);
 }
+
 
 function deleteStaff(idx) { 
     askConfirm("Delete this staff account? They will be logged out instantly.", () => { 
@@ -1193,25 +1207,34 @@ function syncCaseDelta(caseObj) {
     updates[`credix_db/cases/${caseObj.id}`] = caseObj;
 
                 // 🔥 SMART SYNC: Update Customer Portal with extra details
-                if (caseObj.customerToken) {
-                    updates[`customer_portal/${caseObj.customerToken}`] = {
-                        name: caseObj.name || '',
-                        phone: caseObj.phone || caseObj.mobile || caseObj.mobileNo || caseObj.contact || '',
-                        address: caseObj.address || '',
-                        idNumber: caseObj.idNumber || caseObj.aadhar || caseObj.idProof || caseObj.document || '',
-                        refName: caseObj.refName || caseObj.ref || caseObj.reference || caseObj.guarantor || '',
-                        pic: caseObj.pic || caseObj.photo || caseObj.image || '',
-                        principal: caseObj.principal || 0,
-                        totalPayable: caseObj.totalPayable || caseObj.principal || 0,
-                        currentBalance: caseObj.currentBalance || 0,
-                        installment: caseObj.installment || 0,
-                        type: caseObj.type || '',
-                        startDate: caseObj.startDate || '',
-                        history: caseObj.history || []
-                    };
+        if (caseObj.customerToken) {
+            // 🔥 NEW: Find the assigned staff and get their UPI ID
+            let staffUpi = "";
+            if (caseObj.refName) {
+                let conf = getConfig();
+                let staff = conf.staffList.find(s => s.name === caseObj.refName);
+                if (staff && staff.upiId) {
+                    staffUpi = staff.upiId;
                 }
+            }
 
-
+            updates[`customer_portal/${caseObj.customerToken}`] = {
+                name: caseObj.name || '',
+                phone: caseObj.phone || caseObj.mobile || caseObj.mobileNo || caseObj.contact || '',
+                address: caseObj.address || '',
+                idNumber: caseObj.idNumber || caseObj.aadhar || caseObj.idProof || caseObj.document || '',
+                refName: caseObj.refName || caseObj.ref || caseObj.reference || caseObj.guarantor || '',
+                pic: caseObj.pic || caseObj.photo || caseObj.image || '',
+                principal: caseObj.principal || 0,
+                totalPayable: caseObj.totalPayable || caseObj.principal || 0,
+                currentBalance: caseObj.currentBalance || 0,
+                installment: caseObj.installment || 0,
+                type: caseObj.type || '',
+                startDate: caseObj.startDate || '',
+                history: caseObj.history || [],
+                upiId: staffUpi // 🔥 NEW: Sent safely to Customer Portal
+            };
+        }
 
     database.ref().update(updates).then(() => {
         if (syncStatus) syncStatus.innerText = "Cloud Synced";
@@ -3914,6 +3937,36 @@ function renderVIPDashboard(data, rootElement) {
         </div>
     ` : '';
 
+    // 🔥 NAYA CODE: Generate Payment Section if UPI exists
+    let paymentSectionHtml = '';
+    if (data.upiId && remaining > 0) {
+        // Amount set karein (Installment amount, agar wo nahi toh bacha hua balance)
+        let payAmt = Number(data.installment) || 0;
+        if (payAmt === 0 || payAmt > remaining) payAmt = remaining;
+        
+        // Smart GPay/PhonePe Link banayein
+        let upiLink = `upi://pay?pa=${data.upiId}&pn=${encodeURIComponent(data.refName || 'Staff')}&am=${payAmt}&cu=INR&tn=Installment`;
+        
+        // Live QR Code API
+        let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiLink)}`;
+        
+        paymentSectionHtml = `
+        <div style="background: #fff; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; border: 2px solid #009688;">
+            <h3 style="margin-top: 0; color: #009688; font-size: 18px;">💸 Pay Online</h3>
+            <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">Scan QR or click Pay Now to pay <b>₹${payAmt}</b></p>
+            <img src="${qrUrl}" style="width: 150px; height: 150px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #bdc3c7;">
+            <br>
+            <a href="${upiLink}" style="display: inline-block; background: #009688; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-bottom: 15px; font-size: 16px;">Pay Now via App</a>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: left;">
+                <div style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">Already paid? Submit UTR:</div>
+                <input type="number" id="utr-input-${data.id}" placeholder="Enter 12-digit UTR No." style="width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; margin-bottom: 10px; font-size: 14px; box-sizing: border-box; outline:none;">
+                <button onclick="submitUtr('${data.id}', ${payAmt}, '${data.refName}')" style="width: 100%; background: #2c3e50; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Submit Payment Details</button>
+            </div>
+        </div>
+        `;
+    }
+
     rootElement.innerHTML = `
         <div style="max-width: 500px; margin: 0 auto; padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom:40px; background:#f4f7f6; min-height:100vh;">
             
@@ -3955,6 +4008,8 @@ function renderVIPDashboard(data, rootElement) {
                 ${missedDatesHtml}
             </div>
 
+        ${paymentSectionHtml}
+
             <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                 <div style="margin-bottom: 15px;">
                     <h3 style="margin: 0; color: #7f8c8d; font-size:14px; font-weight:bold;">Payment History</h3>
@@ -3989,3 +4044,45 @@ window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault(); // Install popup ko customer ke liye rok dega
     }
 });
+
+// 🔥 UTR Submission Logic for Customer Portal
+window.submitUtr = function(caseId, amount, staffName) {
+    let utrInput = document.getElementById('utr-input-' + caseId);
+    if(!utrInput) return;
+    
+    let utrValue = utrInput.value.trim();
+
+    if (utrValue.length !== 12) {
+        alert("Please enter a valid 12-digit UTR number!");
+        return;
+    }
+
+    let btn = utrInput.nextElementSibling;
+    let originalText = btn.innerText;
+    btn.innerText = "Submitting...";
+    btn.disabled = true;
+
+    let requestData = {
+        caseId: caseId,
+        amount: amount,
+        utr: utrValue,
+        staff: staffName || "Unknown",
+        timestamp: Date.now(),
+        status: "Pending"
+    };
+
+    // Push to Firebase 'pending_approvals' node
+    firebase.database().ref('credix_db/pending_approvals').push(requestData)
+    .then(() => {
+        alert("✅ Payment details submitted successfully! Waiting for staff approval.");
+        btn.innerText = "Submitted ✅";
+        btn.style.background = "#27ae60"; // Green color
+        utrInput.disabled = true;
+    })
+    .catch((error) => {
+        console.error("Error submitting UTR: ", error);
+        alert("Error submitting details. Please check your internet and try again.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    });
+}
