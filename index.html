@@ -171,6 +171,12 @@
             <div class="input-group"><span class="input-icon">👤</span><input type="text" id="new-staff-name" placeholder="E.g. Raju"></div>
             <label class="modal-label">Assign 4-Digit Login ID (PIN)</label>
             <div class="input-group"><span class="input-icon">🔑</span><input type="number" id="new-staff-pin" placeholder="E.g. 1001"></div>
+
+<div style="margin-bottom:15px;">
+    <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Staff UPI ID (Optional)</div>
+    <input type="text" id="new-staff-upi" placeholder="e.g. raju@okicici" style="width:100%; padding:12px; border:1px solid #bdc3c7; border-radius:8px; outline:none; font-size:16px;">
+</div>
+
             <button class="main-btn" style="padding:12px; font-size:14px; margin-top:5px; background:var(--owner-gold); color:black;" onclick="addStaff()">Add Staff Profile</button>
         </div>
         <div style="display:flex; gap:10px; margin-top:20px;">
@@ -195,6 +201,12 @@
         <div class="input-group"><span class="input-icon">👤</span><input type="text" id="edit-staff-new-name"></div>
         <label class="modal-label">4-Digit Login ID (PIN)</label>
         <div class="input-group" style="border-color:var(--owner-gold);"><span class="input-icon">🔑</span><input type="number" id="edit-staff-new-pin" placeholder="E.g. 2002" style="font-weight:bold; letter-spacing:2px;"></div>
+
+<div style="margin-bottom:15px;">
+    <div style="font-size:12px; color:#7f8c8d; font-weight:bold; margin-bottom:5px;">Staff UPI ID (Optional)</div>
+    <input type="text" id="edit-staff-upi" placeholder="e.g. raju@okicici" style="width:100%; padding:12px; border:1px solid #bdc3c7; border-radius:8px; outline:none; font-size:16px;">
+</div>
+
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button class="main-btn" style="background:var(--owner-gold); color:black; margin:0;" onclick="saveStaffProfile()">Save Updates</button>
             <button class="main-btn" style="background:rgba(255,255,255,0.05); color:white; box-shadow:none; margin:0;" onclick="closeModal('edit-staff-pin-modal')">Cancel</button>
